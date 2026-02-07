@@ -1,17 +1,32 @@
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button, Input, Textarea, Badge } from "@components/ui";
 import { MapComponent } from "@features/map";
-import { ImageUpload } from "./ImageUpload";
-import { detailsStepSchema, type DetailsStepData } from "../schemas/quest.schema";
+import { detailsStepSchema, type DetailsStepData, type QuestTheme } from "../schemas/quest.schema";
 import type { QuestDifficulty } from "@/types";
 
 interface DetailsStepProps {
-    defaultValues: Partial<DetailsStepData>;
+    defaultValues: Partial<DetailsStepData> & {
+        latitude?: number;
+        longitude?: number;
+        city?: string;
+    };
     onNext: (data: DetailsStepData) => void;
     onBack: () => void;
 }
+
+const themeOptions: QuestTheme[] = ["Adventure", "Romance", "Culture", "Food", "History", "Nature", "Custom"];
+
+const themeIcons: Record<QuestTheme, string> = {
+    Adventure: "🏔️",
+    Romance: "💕",
+    Culture: "🎭",
+    Food: "🍜",
+    History: "🏛️",
+    Nature: "🌿",
+    Custom: "✨",
+};
 
 const difficultyOptions: QuestDifficulty[] = ["Easy", "Medium", "Hard", "Expert"];
 
@@ -25,7 +40,6 @@ const difficultyColors: Record<QuestDifficulty, "success" | "info" | "warning" |
 export function DetailsStep({ defaultValues, onNext, onBack }: DetailsStepProps) {
     const {
         register,
-        control,
         handleSubmit,
         watch,
         setValue,
@@ -35,17 +49,23 @@ export function DetailsStep({ defaultValues, onNext, onBack }: DetailsStepProps)
         defaultValues: {
             title: defaultValues.title ?? "",
             description: defaultValues.description ?? "",
+            theme: defaultValues.theme ?? "Adventure",
             difficulty: defaultValues.difficulty ?? "Medium",
             duration: defaultValues.duration ?? 60,
-            coverImage: defaultValues.coverImage,
         },
     });
 
+    const theme = watch("theme");
     const difficulty = watch("difficulty");
 
     const onSubmit = (data: DetailsStepData) => {
         onNext(data);
     };
+
+    // Get map center from location data passed from step 1
+    const mapCenter = defaultValues.latitude && defaultValues.longitude
+        ? { lat: defaultValues.latitude, lng: defaultValues.longitude }
+        : undefined;
 
     return (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -58,7 +78,7 @@ export function DetailsStep({ defaultValues, onNext, onBack }: DetailsStepProps)
                 </p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
                 {/* Left Column - Form */}
                 <div className="space-y-5">
                     <Input
@@ -75,6 +95,32 @@ export function DetailsStep({ defaultValues, onNext, onBack }: DetailsStepProps)
                         error={errors.description?.message}
                     />
 
+                    {/* Theme */}
+                    <div>
+                        <label className="block text-sm font-medium text-neutral-700 mb-2">
+                            Quest Theme
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                            {themeOptions.map((themeOption) => (
+                                <button
+                                    key={themeOption}
+                                    type="button"
+                                    onClick={() => setValue("theme", themeOption)}
+                                    className={`px-3 py-2 rounded-lg border-2 transition-all text-sm ${theme === themeOption
+                                        ? "border-indigo-500 bg-indigo-50"
+                                        : "border-neutral-200 hover:border-neutral-300"
+                                        }`}
+                                >
+                                    <span className="mr-1.5">{themeIcons[themeOption]}</span>
+                                    {themeOption}
+                                </button>
+                            ))}
+                        </div>
+                        {errors.theme && (
+                            <p className="mt-1.5 text-sm text-red-600">{errors.theme.message}</p>
+                        )}
+                    </div>
+
                     {/* Difficulty */}
                     <div>
                         <label className="block text-sm font-medium text-neutral-700 mb-2">
@@ -87,8 +133,8 @@ export function DetailsStep({ defaultValues, onNext, onBack }: DetailsStepProps)
                                     type="button"
                                     onClick={() => setValue("difficulty", level)}
                                     className={`px-4 py-2 rounded-lg border-2 transition-all ${difficulty === level
-                                            ? "border-indigo-500 bg-indigo-50"
-                                            : "border-neutral-200 hover:border-neutral-300"
+                                        ? "border-indigo-500 bg-indigo-50"
+                                        : "border-neutral-200 hover:border-neutral-300"
                                         }`}
                                 >
                                     <Badge variant={difficultyColors[level]}>{level}</Badge>
@@ -108,37 +154,21 @@ export function DetailsStep({ defaultValues, onNext, onBack }: DetailsStepProps)
                         placeholder="60"
                         error={errors.duration?.message}
                     />
-
-                    {/* Cover Image */}
-                    <div>
-                        <label className="block text-sm font-medium text-neutral-700 mb-2">
-                            Cover Image
-                        </label>
-                        <Controller
-                            name="coverImage"
-                            control={control}
-                            render={({ field }) => (
-                                <ImageUpload
-                                    value={field.value}
-                                    onChange={field.onChange}
-                                />
-                            )}
-                        />
-                    </div>
                 </div>
 
                 {/* Right Column - Map Preview */}
-                <div>
-                    <label className="block text-sm font-medium text-neutral-700 mb-2">
-                        Map Preview
-                    </label>
+                <div className="self-start">
                     <MapComponent
-                        height="400px"
-                        interactive={false}
-                        className="border border-neutral-200"
+                        height="500px"
+                        interactive={true}
+                        center={mapCenter}
+                        className="border border-neutral-200 rounded-xl"
                     />
                     <p className="mt-2 text-sm text-neutral-500">
-                        Markers will appear after adding waypoints
+                        {mapCenter
+                            ? `📍 ${defaultValues.city ?? 'Selected location'}`
+                            : "Markers will appear after adding waypoints"
+                        }
                     </p>
                 </div>
             </div>

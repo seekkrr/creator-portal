@@ -1,7 +1,6 @@
 import { ChevronLeft, Check, MapPin, Clock, AlertCircle } from "lucide-react";
 import { Button, Card, Badge } from "@components/ui";
 import { MapComponent } from "@features/map";
-import { cloudinaryService } from "@services/cloudinary.service";
 import type { CreateQuestFormData, QuestDifficulty } from "@/types";
 
 interface ReviewStepProps {
@@ -19,7 +18,7 @@ const difficultyColors: Record<QuestDifficulty, "success" | "info" | "warning" |
 };
 
 export function ReviewStep({ formData, onBack, onSubmit, isSubmitting }: ReviewStepProps) {
-    const { title, description, difficulty, duration, coverImage, waypoints = [] } = formData;
+    const { title, description, difficulty, duration, waypoints = [] } = formData;
 
     return (
         <div className="space-y-6">
@@ -35,20 +34,6 @@ export function ReviewStep({ formData, onBack, onSubmit, isSubmitting }: ReviewS
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Left Column - Details */}
                 <div className="space-y-4">
-                    {/* Cover Image */}
-                    {coverImage && (
-                        <div className="rounded-xl overflow-hidden border border-neutral-200">
-                            <img
-                                src={cloudinaryService.getOptimizedUrl(coverImage.public_id, {
-                                    width: 600,
-                                    height: 300,
-                                    crop: "fill",
-                                })}
-                                alt={title ?? "Quest cover"}
-                                className="w-full h-48 object-cover"
-                            />
-                        </div>
-                    )}
 
                     {/* Title & Description */}
                     <Card padding="md">

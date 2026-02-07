@@ -67,6 +67,7 @@ export interface CloudinaryUploadResponse {
 // Quest Types
 export type QuestDifficulty = "Easy" | "Medium" | "Hard" | "Expert";
 export type QuestStatus = "Draft" | "Published" | "Archived";
+export type QuestTheme = "Adventure" | "Romance" | "Culture" | "Food" | "History" | "Nature" | "Custom";
 
 export interface QuestLocation {
     _id?: string;
@@ -133,26 +134,62 @@ export interface CreateQuestFormData {
     locationType: "city" | "url";
     city?: string;
     sourceUrl?: string;
+    latitude?: number;
+    longitude?: number;
 
     // Step 2: Details
     title: string;
     description: string;
+    theme: QuestTheme;
     difficulty: QuestDifficulty;
-    coverImage?: CloudinaryAsset;
     duration?: number;
+    // coverImage removed as per user request
 
     // Step 3: Waypoints
     waypoints: QuestLocation[];
 }
 
+// Backend expects this specific structure
 export interface CreateQuestPayload {
-    metadata: Omit<QuestMetadata, "_id">;
-    location: Omit<QuestLocation, "_id">;
-    media: Omit<QuestMedia, "_id">;
-    steps: Array<Omit<QuestStep, "_id" | "quest_id">>;
+    metadata: {
+        title: string;
+        description: string[];
+        theme: QuestTheme;
+        difficulty: QuestDifficulty;
+        duration_minutes?: number;
+        keywords?: string[];
+    };
+    location: {
+        region: string;
+        start_location: {
+            type: "Point";
+            coordinates: number[];
+        };
+        end_location: {
+            type: "Point";
+            coordinates: number[];
+        };
+        route_waypoints?: Array<{
+            order: number;
+            location: {
+                type: "Point";
+                coordinates: number[];
+            };
+        }>;
+        map_data: {
+            zoom_level: number;
+            map_style: string;
+        };
+    };
+    media: {
+        cloudinary_assets?: CloudinaryAsset[];
+        source_url?: string;
+    };
+    steps: Array<{
+        title: string;
+        description: string;
+    }>;
     status?: QuestStatus;
-    price?: number;
-    currency?: string;
     booking_enabled?: boolean;
 }
 

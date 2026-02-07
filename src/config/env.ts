@@ -42,7 +42,7 @@ export const config = {
     },
     mapbox: {
         accessToken: env.VITE_MAPBOX_ACCESS_TOKEN,
-        style: "mapbox://styles/mapbox/streets-v12",
+        style: "mapbox://styles/mapbox/standard",
         defaultCenter: { lng: 77.5946, lat: 12.9716 } as const, // Bangalore
         defaultZoom: 12,
     },

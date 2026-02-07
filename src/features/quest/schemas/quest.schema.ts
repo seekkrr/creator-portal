@@ -6,6 +6,8 @@ const locationStepBaseSchema = z.object({
     locationType: z.enum(["city", "url"]),
     city: z.string().optional(),
     sourceUrl: z.string().optional(),
+    latitude: z.number().optional(),
+    longitude: z.number().optional(),
 });
 
 // Step 1: Location or URL (with validation)
@@ -37,20 +39,13 @@ export const detailsStepSchema = z.object({
         .string()
         .min(10, "Description must be at least 10 characters")
         .max(1000, "Description must be less than 1000 characters"),
+    theme: z.enum(["Adventure", "Romance", "Culture", "Food", "History", "Nature", "Custom"] as const),
     difficulty: z.enum(["Easy", "Medium", "Hard", "Expert"] as const) satisfies z.ZodType<QuestDifficulty>,
     duration: z.number().min(5).max(480).optional(),
-    coverImage: z
-        .object({
-            public_id: z.string(),
-            secure_url: z.string().url(),
-            width: z.number().optional(),
-            height: z.number().optional(),
-            format: z.string().optional(),
-        })
-        .optional(),
 });
 
 export type DetailsStepData = z.infer<typeof detailsStepSchema>;
+export type QuestTheme = "Adventure" | "Romance" | "Culture" | "Food" | "History" | "Nature" | "Custom";
 
 // Step 3: Waypoints
 export const waypointSchema = z.object({
@@ -85,6 +80,7 @@ export const defaultFormValues: Partial<CreateQuestFormData> = {
     sourceUrl: "",
     title: "",
     description: "",
+    theme: "Adventure",
     difficulty: "Medium",
     duration: 60,
     waypoints: [],

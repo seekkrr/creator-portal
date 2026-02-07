@@ -42,6 +42,7 @@ export const authService = {
         const parts = tokens.split('.');
         if (parts.length < 2) throw new Error("Invalid token format");
         const base64Url = parts[1];
+        if (!base64Url) throw new Error("Invalid token format");
         const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
         const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function (c) {
             return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);

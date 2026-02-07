@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -25,35 +25,112 @@ const stepLabels: Record<Step, string> = {
     4: "Review",
 };
 
+const SESSION_STORAGE_KEY = "quest_creation_form";
+
+// Helper to get initial form data from session storage
+function getInitialFormData(): Partial<CreateQuestFormData> {
+    try {
+        const saved = sessionStorage.getItem(SESSION_STORAGE_KEY);
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            return { ...defaultFormValues, ...parsed.formData };
+        }
+    } catch (e) {
+        console.error("Failed to parse session storage:", e);
+    }
+    return defaultFormValues;
+}
+
+// Helper to get initial step from session storage
+function getInitialStep(): Step {
+    try {
+        const saved = sessionStorage.getItem(SESSION_STORAGE_KEY);
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            return parsed.currentStep ?? 1;
+        }
+    } catch (e) {
+        console.error("Failed to parse session storage:", e);
+    }
+    return 1;
+}
+
 export function CreateQuestPage() {
     const navigate = useNavigate();
-    const [currentStep, setCurrentStep] = useState<Step>(1);
-    const [formData, setFormData] = useState<Partial<CreateQuestFormData>>(defaultFormValues);
+    const [currentStep, setCurrentStep] = useState<Step>(getInitialStep);
+    const [formData, setFormData] = useState<Partial<CreateQuestFormData>>(getInitialFormData);
+
+    // Save to session storage whenever formData or currentStep changes
+    const saveToSession = useCallback(() => {
+        try {
+            sessionStorage.setItem(
+                SESSION_STORAGE_KEY,
+                JSON.stringify({ formData, currentStep })
+            );
+        } catch (e) {
+            console.error("Failed to save to session storage:", e);
+        }
+    }, [formData, currentStep]);
+
+    useEffect(() => {
+        saveToSession();
+    }, [saveToSession]);
+
+    // Clear session storage on successful submit
+    const clearSession = () => {
+        sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    };
 
     // Create quest mutation
     const createQuestMutation = useMutation({
         mutationFn: async (data: CreateQuestFormData) => {
+            // Get the last waypoint for end_location (or use start if no waypoints)
+            const lastWaypoint = data.waypoints.length > 0
+                ? data.waypoints[data.waypoints.length - 1]
+                : null;
+
+            const startCoords = [data.longitude ?? 0, data.latitude ?? 0];
+            const endCoords = lastWaypoint
+                ? [lastWaypoint.longitude, lastWaypoint.latitude]
+                : startCoords;
+
             const payload: CreateQuestPayload = {
                 metadata: {
                     title: data.title,
-                    description: data.description,
+                    description: [data.description], // Backend expects array
+                    theme: data.theme,
                     difficulty: data.difficulty,
-                    duration_minutes: data.duration,
+                    duration_minutes: data.duration ?? 60,
                 },
-                location: data.waypoints[0] ?? {
-                    latitude: 0,
-                    longitude: 0,
-                    city: data.city,
+                location: {
+                    region: data.city ?? "Unknown",
+                    start_location: {
+                        type: "Point" as const,
+                        coordinates: startCoords,
+                    },
+                    end_location: {
+                        type: "Point" as const,
+                        coordinates: endCoords,
+                    },
+                    route_waypoints: data.waypoints.map((wp, index) => ({
+                        order: index + 1,
+                        location: {
+                            type: "Point" as const,
+                            coordinates: [wp.longitude, wp.latitude],
+                        },
+                    })),
+                    map_data: {
+                        zoom_level: 14,
+                        map_style: "standard",
+                    },
                 },
                 media: {
-                    cloudinary_assets: data.coverImage ? [data.coverImage] : [],
+                    cloudinary_assets: [],
                     source_url: data.sourceUrl,
                 },
                 steps: data.waypoints.map((wp, index) => ({
-                    order: index + 1,
-                    title: wp.place_name ?? `Waypoint ${index + 1}`,
-                    location: wp,
-                    points_reward: 10,
+                    title: wp.place_name ?? `Step ${index + 1}`,
+                    description: `Visit ${wp.place_name ?? `location ${index + 1}`}`,
                 })),
                 status: "Draft",
                 booking_enabled: false,
@@ -62,6 +139,7 @@ export function CreateQuestPage() {
             return questService.createQuest(payload);
         },
         onSuccess: () => {
+            clearSession();
             toast.success("Quest created successfully!");
             navigate("/creator/quest/success");
         },
@@ -70,7 +148,7 @@ export function CreateQuestPage() {
         },
     });
 
-    // Step handlers
+    // Step handlers - update formData and save to session
     const handleStep1Next = (data: LocationStepData) => {
         setFormData((prev) => ({ ...prev, ...data }));
         setCurrentStep(2);
@@ -107,20 +185,20 @@ export function CreateQuestPage() {
                             <div className="flex flex-col items-center">
                                 <div
                                     className={`w-10 h-10 rounded-full flex items-center justify-center font-medium transition-colors ${step === currentStep
-                                            ? "bg-indigo-600 text-white"
-                                            : step < currentStep
-                                                ? "bg-green-500 text-white"
-                                                : "bg-neutral-200 text-neutral-500"
+                                        ? "bg-indigo-600 text-white"
+                                        : step < currentStep
+                                            ? "bg-green-500 text-white"
+                                            : "bg-neutral-200 text-neutral-500"
                                         }`}
                                 >
                                     {step < currentStep ? "✓" : step}
                                 </div>
                                 <span
                                     className={`mt-2 text-xs font-medium ${step === currentStep
-                                            ? "text-indigo-600"
-                                            : step < currentStep
-                                                ? "text-green-600"
-                                                : "text-neutral-500"
+                                        ? "text-indigo-600"
+                                        : step < currentStep
+                                            ? "text-green-600"
+                                            : "text-neutral-500"
                                         }`}
                                 >
                                     {stepLabels[step]}

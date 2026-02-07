@@ -58,6 +58,13 @@ export function MapboxLocationSearch({
     const hasValue = query.length > 0;
     const isActive = isFocused || hasValue;
 
+    // Update query when value prop changes (e.g. from parent component setting current location)
+    useEffect(() => {
+        if (value?.place_name) {
+            setQuery(value.place_name);
+        }
+    }, [value]);
+
     const searchLocations = useCallback(async (searchQuery: string) => {
         if (!searchQuery || searchQuery.length < 2) {
             setSuggestions([]);
