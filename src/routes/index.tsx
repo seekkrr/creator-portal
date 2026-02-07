@@ -9,6 +9,10 @@ const LoginPage = lazy(() =>
     import("@features/auth/pages/LoginPage").then((m) => ({ default: m.LoginPage }))
 );
 
+const AuthCallbackPage = lazy(() =>
+    import("@features/auth/pages/AuthCallbackPage").then((m) => ({ default: m.AuthCallbackPage }))
+);
+
 const DashboardPage = lazy(() =>
     import("@features/dashboard/pages/DashboardPage").then((m) => ({ default: m.DashboardPage }))
 );
@@ -38,6 +42,14 @@ export const router = createBrowserRouter([
                         element: (
                             <SuspenseWrapper>
                                 <LoginPage />
+                            </SuspenseWrapper>
+                        ),
+                    },
+                    {
+                        path: "auth/callback",
+                        element: (
+                            <SuspenseWrapper>
+                                <AuthCallbackPage />
                             </SuspenseWrapper>
                         ),
                     },

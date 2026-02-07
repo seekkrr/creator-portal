@@ -51,12 +51,15 @@ function createApiClient(): AxiosInstance {
         (response) => response,
         async (error: AxiosError<ApiError>) => {
             const status = error.response?.status;
+            console.log("[API] Response error:", status, error.response?.data);
 
             // Handle 401 - Unauthorized
             if (status === 401) {
+                console.warn("[API] 401 Unauthorized - Clearing tokens");
                 clearStoredTokens();
                 // Redirect to login if not already there
-                if (!window.location.pathname.includes("/login")) {
+                if (!window.location.pathname.includes("/login") &&
+                    !window.location.pathname.includes("/auth/callback")) {
                     window.location.href = "/creator/login";
                 }
             }

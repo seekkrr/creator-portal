@@ -12,18 +12,53 @@ export const authService = {
     /**
      * Initiate Google OAuth login for creators
      */
+    /**
+     * Initiate Google OAuth login for creators
+     */
     initiateGoogleLogin(): void {
+        const redirectUri = `${window.location.origin}/creator/auth/callback`;
         // Use full backend URL for OAuth to avoid CSRF issues
-        const authUrl = `${config.api.baseUrl}${API_ENDPOINTS.AUTH.GOOGLE}?is_creator=true&platform=web`;
+        const authUrl = `${config.api.baseUrl}${API_ENDPOINTS.AUTH.GOOGLE}?is_creator=true&platform=web&redirect_uri=${encodeURIComponent(redirectUri)}`;
         window.location.href = authUrl;
+    },
+
+    /**
+     * Exchange auth code for tokens
+     */
+    async exchangeAuthCode(code: string): Promise<AuthTokens> {
+        const response = await api.post<AuthTokens>("/api/auth/mobile/exchange", { code });
+        return response.data;
     },
 
     /**
      * Get current authenticated user
      */
     async getCurrentUser(): Promise<AuthMeResponse> {
-        const response = await api.get<AuthMeResponse>(API_ENDPOINTS.AUTH.ME);
-        return response.data;
+        // Get user_id from token or storage
+        const tokens = authStorage.getToken();
+        if (!tokens) throw new Error("No token found");
+
+        // Parse JWT to get user_id (simplistic parsing)
+        const parts = tokens.split('.');
+        if (parts.length < 2) throw new Error("Invalid token format");
+        const base64Url = parts[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function (c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+
+        const payload = JSON.parse(jsonPayload);
+        const userId = payload.sub || payload.user_id; // Adjust based on your JWT payload
+
+        const response = await api.get<any>(`/api/core/users/${userId}`);
+
+        // Transform response to match AuthMeResponse structure if needed, 
+        // or just return the user object if the UI expects that.
+        // The backend returns { user: {...}, contact: {...}, profile: {...} }
+        return {
+            user: response.data.user,
+            creator: undefined // You might want to fetch creator details separately or if included
+        };
     },
 
     /**

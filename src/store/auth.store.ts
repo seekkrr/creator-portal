@@ -60,8 +60,7 @@ export const useAuthStore = create<AuthStore>()(
             login: (tokens) => {
                 authService.storeTokens(tokens);
                 set({ isAuthenticated: true, isLoading: true });
-                // After storing tokens, fetch user data
-                get().checkAuth();
+                // Note: Caller is responsible for calling checkAuth() after login
             },
 
             logout: async () => {
