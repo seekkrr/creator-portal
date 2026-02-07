@@ -1,158 +1,223 @@
 import { Link } from "react-router-dom";
 import { useAuthStore } from "@store/auth.store";
-import { Button, Card } from "@components/ui";
-import { MapPin, Plus, Compass, Trophy } from "lucide-react";
+import { MapPin, Compass, Trophy } from "lucide-react";
+import { useState, useEffect } from "react";
 
-export function DashboardPage() {
-    const { user, creator } = useAuthStore();
+function StackedHeroCards() {
+    const [activeIndex, setActiveIndex] = useState(0);
+    const cards = [
+        { id: 1, src: "/hiker.svg", alt: "Adventure 1", color: "bg-neutral-100" },
+        { id: 2, src: "/login-bg.svg", alt: "Adventure 2", color: "bg-indigo-50" },
+        { id: 3, src: "/google_login_logo.svg", alt: "Adventure 3", color: "bg-green-50" },
+        { id: 4, src: "/seekkrr-logo.svg", alt: "Adventure 4", color: "bg-amber-50" },
+    ];
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setActiveIndex((prev) => (prev + 1) % cards.length);
+        }, 3000);
+
+        return () => clearInterval(interval);
+    }, [cards.length]);
 
     return (
-        <div className="animate-fade-in">
-            {/* Welcome Hero */}
-            <div className="relative overflow-hidden bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 rounded-2xl p-8 md:p-12 mb-8 text-white">
-                {/* Decorative background */}
-                <div className="absolute inset-0 opacity-10">
-                    <div className="absolute -top-24 -right-24 w-96 h-96 bg-white rounded-full blur-3xl" />
-                    <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-white rounded-full blur-3xl" />
-                </div>
+        <div className="relative w-full h-full perspective-1000">
+            {cards.map((card, index) => {
+                const position = (index - activeIndex + cards.length) % cards.length;
 
-                <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-                    <div className="flex-1">
-                        <h1 className="text-3xl md:text-4xl font-bold mb-3">
-                            Welcome back, {user?.first_name ?? "Creator"}! 👋
-                        </h1>
-                        <p className="text-lg text-white/80 max-w-xl">
-                            Ready to create your next adventure? Design immersive quests that
-                            inspire explorers to discover amazing places.
-                        </p>
-                        {creator && !creator.is_verified && (
-                            <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 bg-amber-500/20 rounded-full text-sm">
-                                <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
-                                Verification pending
-                            </div>
+                // Active Card (Front) -> Position 0
+                // Next Cards -> Position 1, 2
+                // Exiting Card (Previously Front) -> Position 3 (cards.length - 1)
+
+                const isExiting = position === cards.length - 1;
+                const isVisible = position <= 2 || isExiting;
+
+                if (!isVisible) return null;
+
+                let zIndex = 30 - position * 10;
+                let scale = 1 - position * 0.05;
+                let translateX = position * 20;
+                let rotate = position * 5;
+                let opacity = 1 - position * 0.15;
+
+                // Ghost Exit Animation for the card leaving the front
+                if (isExiting) {
+                    zIndex = 40; // Stay on top
+                    scale = 1.1; // Expand slightly
+                    translateX = 0;
+                    rotate = 0;
+                    opacity = 0; // Fade out completely
+                }
+
+                return (
+                    <div
+                        key={card.id}
+                        className={`absolute inset-0 rounded-[2.5rem] overflow-hidden shadow-2xl transition-all duration-1000 ease-in-out border-4 border-white ${card.color}`}
+                        style={{
+                            zIndex,
+                            transform: `translateX(${translateX}px) rotate(${rotate}deg) scale(${scale})`,
+                            opacity,
+                        }}
+                    >
+                        <img
+                            src={card.src}
+                            alt={card.alt}
+                            className="w-full h-full object-cover"
+                        />
+                        {position > 0 && !isExiting && (
+                            <div className="absolute inset-0 bg-white/20 backdrop-blur-[1px]" />
                         )}
                     </div>
+                );
+            })}
+        </div>
+    );
+}
 
-                    <Link to="/creator/quest/create">
-                        <Button
-                            size="lg"
-                            className="bg-white text-indigo-700 hover:bg-neutral-100 shadow-lg"
-                            leftIcon={<Plus className="w-5 h-5" />}
-                        >
-                            Create Quest
-                        </Button>
-                    </Link>
+export function DashboardPage() {
+    const { user } = useAuthStore();
+
+    return (
+        <div className="animate-fade-in font-sans space-y-12 lg:space-y-32">
+            {/* Hero Section */}
+            <div className="flex flex-col lg:flex-row gap-8 lg:gap-24 items-center justify-between mt-4 lg:mt-8">
+                <div className="space-y-6 lg:space-y-10 max-w-2xl flex-1">
+                    <h1 className="text-4xl lg:text-7xl font-light text-neutral-900 leading-tight tracking-tight">
+                        Welcome to SeekKrr, {user?.first_name ? `${user.first_name}` : "Creator"}
+                    </h1>
+
+                    <div className="space-y-4 lg:space-y-6 text-lg lg:text-xl text-neutral-600 leading-relaxed font-normal max-w-xl">
+                        <p>
+                            SeekKrr is a local discovery platform giving Indian Influencers and locals
+                            a chance to monetize their experience and expertize of exploration.
+                        </p>
+                        <p>
+                            So you travel to your heart's content and we give your audience a platform
+                            to experience your journey.
+                        </p>
+                    </div>
+
+                    <div className="pt-2 lg:pt-4">
+                        <p className="text-lg lg:text-xl font-medium text-neutral-900 mb-4 lg:mb-8">
+                            What's the wait then, start creating quests
+                        </p>
+                        <Link to="/creator/quest/create">
+                            <button className="px-8 py-3 lg:px-10 lg:py-4 bg-white border-2 border-neutral-900 text-neutral-900 font-normal rounded-full hover:bg-neutral-900 hover:text-white transition-all transform hover:scale-105 duration-200 text-lg lg:text-xl tracking-wide">
+                                Create Quest
+                            </button>
+                        </Link>
+                    </div>
                 </div>
 
-                {/* Hero Image Placeholder */}
-                <div className="absolute right-8 bottom-0 hidden lg:block">
-                    <div className="relative w-64 h-48 bg-white/10 rounded-t-2xl backdrop-blur">
-                        <img
-                            src="https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=400&h=300&fit=crop"
-                            alt="Adventure landscape"
-                            className="w-full h-full object-cover rounded-t-2xl opacity-80"
-                            loading="lazy"
-                        />
+                <div className="relative h-[300px] w-full max-w-[300px] lg:h-[500px] lg:max-w-[500px] hidden md:block flex-shrink-0 perspective-1000">
+                    <StackedHeroCards />
+                </div>
+            </div>
+
+            {/* Quick Stats - Modernized */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-white p-5 rounded-2xl border border-neutral-100 shadow-sm hover:shadow-lg hover:border-indigo-100 transition-all duration-300 group flex items-center gap-4">
+                    <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 group-hover:scale-110 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300 shadow-sm flex-shrink-0">
+                        <MapPin className="w-6 h-6" />
+                    </div>
+                    <div>
+                        <p className="text-md font-medium text-neutral-500">Quests Created</p>
+                        <p className="text-2xl font-bold text-neutral-900 mt-1">0</p>
+                    </div>
+                </div>
+
+                <div className="bg-white p-5 rounded-2xl border border-neutral-100 shadow-sm hover:shadow-lg hover:border-green-100 transition-all duration-300 group flex items-center gap-4">
+                    <div className="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center text-green-600 group-hover:scale-110 group-hover:bg-green-600 group-hover:text-white transition-all duration-300 shadow-sm flex-shrink-0">
+                        <Compass className="w-6 h-6" />
+                    </div>
+                    <div>
+                        <p className="text-md font-medium text-neutral-500">Active Explorers</p>
+                        <p className="text-2xl font-bold text-neutral-900 mt-1">0</p>
+                    </div>
+                </div>
+
+                <div className="bg-white p-5 rounded-2xl border border-neutral-100 shadow-sm hover:shadow-lg hover:border-amber-100 transition-all duration-300 group flex items-center gap-4">
+                    <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600 group-hover:scale-110 group-hover:bg-amber-600 group-hover:text-white transition-all duration-300 shadow-sm flex-shrink-0">
+                        <Trophy className="w-6 h-6" />
+                    </div>
+                    <div>
+                        <p className="text-md font-medium text-neutral-500">Completions</p>
+                        <p className="text-2xl font-bold text-neutral-900 mt-1">0</p>
                     </div>
                 </div>
             </div>
 
-            {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <Card hover className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center">
-                        <MapPin className="w-6 h-6 text-indigo-600" />
-                    </div>
-                    <div>
-                        <p className="text-2xl font-bold text-neutral-900">0</p>
-                        <p className="text-sm text-neutral-500">Quests Created</p>
-                    </div>
-                </Card>
-
-                <Card hover className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
-                        <Compass className="w-6 h-6 text-green-600" />
-                    </div>
-                    <div>
-                        <p className="text-2xl font-bold text-neutral-900">0</p>
-                        <p className="text-sm text-neutral-500">Active Explorers</p>
-                    </div>
-                </Card>
-
-                <Card hover className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
-                        <Trophy className="w-6 h-6 text-amber-600" />
-                    </div>
-                    <div>
-                        <p className="text-2xl font-bold text-neutral-900">0</p>
-                        <p className="text-sm text-neutral-500">Completions</p>
-                    </div>
-                </Card>
-            </div>
-
-            {/* Getting Started Section */}
-            <Card padding="lg">
-                <h2 className="text-xl font-semibold text-neutral-900 mb-4">
+            {/* Getting Started - Modernized */}
+            <div>
+                <h2 className="text-2xl font-medium text-neutral-900 mb-6 tracking-tight">
                     Getting Started
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="flex items-start gap-4 p-4 bg-neutral-50 rounded-xl">
-                        <div className="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-medium">
-                            1
-                        </div>
-                        <div>
-                            <h3 className="font-medium text-neutral-900 mb-1">
-                                Create Your First Quest
-                            </h3>
-                            <p className="text-sm text-neutral-600">
-                                Design an adventure with locations, challenges, and rewards for explorers to discover.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="flex items-start gap-4 p-4 bg-neutral-50 rounded-xl">
-                        <div className="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-medium">
-                            2
-                        </div>
-                        <div>
-                            <h3 className="font-medium text-neutral-900 mb-1">
-                                Add Waypoints
-                            </h3>
-                            <p className="text-sm text-neutral-600">
-                                Mark interesting locations on the map that explorers will visit during their journey.
-                            </p>
+                    <div className="group p-6 bg-white rounded-3xl border border-neutral-100 hover:border-indigo-100 hover:shadow-xl transition-all duration-300">
+                        <div className="flex items-start gap-5">
+                            <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-lg shadow-indigo-200 shadow-lg group-hover:scale-110 transition-transform flex-shrink-0">
+                                1
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-semibold text-neutral-900 mb-2">
+                                    Create Your First Quest
+                                </h3>
+                                <p className="text-sm text-neutral-600 leading-relaxed">
+                                    Design an adventure with locations, challenges, and rewards for explorers to discover.
+                                </p>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="flex items-start gap-4 p-4 bg-neutral-50 rounded-xl">
-                        <div className="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-medium">
-                            3
-                        </div>
-                        <div>
-                            <h3 className="font-medium text-neutral-900 mb-1">
-                                Publish & Share
-                            </h3>
-                            <p className="text-sm text-neutral-600">
-                                Once your quest is ready, publish it for adventurers around the world to enjoy.
-                            </p>
+                    <div className="group p-6 bg-white rounded-3xl border border-neutral-100 hover:border-indigo-100 hover:shadow-xl transition-all duration-300">
+                        <div className="flex items-start gap-5">
+                            <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-lg shadow-indigo-200 shadow-lg group-hover:scale-110 transition-transform flex-shrink-0">
+                                2
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-semibold text-neutral-900 mb-2">
+                                    Add Waypoints
+                                </h3>
+                                <p className="text-sm text-neutral-600 leading-relaxed">
+                                    Mark interesting locations on the map that explorers will visit during their journey.
+                                </p>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="flex items-start gap-4 p-4 bg-neutral-50 rounded-xl">
-                        <div className="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-medium">
-                            4
+                    <div className="group p-6 bg-white rounded-3xl border border-neutral-100 hover:border-indigo-100 hover:shadow-xl transition-all duration-300">
+                        <div className="flex items-start gap-5">
+                            <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-lg shadow-indigo-200 shadow-lg group-hover:scale-110 transition-transform flex-shrink-0">
+                                3
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-semibold text-neutral-900 mb-2">
+                                    Publish & Share
+                                </h3>
+                                <p className="text-sm text-neutral-600 leading-relaxed">
+                                    Once your quest is ready, publish it for adventurers around the world to enjoy.
+                                </p>
+                            </div>
                         </div>
-                        <div>
-                            <h3 className="font-medium text-neutral-900 mb-1">
-                                Earn Rewards
-                            </h3>
-                            <p className="text-sm text-neutral-600">
-                                Get recognized and earn rewards as more explorers complete your quests.
-                            </p>
+                    </div>
+
+                    <div className="group p-6 bg-white rounded-3xl border border-neutral-100 hover:border-indigo-100 hover:shadow-xl transition-all duration-300">
+                        <div className="flex items-start gap-5">
+                            <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-lg shadow-indigo-200 shadow-lg group-hover:scale-110 transition-transform flex-shrink-0">
+                                4
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-semibold text-neutral-900 mb-2">
+                                    Earn Rewards
+                                </h3>
+                                <p className="text-sm text-neutral-600 leading-relaxed">
+                                    Get recognized and earn rewards as more explorers complete your quests.
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </Card>
+            </div>
         </div>
     );
 }
