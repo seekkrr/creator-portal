@@ -56,7 +56,17 @@ export const cloudinaryService = {
                         reject(new Error("Failed to parse upload response"));
                     }
                 } else {
-                    reject(new Error(`Upload failed with status ${xhr.status}`));
+                    let errorMessage = `Upload failed with status ${xhr.status}`;
+                    try {
+                        const errorResponse = JSON.parse(xhr.responseText);
+                        if (errorResponse.error && errorResponse.error.message) {
+                            errorMessage = errorResponse.error.message;
+                        }
+                    } catch (e) {
+                        // ignore parse error
+                    }
+                    console.error("Cloudinary error:", xhr.responseText);
+                    reject(new Error(errorMessage));
                 }
             });
 
