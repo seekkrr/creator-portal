@@ -35,6 +35,14 @@ export function AuthCallbackPage() {
                 return;
             }
 
+            // Verify CSRF state parameter to prevent OAuth state injection attacks
+            const state = searchParams.get("state");
+            if (!authService.verifyOAuthState(state)) {
+                setErrorState("Security validation failed");
+                toast.error("Invalid login attempt. Please try again.");
+                return;
+            }
+
             // Mark this code as being processed IMMEDIATELY to prevent race conditions
             sessionStorage.setItem(PROCESSED_CODE_KEY, code);
 
@@ -57,10 +65,11 @@ export function AuthCallbackPage() {
                     setErrorState("Failed to verify user session");
                     toast.error("Failed to load user profile.");
                 }
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const errorMessage = err instanceof Error ? err.message : "Authentication failed";
                 // Clear the processed code marker on failure so user can retry
                 sessionStorage.removeItem(PROCESSED_CODE_KEY);
-                setErrorState(err.message || "Authentication failed");
+                setErrorState(errorMessage);
                 toast.error("Authentication failed. Please try again.");
             }
         };
