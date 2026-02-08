@@ -119,6 +119,14 @@ export function CreateQuestPage() {
                             coordinates: [wp.longitude, wp.latitude],
                         },
                     })),
+                    // Route geometry - LineString of all coordinates
+                    route_geometry: data.waypoints.length > 0 ? {
+                        type: "LineString" as const,
+                        coordinates: [
+                            startCoords,
+                            ...data.waypoints.map(wp => [wp.longitude, wp.latitude]),
+                        ],
+                    } : undefined,
                     map_data: {
                         zoom_level: 14,
                         map_style: "standard",
@@ -127,12 +135,17 @@ export function CreateQuestPage() {
                 media: {
                     cloudinary_assets: [],
                     source_url: data.sourceUrl,
+                    mapbox_reference: {
+                        style_id: "mapbox/standard",
+                    },
                 },
                 steps: data.waypoints.map((wp, index) => ({
                     title: wp.place_name ?? `Step ${index + 1}`,
                     description: `Visit ${wp.place_name ?? `location ${index + 1}`}`,
                 })),
                 status: "Draft",
+                price: 0, // Free for draft quests
+                currency: "INR",
                 booking_enabled: false,
             };
 

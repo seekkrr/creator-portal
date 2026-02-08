@@ -158,6 +158,8 @@ export interface CreateQuestPayload {
         difficulty: QuestDifficulty;
         duration_minutes?: number;
         keywords?: string[];
+        max_points?: number;
+        hints_allowed?: number;
     };
     location: {
         region: string;
@@ -176,6 +178,10 @@ export interface CreateQuestPayload {
                 coordinates: number[];
             };
         }>;
+        route_geometry?: {
+            type: "LineString";
+            coordinates: number[][];
+        };
         map_data: {
             zoom_level: number;
             map_style: string;
@@ -184,12 +190,18 @@ export interface CreateQuestPayload {
     media: {
         cloudinary_assets?: CloudinaryAsset[];
         source_url?: string;
+        mapbox_reference?: {
+            style_id?: string;
+            route_id?: string;
+        };
     };
     steps: Array<{
         title: string;
         description: string;
     }>;
     status?: QuestStatus;
+    price?: number;
+    currency?: string;
     booking_enabled?: boolean;
 }
 

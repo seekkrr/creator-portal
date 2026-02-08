@@ -1,6 +1,6 @@
 import { ChevronLeft, Check, MapPin, Clock, AlertCircle } from "lucide-react";
 import { Button, Card, Badge } from "@components/ui";
-import { MapComponent } from "@features/map";
+import { WaypointMapComponent } from "@features/map";
 import type { CreateQuestFormData, QuestDifficulty } from "@/types";
 
 interface ReviewStepProps {
@@ -18,7 +18,12 @@ const difficultyColors: Record<QuestDifficulty, "success" | "info" | "warning" |
 };
 
 export function ReviewStep({ formData, onBack, onSubmit, isSubmitting }: ReviewStepProps) {
-    const { title, description, difficulty, duration, waypoints = [] } = formData;
+    const { title, description, difficulty, duration, waypoints = [], latitude, longitude } = formData;
+
+    // Calculate map center from first waypoint or location step
+    const mapCenter = waypoints.length > 0 && waypoints[0]
+        ? { lng: waypoints[0].longitude, lat: waypoints[0].latitude }
+        : { lng: longitude ?? 77.5946, lat: latitude ?? 12.9716 };
 
     return (
         <div className="space-y-6">
@@ -103,10 +108,13 @@ export function ReviewStep({ formData, onBack, onSubmit, isSubmitting }: ReviewS
                         Quest Route Preview
                     </label>
                     {waypoints.length > 0 ? (
-                        <MapComponent
+                        <WaypointMapComponent
                             height="400px"
-                            markers={waypoints}
-                            interactive={false}
+                            center={mapCenter}
+                            waypoints={waypoints}
+                            onWaypointAdd={() => { }} // No-op for read-only
+                            onWaypointUpdate={() => { }} // No-op for read-only
+                            onWaypointRemove={() => { }} // No-op for read-only
                             className="border border-neutral-200"
                         />
                     ) : (

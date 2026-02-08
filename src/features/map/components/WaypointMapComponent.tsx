@@ -482,24 +482,64 @@ export const WaypointMapComponent = memo(function WaypointMapComponent({
     // Update markers and route when waypoints change
     useEffect(() => {
         const map = mapRef.current;
-        if (!map) return;
+        if (!map || !map.isStyleLoaded()) return;
 
-        const renderMarkersAndRoute = () => {
-            addMarkers();
-            updateRouteLine();
-        };
+        // Immediately update markers and route
+        clearMarkers();
 
-        if (map.isStyleLoaded()) {
-            renderMarkersAndRoute();
-        } else {
-            // Wait for style to load before rendering
-            map.once('style.load', renderMarkersAndRoute);
-        }
+        const wps = waypointsRef.current;
+        wps.forEach((wp, index) => {
+            const el = createMarkerElement(index);
 
-        return () => {
-            map.off('style.load', renderMarkersAndRoute);
-        };
-    }, [waypoints, addMarkers, updateRouteLine]);
+            const marker = new mapboxgl.Marker({
+                element: el,
+                anchor: 'bottom',
+                draggable: true,
+            })
+                .setLngLat([wp.longitude, wp.latitude])
+                .addTo(map);
+
+            // Create popup for hover
+            const popup = new mapboxgl.Popup({
+                offset: 25,
+                closeButton: false,
+                closeOnClick: false,
+            }).setHTML(`
+                <div class="p-2">
+                    <p class="font-semibold text-sm">${wp.place_name || 'Waypoint ' + (index + 1)}</p>
+                    <p class="text-xs text-gray-500">${wp.latitude.toFixed(5)}, ${wp.longitude.toFixed(5)}</p>
+                    <p class="text-xs text-indigo-600 mt-1">Drag to move • Right-click to remove</p>
+                </div>
+            `);
+
+            el.addEventListener('mouseenter', () => {
+                popup.setLngLat([wp.longitude, wp.latitude]).addTo(map);
+            });
+            el.addEventListener('mouseleave', () => {
+                popup.remove();
+            });
+
+            marker.on('dragend', () => {
+                const lngLat = marker.getLngLat();
+                onWaypointUpdateRef.current?.(index, {
+                    latitude: lngLat.lat,
+                    longitude: lngLat.lng,
+                    place_name: wp.place_name,
+                });
+            });
+
+            el.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                onWaypointRemoveRef.current?.(index);
+            });
+
+            markersRef.current.push(marker);
+            popupsRef.current.push(popup);
+        });
+
+        // Update route immediately after markers
+        updateRouteLine();
+    }, [waypoints]); // Depend on full array for immediate updates
 
     // Animate to show all waypoints when waypoints added OR removed
     useEffect(() => {
