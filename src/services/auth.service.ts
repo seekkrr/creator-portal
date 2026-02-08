@@ -1,6 +1,7 @@
 import { api, authStorage } from "./api";
 import { API_ENDPOINTS } from "@config/api";
 import { config } from "@config/env";
+import { generateStateToken } from "@/utils/security";
 import type { AuthTokens, User, Creator } from "@/types";
 
 export interface AuthMeResponse {
@@ -8,18 +9,37 @@ export interface AuthMeResponse {
     creator?: Creator;
 }
 
+// Session storage key for CSRF state
+const OAUTH_STATE_KEY = 'oauth_state';
+
 export const authService = {
     /**
      * Initiate Google OAuth login for creators
-     */
-    /**
-     * Initiate Google OAuth login for creators
+     * Uses state parameter for CSRF protection
      */
     initiateGoogleLogin(): void {
         const redirectUri = `${window.location.origin}/creator/auth/callback`;
-        // Use full backend URL for OAuth to avoid CSRF issues
-        const authUrl = `${config.api.baseUrl}${API_ENDPOINTS.AUTH.GOOGLE}?is_creator=true&platform=web&redirect_uri=${encodeURIComponent(redirectUri)}`;
+
+        // Generate and store CSRF state token
+        const state = generateStateToken();
+        sessionStorage.setItem(OAUTH_STATE_KEY, state);
+
+        // Include state parameter for CSRF protection
+        const authUrl = `${config.api.baseUrl}${API_ENDPOINTS.AUTH.GOOGLE}?is_creator=true&platform=web&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(state)}`;
         window.location.href = authUrl;
+    },
+
+    /**
+     * Verify OAuth state parameter to prevent CSRF attacks
+     */
+    verifyOAuthState(receivedState: string | null): boolean {
+        const storedState = sessionStorage.getItem(OAUTH_STATE_KEY);
+        sessionStorage.removeItem(OAUTH_STATE_KEY); // Clean up
+
+        if (!storedState || !receivedState) {
+            return false;
+        }
+        return storedState === receivedState;
     },
 
     /**
@@ -51,7 +71,7 @@ export const authService = {
         const payload = JSON.parse(jsonPayload);
         const userId = payload.sub || payload.user_id; // Adjust based on your JWT payload
 
-        const response = await api.get<any>(`/api/core/users/${userId}`);
+        const response = await api.get<{ user: User }>(`/api/core/users/${userId}`);
 
         // Transform response to match AuthMeResponse structure if needed, 
         // or just return the user object if the UI expects that.

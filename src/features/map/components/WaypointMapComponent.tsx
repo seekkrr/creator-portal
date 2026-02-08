@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback, memo } from "react";
 import mapboxgl from "mapbox-gl";
 import { config } from "@config/env";
+import { escapeHtml } from "@/utils/security";
 import type { QuestLocation } from "@/types";
 
 // Set Mapbox token
@@ -244,7 +245,7 @@ export const WaypointMapComponent = memo(function WaypointMapComponent({
                 closeOnClick: false,
             }).setHTML(`
                 <div class="p-2">
-                    <p class="font-semibold text-sm">${wp.place_name || 'Waypoint ' + (index + 1)}</p>
+                    <p class="font-semibold text-sm">${escapeHtml(wp.place_name) || 'Waypoint ' + (index + 1)}</p>
                     <p class="text-xs text-gray-500">${wp.latitude.toFixed(5)}, ${wp.longitude.toFixed(5)}</p>
                     <p class="text-xs text-indigo-600 mt-1">Drag to move • Right-click to remove</p>
                 </div>
@@ -506,7 +507,7 @@ export const WaypointMapComponent = memo(function WaypointMapComponent({
                 closeOnClick: false,
             }).setHTML(`
                 <div class="p-2">
-                    <p class="font-semibold text-sm">${wp.place_name || 'Waypoint ' + (index + 1)}</p>
+                    <p class="font-semibold text-sm">${escapeHtml(wp.place_name) || 'Waypoint ' + (index + 1)}</p>
                     <p class="text-xs text-gray-500">${wp.latitude.toFixed(5)}, ${wp.longitude.toFixed(5)}</p>
                     <p class="text-xs text-indigo-600 mt-1">Drag to move • Right-click to remove</p>
                 </div>

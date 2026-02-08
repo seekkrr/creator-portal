@@ -3,6 +3,7 @@ import tsPlugin from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
 import reactHooksPlugin from "eslint-plugin-react-hooks";
 import reactRefreshPlugin from "eslint-plugin-react-refresh";
+import globals from "globals";
 
 export default [
     js.configs.recommended,
@@ -18,38 +19,7 @@ export default [
                 },
             },
             globals: {
-                window: "readonly",
-                document: "readonly",
-                navigator: "readonly",
-                console: "readonly",
-                setTimeout: "readonly",
-                clearTimeout: "readonly",
-                setInterval: "readonly",
-                clearInterval: "readonly",
-                fetch: "readonly",
-                URL: "readonly",
-                URLSearchParams: "readonly",
-                FormData: "readonly",
-                File: "readonly",
-                Blob: "readonly",
-                localStorage: "readonly",
-                sessionStorage: "readonly",
-                HTMLElement: "readonly",
-                HTMLInputElement: "readonly",
-                HTMLDivElement: "readonly",
-                Element: "readonly",
-                Event: "readonly",
-                MouseEvent: "readonly",
-                KeyboardEvent: "readonly",
-                CustomEvent: "readonly",
-                ResizeObserver: "readonly",
-                IntersectionObserver: "readonly",
-                MutationObserver: "readonly",
-                requestAnimationFrame: "readonly",
-                cancelAnimationFrame: "readonly",
-                performance: "readonly",
-                queueMicrotask: "readonly",
-                structuredClone: "readonly",
+                ...globals.browser,
             },
         },
         plugins: {

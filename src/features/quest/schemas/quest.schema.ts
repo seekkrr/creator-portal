@@ -14,15 +14,23 @@ const locationStepBaseSchema = z.object({
 export const locationStepSchema = locationStepBaseSchema.refine(
     (data) => {
         if (data.locationType === "city") {
-            return data.city && data.city.trim().length >= 2;
+            // Require city name AND valid coordinates
+            return (
+                !!data.city &&
+                data.city.trim().length >= 2 &&
+                typeof data.latitude === "number" &&
+                typeof data.longitude === "number" &&
+                !isNaN(data.latitude) &&
+                !isNaN(data.longitude)
+            );
         }
         if (data.locationType === "url") {
-            return data.sourceUrl && data.sourceUrl.trim().length > 0;
+            return !!data.sourceUrl && data.sourceUrl.trim().length > 0;
         }
         return false;
     },
     {
-        message: "Please provide a city name or a valid URL",
+        message: "A valid city with coordinates or a source URL is required.",
         path: ["locationType"],
     }
 );

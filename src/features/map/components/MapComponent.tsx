@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import mapboxgl from "mapbox-gl";
 import { config } from "@config/env";
+import { escapeHtml } from "@/utils/security";
 import type { QuestLocation } from "@/types";
 
 // Set Mapbox token
@@ -107,12 +108,12 @@ export function MapComponent({
                 .setLngLat([location.longitude, location.latitude])
                 .addTo(mapRef.current!);
 
-            // Add popup with location info
+            // Add popup with location info - escape HTML to prevent XSS
             const popup = new mapboxgl.Popup({ offset: 25, closeButton: false })
                 .setHTML(`
                     <div class="p-2">
-                        <p class="font-semibold text-sm">${location.place_name || 'Location ' + (index + 1)}</p>
-                        ${location.address ? `<p class="text-xs text-gray-500">${location.address}</p>` : ''}
+                        <p class="font-semibold text-sm">${escapeHtml(location.place_name) || 'Location ' + (index + 1)}</p>
+                        ${location.address ? `<p class="text-xs text-gray-500">${escapeHtml(location.address)}</p>` : ''}
                     </div>
                 `);
             marker.setPopup(popup);

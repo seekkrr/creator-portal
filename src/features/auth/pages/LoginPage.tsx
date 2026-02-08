@@ -38,8 +38,8 @@ export function LoginPage() {
                             onClick={handleGoogleLogin}
                             className="w-full bg-white text-neutral-700 border border-neutral-300 hover:bg-neutral-50 hover:border-neutral-400 active:bg-neutral-100 transition-all duration-200 h-12 lg:h-[4em] rounded-full flex items-center justify-center gap-3 lg:gap-4 group hover:shadow-sm px-4"
                         >
-                            <img src="/google_login_logo.svg" alt="" className="w-5 h-5 lg:w-8 lg:h-8 flex-shrink-0" />
-                            <span className="font-medium text-sm lg:text-[1.25em] whitespace-nowrap overflow-hidden text-ellipsis" style={{ fontFamily: 'Roboto, sans-serif' }}>Sign in with Google</span>
+                            <img src="/google_logo.svg" alt="" className="w-5 h-5 lg:w-8 lg:h-8 flex-shrink-0" />
+                            <span className="font-medium text-sm lg:text-[1.25em] whitespace-nowrap overflow-hidden text-ellipsis font-['Roboto',sans-serif]">Sign in with Google</span>
                         </button>
                     </div>
                 </div>
