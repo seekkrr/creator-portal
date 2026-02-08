@@ -59,7 +59,9 @@ export function ContactUsPage() {
         const validationResult = contactFormSchema.safeParse(formData);
 
         if (!validationResult.success) {
-            toast.error(validationResult.error.errors[0].message);
+            toast.error(
+                validationResult.error?.errors?.[0]?.message || "Invalid input."
+            );
             return;
         }
 
