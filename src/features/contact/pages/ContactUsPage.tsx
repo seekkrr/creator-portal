@@ -3,6 +3,7 @@ import { useState, useEffect, type FormEvent, type ChangeEvent } from "react";
 import { api } from "@/services/api";
 import { API_ENDPOINTS } from "@/config/api";
 import { toast } from "sonner";
+import { z } from "zod";
 import { Mail, MessageSquare, Send, User, Phone, CheckCircle2 } from "lucide-react";
 
 interface ContactFormData {
@@ -41,26 +42,31 @@ export function ContactUsPage() {
         }));
     };
 
-    const validateForm = () => {
-        if (!formData.name.trim()) return false;
-        if (!formData.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) return false;
-        if (formData.mobile.trim() && !/^\d{10}$/.test(formData.mobile.trim())) return false;
-        if (!formData.message.trim()) return false;
-        return true;
-    };
-
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
-        if (!validateForm()) {
-            toast.error("Please fill in all required fields correctly. Mobile number must be 10 digits if provided.");
+
+        // Zod schema for validation
+        const contactFormSchema = z.object({
+            name: z.string().trim().min(1, { message: "Full name is required." }),
+            email: z.string().trim().email({ message: "Please enter a valid email address." }),
+            // Mobile is optional, but if present must be 10 digits
+            mobile: z.string().trim().optional().refine((val) => !val || /^\d{10}$/.test(val), {
+                message: "Mobile number must be 10 digits.",
+            }),
+            message: z.string().trim().min(1, { message: "Message cannot be empty." }),
+        });
+
+        const validationResult = contactFormSchema.safeParse(formData);
+
+        if (!validationResult.success) {
+            toast.error(validationResult.error.errors[0].message);
             return;
         }
 
         setIsSubmitting(true);
         try {
             // Using the centralized API endpoints
-            // Adding trailing slash as server returns 308 without it
-            await api.post(`${API_ENDPOINTS.QUERIES.SUBMIT}`, formData);
+            await api.post(`${API_ENDPOINTS.QUERIES.SUBMIT}`, validationResult.data);
             setIsSuccess(true);
             sessionStorage.setItem(SESSION_KEY, "true");
             toast.success("Message sent successfully!");
