@@ -2,6 +2,7 @@ import { Outlet, Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@store/auth.store";
 import { LogOut, Menu, X } from "lucide-react";
 import { useState } from "react";
+import { Footer } from "@components/ui";
 
 export function DashboardLayout() {
     const { logout } = useAuthStore();
@@ -31,18 +32,18 @@ export function DashboardLayout() {
                             >
                                 Terms and Conditions
                             </a>
-                            <a
-                                href="#"
+                            <Link
+                                to="/privacy-policy"
                                 className="text-base font-normal text-neutral-600 hover:text-neutral-900 transition-colors"
                             >
                                 Privacy Policy
-                            </a>
-                            <a
-                                href="#"
+                            </Link>
+                            <Link
+                                to="/contact"
                                 className="text-base font-normal text-neutral-600 hover:text-neutral-900 transition-colors"
                             >
                                 Contact Us
-                            </a>
+                            </Link>
                         </nav>
 
                         {/* User Menu */}
@@ -87,18 +88,18 @@ export function DashboardLayout() {
                             >
                                 Terms and Conditions
                             </a>
-                            <a
-                                href="#"
+                            <Link
+                                to="/privacy-policy"
                                 className="block text-base font-normal text-neutral-600 hover:text-neutral-900"
                             >
                                 Privacy Policy
-                            </a>
-                            <a
-                                href="#"
+                            </Link>
+                            <Link
+                                to="/contact"
                                 className="block text-base font-normal text-neutral-600 hover:text-neutral-900"
                             >
                                 Contact Us
-                            </a>
+                            </Link>
                             <div className="pt-4 border-t border-neutral-100">
                                 <button
                                     onClick={handleLogout}
@@ -119,13 +120,8 @@ export function DashboardLayout() {
             </main>
 
             {/* Footer */}
-            <footer className="bg-white border-t border-neutral-200 mt-auto">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                    <p className="text-sm text-neutral-500 text-center">
-                        © {new Date().getFullYear()} SeekKrr. All rights reserved.
-                    </p>
-                </div>
-            </footer>
+            {/* Footer */}
+            <Footer />
         </div>
     );
 }
