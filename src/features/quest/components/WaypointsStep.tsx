@@ -115,7 +115,8 @@ export function WaypointsStep({ defaultValues, initialCenter, onNext, onBack }: 
                     Create Your Quest Route
                 </h2>
                 <p className="text-neutral-600">
-                    Add waypoints to define the path users will follow. Drag to reorder, right-click to remove.
+                    Add waypoints to define the path users will follow. 
+                    <span className="mx-2 font-medium">Drag to reorder, right-click to remove.</span>
                 </p>
             </div>
 

@@ -7,22 +7,25 @@ import { questService } from "@services/quest.service";
 import { LocationStep } from "../components/LocationStep";
 import { DetailsStep } from "../components/DetailsStep";
 import { WaypointsStep } from "../components/WaypointsStep";
+import { WaypointDetailsStep } from "../components/WaypointDetailsStep";
 import { ReviewStep } from "../components/ReviewStep";
 import {
     type LocationStepData,
     type DetailsStepData,
     type WaypointsStepData,
+    type WaypointDetailsStepData,
     defaultFormValues,
 } from "../schemas/quest.schema";
 import type { CreateQuestFormData, CreateQuestPayload } from "@/types";
 
-type Step = 1 | 2 | 3 | 4;
+type Step = 1 | 2 | 3 | 4 | 5;
 
 const stepLabels: Record<Step, string> = {
     1: "Location",
     2: "Details",
     3: "Waypoints",
-    4: "Review",
+    4: "Waypoint Details",
+    5: "Review",
 };
 
 const SESSION_STORAGE_KEY = "quest_creation_form";
@@ -113,7 +116,7 @@ export function CreateQuestPage() {
                         coordinates: endCoords,
                     },
                     route_waypoints: data.waypoints.map((wp, index) => ({
-                        order: index + 1,
+                        order: index,
                         location: {
                             type: "Point" as const,
                             coordinates: [wp.longitude, wp.latitude],
@@ -133,16 +136,23 @@ export function CreateQuestPage() {
                     },
                 },
                 media: {
-                    cloudinary_assets: [],
-                    source_url: data.sourceUrl,
+                    cloudinary_assets: data.galleryImages || [],
                     mapbox_reference: {
                         style_id: "mapbox/standard",
                     },
+                    reel_url: data.sourceUrl,
                 },
-                steps: data.waypoints.map((wp, index) => ({
-                    title: wp.place_name ?? `Step ${index + 1}`,
-                    description: `Visit ${wp.place_name ?? `location ${index + 1}`}`,
-                })),
+                steps: data.waypoints.map((wp, index) => {
+                    const details = data.waypointDetails?.[index];
+                    return {
+                        order: index,
+                        title: wp.place_name ?? `Step ${index + 1}`,
+                        description: details?.description ?? `Visit ${wp.place_name ?? `location ${index + 1}`}`,
+                        how_to_reach: details?.howToReach,
+                        waypoint_order: index,
+                        cloudinary_assets: details?.images || [],
+                    };
+                }),
                 status: "Draft",
                 price: 0, // Free for draft quests
                 currency: "INR",
@@ -177,8 +187,13 @@ export function CreateQuestPage() {
         setCurrentStep(4);
     };
 
-    const handleBack = (data?: WaypointsStepData) => {
-        // Save waypoints data if provided (when coming back from WaypointsStep)
+    const handleStep4Next = (data: WaypointDetailsStepData) => {
+        setFormData((prev) => ({ ...prev, ...data }));
+        setCurrentStep(5);
+    }
+
+    const handleBack = (data?: WaypointsStepData | WaypointDetailsStepData) => {
+        // Save data if provided
         if (data) {
             setFormData((prev) => ({ ...prev, ...data }));
         }
@@ -194,10 +209,10 @@ export function CreateQuestPage() {
             {/* Progress Steps */}
             <div className="mb-8">
                 <div className="flex items-center justify-between">
-                    {([1, 2, 3, 4] as const).map((step) => (
+                    {([1, 2, 3, 4, 5] as const).map((step) => (
                         <div
                             key={step}
-                            className={`flex items-center ${step < 4 ? "flex-1" : ""}`}
+                            className={`flex items-center ${step < 5 ? "flex-1" : ""}`}
                         >
                             <div className="flex flex-col items-center">
                                 <div
@@ -221,7 +236,7 @@ export function CreateQuestPage() {
                                     {stepLabels[step]}
                                 </span>
                             </div>
-                            {step < 4 && (
+                            {step < 5 && (
                                 <div
                                     className={`flex-1 h-1 mx-4 rounded ${step < currentStep ? "bg-green-500" : "bg-neutral-200"
                                         }`}
@@ -257,6 +272,13 @@ export function CreateQuestPage() {
                     />
                 )}
                 {currentStep === 4 && (
+                    <WaypointDetailsStep
+                        defaultValues={formData}
+                        onNext={handleStep4Next}
+                        onBack={handleBack as any}
+                    />
+                )}
+                {currentStep === 5 && (
                     <ReviewStep
                         formData={formData}
                         onBack={handleBack}

@@ -50,6 +50,8 @@ export interface CloudinaryAsset {
     resource_type?: string;
     width?: number;
     height?: number;
+    alt_text?: string;
+    is_thumbnail?: boolean;
 }
 
 export interface CloudinaryUploadResponse {
@@ -147,6 +149,14 @@ export interface CreateQuestFormData {
 
     // Step 3: Waypoints
     waypoints: QuestLocation[];
+
+    // Step 4: Waypoint Details
+    waypointDetails: Array<{
+        howToReach: string;
+        description: string;
+        images?: CloudinaryAsset[];
+    }>;
+    galleryImages: CloudinaryAsset[];
 }
 
 // Backend expects this specific structure
@@ -154,29 +164,35 @@ export interface CreateQuestPayload {
     metadata: {
         title: string;
         description: string[];
+        keywords?: string[]; // Added based on sample
         theme: QuestTheme;
         difficulty: QuestDifficulty;
+        price?: number; // Added based on sample
+        max_points?: number; // Added based on sample
         duration_minutes?: number;
-        keywords?: string[];
-        max_points?: number;
-        hints_allowed?: number;
+        hints_allowed?: number; // Added based on sample
     };
     location: {
         region: string;
         start_location: {
             type: "Point";
             coordinates: number[];
+            mapbox_feature_id?: string;
         };
         end_location: {
             type: "Point";
             coordinates: number[];
+            mapbox_feature_id?: string;
         };
         route_waypoints?: Array<{
             order: number;
             location: {
                 type: "Point";
                 coordinates: number[];
+                mapbox_waypoint_id?: string;
             };
+            estimated_time_minutes?: number;
+            distance_from_previous_km?: number | null;
         }>;
         route_geometry?: {
             type: "LineString";
@@ -185,19 +201,38 @@ export interface CreateQuestPayload {
         map_data: {
             zoom_level: number;
             map_style: string;
+            custom_markers?: Array<{
+                location: {
+                    type: "Point";
+                    coordinates: number[];
+                };
+                icon_public_id: string;
+                label: string;
+            }>;
+            bounding_box?: {
+                northeast: { type: "Point"; coordinates: number[] };
+                southwest: { type: "Point"; coordinates: number[] };
+            };
         };
+        tileset_id?: string; // Added based on sample
     };
     media: {
         cloudinary_assets?: CloudinaryAsset[];
-        source_url?: string;
         mapbox_reference?: {
             style_id?: string;
             route_id?: string;
+            tile_url?: string;
+            static_map_url?: string;
         };
+        reel_url?: string;
     };
     steps: Array<{
+        order: number;
         title: string;
         description: string;
+        how_to_reach?: string;
+        waypoint_order?: number;
+        cloudinary_assets?: CloudinaryAsset[];
     }>;
     status?: QuestStatus;
     price?: number;

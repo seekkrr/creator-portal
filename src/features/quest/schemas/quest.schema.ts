@@ -74,10 +74,25 @@ export const waypointsStepSchema = z.object({
 
 export type WaypointsStepData = z.infer<typeof waypointsStepSchema>;
 
+// Step 4: Waypoint Details
+export const waypointDetailSchema = z.object({
+    howToReach: z.string().min(1, "Navigation instructions are required"),
+    description: z.string().min(1, "Activity description is required"),
+    images: z.array(z.any()).optional(), // Array of CloudinaryAsset
+});
+
+export const waypointDetailsStepSchema = z.object({
+    waypointDetails: z.array(waypointDetailSchema),
+    galleryImages: z.array(z.any()).optional(), // Array of CloudinaryAsset
+});
+
+export type WaypointDetailsStepData = z.infer<typeof waypointDetailsStepSchema>;
+
 // Combined form data schema using intersection
 export const createQuestSchema = locationStepBaseSchema
     .merge(detailsStepSchema)
-    .merge(waypointsStepSchema);
+    .merge(waypointsStepSchema)
+    .merge(waypointDetailsStepSchema);
 
 export type CreateQuestFormData = z.infer<typeof createQuestSchema>;
 
@@ -92,4 +107,6 @@ export const defaultFormValues: Partial<CreateQuestFormData> = {
     difficulty: "Medium",
     duration: 60,
     waypoints: [],
+    waypointDetails: [],
+    galleryImages: [],
 };

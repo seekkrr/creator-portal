@@ -8,6 +8,8 @@ interface ImageUploadProps {
     onChange: (asset: CloudinaryAsset | undefined) => void;
     folder?: string;
     className?: string;
+    variant?: "default" | "minimal";
+    allowMultiple?: boolean; // If true, won't show preview, just uploads and calls onChange
 }
 
 export function ImageUpload({
@@ -15,6 +17,8 @@ export function ImageUpload({
     onChange,
     folder = "creator-portal/quests",
     className = "",
+    allowMultiple = false,
+    variant = "default",
 }: ImageUploadProps) {
     const [isUploading, setIsUploading] = useState(false);
     const [progress, setProgress] = useState(0);
@@ -96,7 +100,7 @@ export function ImageUpload({
         setError(null);
     };
 
-    if (value) {
+    if (value && !allowMultiple) {
         return (
             <div className={`relative ${className}`}>
                 <div className="relative rounded-xl overflow-hidden border-2 border-neutral-200">
@@ -107,9 +111,10 @@ export function ImageUpload({
                             crop: "fill",
                         })}
                         alt="Cover image"
-                        className="w-full h-48 object-cover"
+                        className="w-full h-full object-cover"
                     />
                     <button
+                        type="button" // Use type button to prevent form submission
                         onClick={handleRemove}
                         className="absolute top-2 right-2 p-1.5 bg-white/90 backdrop-blur rounded-full text-neutral-600 hover:text-red-600 transition-colors shadow-md"
                         aria-label="Remove image"
@@ -130,13 +135,13 @@ export function ImageUpload({
                 onDrop={handleDrop}
                 className={`
           relative flex flex-col items-center justify-center
-          w-full h-48 border-2 border-dashed rounded-xl
-          cursor-pointer transition-colors
-          ${dragActive
-                        ? "border-indigo-500 bg-indigo-50"
-                        : "border-neutral-300 bg-neutral-50 hover:border-neutral-400 hover:bg-neutral-100"
+          w-full h-full rounded-xl cursor-pointer transition-all duration-200
+          ${variant === "minimal"
+                        ? "border border-dashed border-slate-300 bg-slate-50 hover:bg-white hover:border-slate-800 hover:text-slate-900"
+                        : "border-2 border-dashed border-slate-300 bg-slate-50 hover:bg-slate-100 hover:border-slate-400"
                     }
-          ${isUploading ? "pointer-events-none" : ""}
+          ${dragActive ? "border-slate-900 bg-slate-100 ring-1 ring-slate-900" : ""}
+          ${isUploading ? "pointer-events-none opacity-80" : ""}
         `}
             >
                 <input
@@ -149,27 +154,69 @@ export function ImageUpload({
                 />
 
                 {isUploading ? (
-                    <div className="text-center">
-                        <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mx-auto mb-3" />
-                        <p className="text-sm text-neutral-600">Uploading... {progress}%</p>
-                        <div className="w-48 h-2 bg-neutral-200 rounded-full mt-2 overflow-hidden">
-                            <div
-                                className="h-full bg-indigo-600 transition-all duration-300"
-                                style={{ width: `${progress}%` }}
-                            />
-                        </div>
+                    <div className="flex flex-col items-center justify-center w-full h-full">
+                        {variant !== "minimal" ? (
+                            <div className="w-full px-4">
+                                <Loader2 className="w-10 h-10 text-slate-900 animate-spin mx-auto mb-3" />
+                                <p className="text-sm text-slate-600 text-center">Uploading... {progress}%</p>
+                                <div className="w-full max-w-[200px] h-1.5 bg-slate-100 rounded-full mt-3 overflow-hidden mx-auto">
+                                    <div
+                                        className="h-full bg-slate-900 transition-all duration-300"
+                                        style={{ width: `${progress}%` }}
+                                    />
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="relative flex items-center justify-center w-full h-full">
+                                <svg className="w-12 h-12 transform -rotate-90">
+                                    <circle
+                                        className="text-slate-100"
+                                        strokeWidth="3"
+                                        stroke="currentColor"
+                                        fill="transparent"
+                                        r="18"
+                                        cx="24"
+                                        cy="24"
+                                    />
+                                    <circle
+                                        className="text-slate-900 transition-all duration-300 ease-linear"
+                                        strokeWidth="3"
+                                        strokeDasharray={113}
+                                        strokeDashoffset={113 - (113 * progress) / 100}
+                                        strokeLinecap="round"
+                                        stroke="currentColor"
+                                        fill="transparent"
+                                        r="18"
+                                        cx="24"
+                                        cy="24"
+                                    />
+                                </svg>
+                                <span className="absolute text-[10px] font-bold text-slate-900">{progress}%</span>
+                            </div>
+                        )}
                     </div>
                 ) : (
                     <div className="text-center">
-                        {dragActive ? (
-                            <Upload className="w-10 h-10 text-indigo-600 mx-auto mb-3" />
+                        {variant === "minimal" ? (
+                            <div className="flex flex-col items-center justify-center p-2 text-slate-400 group-hover:text-slate-900 transition-colors">
+                                <span className="bg-white border border-slate-200 p-1.5 rounded-full mb-1.5 group-hover:border-slate-400 transition-colors">
+                                    <Upload className="w-3.5 h-3.5" />
+                                </span>
+                                <span className="text-[10px] font-semibold uppercase tracking-wider">Add</span>
+                            </div>
                         ) : (
-                            <ImageIcon className="w-10 h-10 text-neutral-400 mx-auto mb-3" />
+                            <>
+                                {dragActive ? (
+                                    <Upload className="w-10 h-10 text-slate-900 mx-auto mb-3" />
+                                ) : (
+                                    <ImageIcon className="w-10 h-10 text-slate-400 mx-auto mb-3" />
+                                )}
+                                <p className="text-sm font-medium text-slate-700 mb-1">
+                                    {dragActive ? "Drop image here" : "Click or drag to upload"}
+                                </p>
+                                <p className="text-xs text-slate-500">PNG, JPG up to 5MB</p>
+                            </>
                         )}
-                        <p className="text-sm font-medium text-neutral-700 mb-1">
-                            {dragActive ? "Drop image here" : "Click or drag to upload"}
-                        </p>
-                        <p className="text-xs text-neutral-500">PNG, JPG up to 5MB</p>
                     </div>
                 )}
             </label>

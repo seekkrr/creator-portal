@@ -55,6 +55,7 @@ interface WaypointMapComponentProps {
     onWaypointRemove: (index: number) => void;
     height?: string;
     className?: string;
+    focusedLocation?: { lng: number; lat: number } | null;
 }
 
 // Create marker element for 60 FPS performance
@@ -91,6 +92,7 @@ export const WaypointMapComponent = memo(function WaypointMapComponent({
     onWaypointRemove,
     height = "500px",
     className = "",
+    focusedLocation,
 }: WaypointMapComponentProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -542,16 +544,42 @@ export const WaypointMapComponent = memo(function WaypointMapComponent({
         updateRouteLine();
     }, [waypoints]); // Depend on full array for immediate updates
 
-    // Animate to show all waypoints when waypoints added OR removed
+    // Animate to show all waypoints when waypoints added/removed OR when single waypoint changes
     useEffect(() => {
         const waypointAdded = waypoints.length > prevWaypointCountRef.current;
         const waypointRemoved = waypoints.length < prevWaypointCountRef.current;
+
+        // Check if single waypoint changed (for WaypointDetailsStep)
+        const previousWaypoint = waypointsRef.current[0];
+        const currentWaypoint = waypoints[0];
+
+        const singleWaypointChanged = waypoints.length === 1 && prevWaypointCountRef.current === 1 &&
+            previousWaypoint && currentWaypoint &&
+            (currentWaypoint.latitude !== previousWaypoint.latitude ||
+                currentWaypoint.longitude !== previousWaypoint.longitude);
+
         prevWaypointCountRef.current = waypoints.length;
 
-        if ((waypointAdded || waypointRemoved) && waypoints.length > 0) {
+        // Only auto-fly if NO focusedLocation is provided. If focusedLocation is provided, we rely on the specific effect below.
+        if ((waypointAdded || waypointRemoved || singleWaypointChanged) && waypoints.length > 0 && !focusedLocation) {
             setTimeout(() => flyToWaypoints(), 150);
         }
-    }, [waypoints.length, flyToWaypoints]);
+    }, [waypoints, flyToWaypoints, focusedLocation]);
+
+    // Handle focusedLocation changes
+    useEffect(() => {
+        const map = mapRef.current;
+        if (!map || !focusedLocation) return;
+
+        map.flyTo({
+            center: [focusedLocation.lng, focusedLocation.lat],
+            zoom: 17,
+            pitch: 65,
+            bearing: -17.6,
+            duration: 1000,
+            essential: true,
+        });
+    }, [focusedLocation]);
 
     return (
         <div className="relative">
