@@ -164,7 +164,11 @@ export function CreateQuestPage() {
         setCurrentStep(4);
     };
 
-    const handleBack = () => {
+    const handleBack = (data?: WaypointsStepData) => {
+        // Save waypoints data if provided (when coming back from WaypointsStep)
+        if (data) {
+            setFormData((prev) => ({ ...prev, ...data }));
+        }
         setCurrentStep((prev) => (prev > 1 ? (prev - 1) as Step : prev));
     };
 
@@ -230,6 +234,11 @@ export function CreateQuestPage() {
                 {currentStep === 3 && (
                     <WaypointsStep
                         defaultValues={formData}
+                        initialCenter={
+                            formData.latitude && formData.longitude
+                                ? { lat: formData.latitude, lng: formData.longitude }
+                                : undefined
+                        }
                         onNext={handleStep3Next}
                         onBack={handleBack}
                     />
