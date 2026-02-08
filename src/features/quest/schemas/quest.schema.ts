@@ -41,7 +41,7 @@ export const detailsStepSchema = z.object({
         .max(1000, "Description must be less than 1000 characters"),
     theme: z.enum(["Adventure", "Romance", "Culture", "Food", "History", "Nature", "Custom"] as const),
     difficulty: z.enum(["Easy", "Medium", "Hard", "Expert"] as const) satisfies z.ZodType<QuestDifficulty>,
-    duration: z.number().min(5).max(480).optional(),
+    duration: z.number().min(30).max(1440).optional(),
 });
 
 export type DetailsStepData = z.infer<typeof detailsStepSchema>;

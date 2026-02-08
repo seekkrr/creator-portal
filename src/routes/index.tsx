@@ -30,6 +30,11 @@ const PrivacyPolicyPage = lazy(() =>
 );
 
 
+
+const ContactUsPage = lazy(() =>
+    import("@features/contact/pages/ContactUsPage").then((m) => ({ default: m.ContactUsPage }))
+);
+
 export const router = createBrowserRouter([
     {
         path: "/",
@@ -43,6 +48,14 @@ export const router = createBrowserRouter([
                 element: (
                     <SuspenseWrapper>
                         <PrivacyPolicyPage />
+                    </SuspenseWrapper>
+                ),
+            },
+            {
+                path: "/contact",
+                element: (
+                    <SuspenseWrapper>
+                        <ContactUsPage />
                     </SuspenseWrapper>
                 ),
             },

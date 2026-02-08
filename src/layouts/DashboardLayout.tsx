@@ -38,12 +38,12 @@ export function DashboardLayout() {
                             >
                                 Privacy Policy
                             </Link>
-                            <a
-                                href="#"
+                            <Link
+                                to="/contact"
                                 className="text-base font-normal text-neutral-600 hover:text-neutral-900 transition-colors"
                             >
                                 Contact Us
-                            </a>
+                            </Link>
                         </nav>
 
                         {/* User Menu */}
@@ -94,12 +94,12 @@ export function DashboardLayout() {
                             >
                                 Privacy Policy
                             </Link>
-                            <a
-                                href="#"
+                            <Link
+                                to="/contact"
                                 className="block text-base font-normal text-neutral-600 hover:text-neutral-900"
                             >
                                 Contact Us
-                            </a>
+                            </Link>
                             <div className="pt-4 border-t border-neutral-100">
                                 <button
                                     onClick={handleLogout}
