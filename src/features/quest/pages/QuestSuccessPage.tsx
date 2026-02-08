@@ -15,11 +15,8 @@ export function QuestSuccessPage() {
                 <h1 className="text-2xl font-bold text-neutral-900 mb-3">
                     Thank you for adding the Quest!
                 </h1>
-                <p className="text-neutral-600 mb-2">
-                    You can view and edit the quest by clicking on the see your quest.
-                </p>
                 <p className="text-sm text-neutral-500 mb-8">
-                    Our team will review the quest and send.
+                    Our team will review the quest and notify you once it's approved.
                 </p>
 
                 {/* Actions */}

@@ -14,7 +14,7 @@ export function DashboardLayout() {
     };
 
     return (
-        <div className="min-h-screen bg-neutral-50">
+        <div className="min-h-screen bg-neutral-50 flex flex-col">
             <header className="bg-white border-b border-neutral-200 sticky top-0 z-40 font-sans">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center h-20">
