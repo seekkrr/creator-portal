@@ -2,6 +2,7 @@ import { Outlet, Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@store/auth.store";
 import { LogOut, Menu, X } from "lucide-react";
 import { useState } from "react";
+import { Footer } from "@components/ui";
 
 export function DashboardLayout() {
     const { logout } = useAuthStore();
@@ -31,12 +32,12 @@ export function DashboardLayout() {
                             >
                                 Terms and Conditions
                             </a>
-                            <a
-                                href="#"
+                            <Link
+                                to="/privacy-policy"
                                 className="text-base font-normal text-neutral-600 hover:text-neutral-900 transition-colors"
                             >
                                 Privacy Policy
-                            </a>
+                            </Link>
                             <a
                                 href="#"
                                 className="text-base font-normal text-neutral-600 hover:text-neutral-900 transition-colors"
@@ -87,12 +88,12 @@ export function DashboardLayout() {
                             >
                                 Terms and Conditions
                             </a>
-                            <a
-                                href="#"
+                            <Link
+                                to="/privacy-policy"
                                 className="block text-base font-normal text-neutral-600 hover:text-neutral-900"
                             >
                                 Privacy Policy
-                            </a>
+                            </Link>
                             <a
                                 href="#"
                                 className="block text-base font-normal text-neutral-600 hover:text-neutral-900"
@@ -119,13 +120,8 @@ export function DashboardLayout() {
             </main>
 
             {/* Footer */}
-            <footer className="bg-white border-t border-neutral-200 mt-auto">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                    <p className="text-sm text-neutral-500 text-center">
-                        © {new Date().getFullYear()} SeekKrr. All rights reserved.
-                    </p>
-                </div>
-            </footer>
+            {/* Footer */}
+            <Footer />
         </div>
     );
 }

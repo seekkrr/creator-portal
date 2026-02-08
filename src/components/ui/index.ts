@@ -1,3 +1,4 @@
+export * from "./Footer";
 export { Button } from "./Button";
 export { Input } from "./Input";
 export { FloatingInput } from "./FloatingInput";

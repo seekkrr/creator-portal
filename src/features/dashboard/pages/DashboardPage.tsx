@@ -6,10 +6,10 @@ import { useState, useEffect } from "react";
 function StackedHeroCards() {
     const [activeIndex, setActiveIndex] = useState(0);
     const cards = [
-        { id: 1, src: "/hiker.svg", alt: "Adventure 1", color: "bg-neutral-100" },
-        { id: 2, src: "/login-bg.svg", alt: "Adventure 2", color: "bg-indigo-50" },
-        { id: 3, src: "/google_login_logo.svg", alt: "Adventure 3", color: "bg-green-50" },
-        { id: 4, src: "/seekkrr-logo.svg", alt: "Adventure 4", color: "bg-amber-50" },
+        { id: 1, src: "/hiker.png", alt: "Adventure 1", color: "bg-neutral-100" },
+        { id: 2, src: "/cafe.png", alt: "Adventure 2", color: "bg-indigo-50" },
+        { id: 3, src: "/dancing.png", alt: "Adventure 3", color: "bg-green-50" },
+        { id: 4, src: "/old_man.png", alt: "Adventure 4", color: "bg-amber-50" },
     ];
 
     useEffect(() => {
@@ -87,22 +87,22 @@ export function DashboardPage() {
                     </h1>
 
                     <div className="space-y-4 lg:space-y-6 text-lg lg:text-xl text-neutral-600 leading-relaxed font-normal max-w-xl">
-                        <p>
-                            SeekKrr is a local discovery platform giving Indian Influencers and locals
-                            a chance to monetize their experience and expertize of exploration.
+                        <p className="font-medium">
+                            Your stories inspired them. Now, your Quests will lead them!
                         </p>
                         <p>
-                            So you travel to your heart's content and we give your audience a platform
-                            to experience your journey.
+                            You're already out there discovering the best of India, let's make those footsteps
+                            count. Turn your passion for the 'unseen' into immersive journeys that your followers can
+                            actually experience.
                         </p>
                     </div>
 
                     <div className="pt-2 lg:pt-4">
                         <p className="text-lg lg:text-xl font-medium text-neutral-900 mb-4 lg:mb-8">
-                            What's the wait then, start creating quests
+                            What's the wait then, create your first Quest today
                         </p>
                         <Link to="/creator/quest/create">
-                            <button className="px-8 py-3 lg:px-10 lg:py-4 bg-white border-2 border-neutral-900 text-neutral-900 font-normal rounded-full hover:bg-neutral-900 hover:text-white transition-all transform hover:scale-105 duration-200 text-lg lg:text-xl tracking-wide">
+                            <button className="px-8 py-3 lg:px-10 lg:py-4 bg-white border-2 border-neutral-900 text-neutral-900 font-normal rounded-full hover:bg-neutral-900 hover:text-white transition-all transform hover:scale-105 duration-200 text-lg lg:text-xl tracking-wide cursor-pointer">
                                 Create Quest
                             </button>
                         </Link>
@@ -150,7 +150,7 @@ export function DashboardPage() {
             {/* Getting Started - Modernized */}
             <div>
                 <h2 className="text-2xl font-medium text-neutral-900 mb-6 tracking-tight">
-                    Getting Started
+                    How to create a Quest ?
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="group p-6 bg-white rounded-3xl border border-neutral-100 hover:border-indigo-100 hover:shadow-xl transition-all duration-300">
@@ -160,10 +160,10 @@ export function DashboardPage() {
                             </div>
                             <div>
                                 <h3 className="text-lg font-semibold text-neutral-900 mb-2">
-                                    Create Your First Quest
+                                    Add Destination or Content Link
                                 </h3>
                                 <p className="text-sm text-neutral-600 leading-relaxed">
-                                    Design an adventure with locations, challenges, and rewards for explorers to discover.
+                                    Click Create Quest and enter the location. You can also add a link to your content
                                 </p>
                             </div>
                         </div>
@@ -176,10 +176,10 @@ export function DashboardPage() {
                             </div>
                             <div>
                                 <h3 className="text-lg font-semibold text-neutral-900 mb-2">
-                                    Add Waypoints
+                                    Add Quest Details
                                 </h3>
                                 <p className="text-sm text-neutral-600 leading-relaxed">
-                                    Mark interesting locations on the map that explorers will visit during their journey.
+                                    Add the name of the quest, description and duration of the quest
                                 </p>
                             </div>
                         </div>
@@ -192,10 +192,11 @@ export function DashboardPage() {
                             </div>
                             <div>
                                 <h3 className="text-lg font-semibold text-neutral-900 mb-2">
-                                    Publish & Share
+                                    Add Locations
                                 </h3>
                                 <p className="text-sm text-neutral-600 leading-relaxed">
-                                    Once your quest is ready, publish it for adventurers around the world to enjoy.
+                                    Guide travelers on how to reach and
+                                    what to expect by pinning locations on the map
                                 </p>
                             </div>
                         </div>
@@ -211,7 +212,7 @@ export function DashboardPage() {
                                     Earn Rewards
                                 </h3>
                                 <p className="text-sm text-neutral-600 leading-relaxed">
-                                    Get recognized and earn rewards as more explorers complete your quests.
+                                    Get recognized and earn commission as more explorers complete your quests
                                 </p>
                             </div>
                         </div>

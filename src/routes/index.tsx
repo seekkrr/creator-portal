@@ -1,6 +1,6 @@
 import { lazy } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
-import { AuthLayout, DashboardLayout } from "@layouts/index";
+import { AuthLayout, DashboardLayout, PublicLayout } from "@layouts/index";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { SuspenseWrapper } from "@components/index";
 
@@ -25,11 +25,28 @@ const QuestSuccessPage = lazy(() =>
     import("@features/quest/pages/QuestSuccessPage").then((m) => ({ default: m.QuestSuccessPage }))
 );
 
+const PrivacyPolicyPage = lazy(() =>
+    import("@features/legal/pages/PrivacyPolicyPage").then((m) => ({ default: m.PrivacyPolicyPage }))
+);
+
 
 export const router = createBrowserRouter([
     {
         path: "/",
         element: <Navigate to="/creator/login" replace />,
+    },
+    {
+        element: <PublicLayout />,
+        children: [
+            {
+                path: "/privacy-policy",
+                element: (
+                    <SuspenseWrapper>
+                        <PrivacyPolicyPage />
+                    </SuspenseWrapper>
+                ),
+            },
+        ],
     },
     {
         path: "/creator",

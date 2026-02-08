@@ -28,7 +28,7 @@ export function LoginPage() {
                         Creator Portal
                     </h2>
                     <p className="text-sm lg:text-[1.125em] leading-relaxed text-center text-neutral-500 mb-8 lg:mb-10 font-sans max-w-md mx-auto px-4 lg:px-0">
-                        Own the Map and Design the Journey
+                        Step In. Build What Others Explore.
                     </p>
 
                     <div className="bg-white border border-neutral-200 rounded-2xl lg:rounded-[2rem] p-6 lg:p-6 shadow-sm lg:shadow-md shadow-neutral-100/50 w-full">
