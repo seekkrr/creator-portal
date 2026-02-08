@@ -1,7 +1,6 @@
 import { api, authStorage } from "./api";
 import { API_ENDPOINTS } from "@config/api";
 import { config } from "@config/env";
-import { generateStateToken } from "@/utils/security";
 import type { AuthTokens, User, Creator } from "@/types";
 
 export interface AuthMeResponse {
@@ -9,8 +8,7 @@ export interface AuthMeResponse {
     creator?: Creator;
 }
 
-// Session storage key for CSRF state
-const OAUTH_STATE_KEY = 'oauth_state';
+// Session storage key removed
 
 export const authService = {
     /**
@@ -20,27 +18,12 @@ export const authService = {
     initiateGoogleLogin(): void {
         const redirectUri = `${window.location.origin}/creator/auth/callback`;
 
-        // Generate and store CSRF state token
-        const state = generateStateToken();
-        sessionStorage.setItem(OAUTH_STATE_KEY, state);
-
-        // Include state parameter for CSRF protection
-        const authUrl = `${config.api.baseUrl}${API_ENDPOINTS.AUTH.GOOGLE}?is_creator=true&platform=web&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(state)}`;
+        // Use full backend URL for OAuth
+        const authUrl = `${config.api.baseUrl}${API_ENDPOINTS.AUTH.GOOGLE}?is_creator=true&platform=web&redirect_uri=${encodeURIComponent(redirectUri)}`;
         window.location.href = authUrl;
     },
 
-    /**
-     * Verify OAuth state parameter to prevent CSRF attacks
-     */
-    verifyOAuthState(receivedState: string | null): boolean {
-        const storedState = sessionStorage.getItem(OAUTH_STATE_KEY);
-        sessionStorage.removeItem(OAUTH_STATE_KEY); // Clean up
 
-        if (!storedState || !receivedState) {
-            return false;
-        }
-        return storedState === receivedState;
-    },
 
     /**
      * Exchange auth code for tokens
