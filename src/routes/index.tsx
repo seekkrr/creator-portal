@@ -1,5 +1,7 @@
 import { lazy } from "react";
-import { createBrowserRouter, Navigate } from "react-router-dom";
+import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
+import { Analytics } from "@vercel/analytics/react";
+import { RouteTracker } from "@components/RouteTracker";
 import { AuthLayout, DashboardLayout, PublicLayout } from "@layouts/index";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { SuspenseWrapper } from "@components/index";
@@ -35,106 +37,119 @@ const ContactUsPage = lazy(() =>
     import("@features/contact/pages/ContactUsPage").then((m) => ({ default: m.ContactUsPage }))
 );
 
+const RootWrapper = () => (
+    <>
+        <RouteTracker />
+        <Analytics />
+        <Outlet />
+    </>
+);
+
 export const router = createBrowserRouter([
     {
-        path: "/",
-        element: <Navigate to="/creator/login" replace />,
-    },
-    {
-        element: <PublicLayout />,
+        element: <RootWrapper />,
         children: [
             {
-                path: "/privacy-policy",
-                element: (
-                    <SuspenseWrapper>
-                        <PrivacyPolicyPage />
-                    </SuspenseWrapper>
-                ),
+                path: "/",
+                element: <Navigate to="/creator/login" replace />,
             },
             {
-                path: "/contact",
-                element: (
-                    <SuspenseWrapper>
-                        <ContactUsPage />
-                    </SuspenseWrapper>
-                ),
-            },
-        ],
-    },
-    {
-        path: "/creator",
-        children: [
-            {
-                element: <AuthLayout />,
+                element: <PublicLayout />,
                 children: [
                     {
-                        path: "login",
+                        path: "/privacy-policy",
                         element: (
                             <SuspenseWrapper>
-                                <LoginPage />
+                                <PrivacyPolicyPage />
                             </SuspenseWrapper>
                         ),
                     },
                     {
-                        path: "auth/callback",
+                        path: "/contact",
                         element: (
                             <SuspenseWrapper>
-                                <AuthCallbackPage />
+                                <ContactUsPage />
                             </SuspenseWrapper>
                         ),
                     },
                 ],
             },
             {
-                element: (
-                    <ProtectedRoute>
-                        <DashboardLayout />
-                    </ProtectedRoute>
-                ),
+                path: "/creator",
                 children: [
                     {
-                        path: "dashboard",
-                        element: (
-                            <SuspenseWrapper>
-                                <DashboardPage />
-                            </SuspenseWrapper>
-                        ),
+                        element: <AuthLayout />,
+                        children: [
+                            {
+                                path: "login",
+                                element: (
+                                    <SuspenseWrapper>
+                                        <LoginPage />
+                                    </SuspenseWrapper>
+                                ),
+                            },
+                            {
+                                path: "auth/callback",
+                                element: (
+                                    <SuspenseWrapper>
+                                        <AuthCallbackPage />
+                                    </SuspenseWrapper>
+                                ),
+                            },
+                        ],
                     },
                     {
-                        path: "quest/create",
                         element: (
-                            <SuspenseWrapper>
-                                <CreateQuestPage />
-                            </SuspenseWrapper>
+                            <ProtectedRoute>
+                                <DashboardLayout />
+                            </ProtectedRoute>
                         ),
-                    },
-                    {
-                        path: "quest/success",
-                        element: (
-                            <SuspenseWrapper>
-                                <QuestSuccessPage />
-                            </SuspenseWrapper>
-                        ),
+                        children: [
+                            {
+                                path: "dashboard",
+                                element: (
+                                    <SuspenseWrapper>
+                                        <DashboardPage />
+                                    </SuspenseWrapper>
+                                ),
+                            },
+                            {
+                                path: "quest/create",
+                                element: (
+                                    <SuspenseWrapper>
+                                        <CreateQuestPage />
+                                    </SuspenseWrapper>
+                                ),
+                            },
+                            {
+                                path: "quest/success",
+                                element: (
+                                    <SuspenseWrapper>
+                                        <QuestSuccessPage />
+                                    </SuspenseWrapper>
+                                ),
+                            },
+                        ],
                     },
                 ],
             },
+            {
+                path: "*",
+                element: (
+                    <div className="min-h-screen flex items-center justify-center bg-neutral-50">
+                        <div className="text-center">
+                            <h1 className="text-6xl font-bold text-neutral-900 mb-4">404</h1>
+                            <p className="text-neutral-600 mb-8">Page not found</p>
+                            <a
+                                href="/creator/login"
+                                className="text-indigo-600 hover:text-indigo-700 font-medium"
+                            >
+                                Go to Login
+                            </a>
+                        </div>
+                    </div>
+                ),
+            },
         ],
-    },
-    {
-        path: "*",
-        element: (
-            <div className="min-h-screen flex items-center justify-center bg-neutral-50">
-                <div className="text-center">
-                    <h1 className="text-6xl font-bold text-neutral-900 mb-4">404</h1>
-                    <p className="text-neutral-600 mb-8">Page not found</p>
-                    <a
-                        href="/creator/login"
-                        className="text-indigo-600 hover:text-indigo-700 font-medium"
-                    >
-                        Go to Login
-                    </a>
-                </div>
-            </div>
-        ),
     },
 ]);
