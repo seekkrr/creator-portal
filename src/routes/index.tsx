@@ -140,12 +140,12 @@ export const router = createBrowserRouter([
                         <div className="text-center">
                             <h1 className="text-6xl font-bold text-neutral-900 mb-4">404</h1>
                             <p className="text-neutral-600 mb-8">Page not found</p>
-                            <a
-                                href="/creator/login"
+                            <Link
+                                to="/creator/login"
                                 className="text-indigo-600 hover:text-indigo-700 font-medium"
                             >
                                 Go to Login
-                            </a>
+                            </Link>
                         </div>
                     </div>
                 ),
