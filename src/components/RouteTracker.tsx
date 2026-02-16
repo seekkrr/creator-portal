@@ -7,7 +7,7 @@ export function RouteTracker() {
 
     useEffect(() => {
         track("pageview", {
-            path: location.pathname,
+            path: `${location.pathname}${location.search}`,
         });
     }, [location]);
 
