@@ -12,7 +12,14 @@ export const lazyRetry = <T extends ComponentType<any>>(
 ): LazyExoticComponent<T> => {
     return lazy(async () => {
         try {
-            return await factory();
+            const component = await factory();
+
+            // Clear the retry flag for this path on success
+            // This ensures that if the user stays on the app and a new deployment happens,
+            // we can retry again if they navigate back to this path.
+            sessionStorage.removeItem(`retry-${window.location.pathname}`);
+
+            return component;
         } catch (error: any) {
             // Check if the error is a chunk load failure or a dynamic import failure
             const isChunkError =
