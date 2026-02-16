@@ -1,39 +1,39 @@
-import { lazy } from "react";
 import { createBrowserRouter, Navigate, Outlet, Link } from "react-router-dom";
 import { Analytics } from "@vercel/analytics/react";
 import { RouteTracker } from "@components/RouteTracker";
 import { AuthLayout, DashboardLayout, PublicLayout } from "@layouts/index";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { SuspenseWrapper } from "@components/index";
+import { lazyRetry } from "@utils/lazyRetry";
 
-// Lazy load pages
-const LoginPage = lazy(() =>
+// Lazy load pages with retry mechanism
+const LoginPage = lazyRetry(() =>
     import("@features/auth/pages/LoginPage").then((m) => ({ default: m.LoginPage }))
 );
 
-const AuthCallbackPage = lazy(() =>
+const AuthCallbackPage = lazyRetry(() =>
     import("@features/auth/pages/AuthCallbackPage").then((m) => ({ default: m.AuthCallbackPage }))
 );
 
-const DashboardPage = lazy(() =>
+const DashboardPage = lazyRetry(() =>
     import("@features/dashboard/pages/DashboardPage").then((m) => ({ default: m.DashboardPage }))
 );
 
-const CreateQuestPage = lazy(() =>
+const CreateQuestPage = lazyRetry(() =>
     import("@features/quest/pages/CreateQuestPage").then((m) => ({ default: m.CreateQuestPage }))
 );
 
-const QuestSuccessPage = lazy(() =>
+const QuestSuccessPage = lazyRetry(() =>
     import("@features/quest/pages/QuestSuccessPage").then((m) => ({ default: m.QuestSuccessPage }))
 );
 
-const PrivacyPolicyPage = lazy(() =>
+const PrivacyPolicyPage = lazyRetry(() =>
     import("@features/legal/pages/PrivacyPolicyPage").then((m) => ({ default: m.PrivacyPolicyPage }))
 );
 
 
 
-const ContactUsPage = lazy(() =>
+const ContactUsPage = lazyRetry(() =>
     import("@features/contact/pages/ContactUsPage").then((m) => ({ default: m.ContactUsPage }))
 );
 
