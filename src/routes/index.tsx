@@ -1,5 +1,5 @@
 import { lazy } from "react";
-import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
+import { createBrowserRouter, Navigate, Outlet, Link } from "react-router-dom";
 import { Analytics } from "@vercel/analytics/react";
 import { RouteTracker } from "@components/RouteTracker";
 import { AuthLayout, DashboardLayout, PublicLayout } from "@layouts/index";
