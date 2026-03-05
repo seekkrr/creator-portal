@@ -2,6 +2,7 @@
 import { useState, useEffect, type FormEvent, type ChangeEvent } from "react";
 import { api } from "@/services/api";
 import { API_ENDPOINTS } from "@/config/api";
+import { config } from "@/config/env";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Mail, MessageSquare, Send, User, Phone, CheckCircle2 } from "lucide-react";
@@ -125,7 +126,7 @@ export function ContactUsPage() {
                             </div>
                             <div>
                                 <p className="font-medium text-neutral-900">Email Us</p>
-                                <p className="text-sm">seekkrr@gmail.com</p>
+                                <p className="text-sm">{config.app.supportEmail}</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-4 text-neutral-600">

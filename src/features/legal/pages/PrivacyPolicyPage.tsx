@@ -1,4 +1,5 @@
 import { Card } from "@components/ui";
+import { config } from "@/config/env";
 
 export function PrivacyPolicyPage() {
   return (
@@ -516,10 +517,10 @@ export function PrivacyPolicyPage() {
                 <li>
                   By email:{" "}
                   <a
-                    href="mailto:seekkrr@gmail.com"
+                    href={`mailto:${config.app.supportEmail}`}
                     className="text-indigo-600 hover:text-indigo-800 underline"
                   >
-                    seekkrr@gmail.com
+                    {config.app.supportEmail}
                   </a>
                 </li>
                 <li>
@@ -533,10 +534,6 @@ export function PrivacyPolicyPage() {
                 </li>
               </ul>
             </section>
-
-            <div className="text-center text-sm text-neutral-500 pt-8 border-t border-neutral-200">
-              Generated using Free Privacy Policy Generator
-            </div>
           </div>
         </Card>
       </div>

@@ -6,6 +6,7 @@ const envSchema = z.object({
     VITE_MAPBOX_ACCESS_TOKEN: z.string().min(1, "Mapbox access token is required"),
     VITE_CLOUDINARY_CLOUD_NAME: z.string().min(1, "Cloudinary cloud name is required"),
     VITE_CLOUDINARY_UPLOAD_PRESET: z.string().default("seekkrr_unsigned"),
+    VITE_SUPPORT_EMAIL: z.string().email().default("support@seekkrr.com"),
 });
 
 type EnvConfig = z.infer<typeof envSchema>;
@@ -17,6 +18,7 @@ function validateEnv(): EnvConfig {
         VITE_MAPBOX_ACCESS_TOKEN: import.meta.env.VITE_MAPBOX_ACCESS_TOKEN,
         VITE_CLOUDINARY_CLOUD_NAME: import.meta.env.VITE_CLOUDINARY_CLOUD_NAME,
         VITE_CLOUDINARY_UPLOAD_PRESET: import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET,
+        VITE_SUPPORT_EMAIL: import.meta.env.VITE_SUPPORT_EMAIL,
     });
 
     if (!result.success) {
@@ -39,6 +41,7 @@ export const config = {
     },
     app: {
         name: env.VITE_APP_NAME,
+        supportEmail: env.VITE_SUPPORT_EMAIL,
     },
     mapbox: {
         accessToken: env.VITE_MAPBOX_ACCESS_TOKEN,
