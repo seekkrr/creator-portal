@@ -26,6 +26,12 @@ export function DashboardLayout() {
 
                         {/* Desktop Navigation */}
                         <nav className="hidden md:flex items-center gap-8 ml-auto">
+                            <Link
+                                to="/creator/quests"
+                                className="text-base font-normal text-neutral-600 hover:text-neutral-900 transition-colors"
+                            >
+                                My Quests
+                            </Link>
                             <a
                                 href="#"
                                 className="text-base font-normal text-neutral-600 hover:text-neutral-900 transition-colors"
@@ -48,13 +54,6 @@ export function DashboardLayout() {
 
                         {/* User Menu */}
                         <div className="hidden md:flex items-center gap-4 ml-8">
-                            <Link
-                                to="/creator/quests"
-                                className="text-base font-normal text-neutral-600 hover:text-neutral-900 transition-colors mr-4"
-                            >
-                                My Quests
-                            </Link>
-
                             <button
                                 onClick={handleLogout}
                                 className="flex items-center gap-2 text-neutral-600 hover:text-neutral-900 transition-colors"

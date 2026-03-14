@@ -31,6 +31,10 @@ const QuestSuccessPage = lazyRetry(() =>
     import("@features/quest/pages/QuestSuccessPage").then((m) => ({ default: m.QuestSuccessPage }))
 );
 
+const QuestDetailPage = lazyRetry(() =>
+    import("@features/quest/pages/QuestDetailPage").then((m) => ({ default: m.QuestDetailPage }))
+);
+
 const PrivacyPolicyPage = lazyRetry(() =>
     import("@features/legal/pages/PrivacyPolicyPage").then((m) => ({ default: m.PrivacyPolicyPage }))
 );
@@ -130,6 +134,22 @@ export const router = createBrowserRouter([
                                 element: (
                                     <SuspenseWrapper>
                                         <CreateQuestPage />
+                                    </SuspenseWrapper>
+                                ),
+                            },
+                            {
+                                path: "quest/edit/:id",
+                                element: (
+                                    <SuspenseWrapper>
+                                        <CreateQuestPage />
+                                    </SuspenseWrapper>
+                                ),
+                            },
+                            {
+                                path: "quest/view/:id",
+                                element: (
+                                    <SuspenseWrapper>
+                                        <QuestDetailPage />
                                     </SuspenseWrapper>
                                 ),
                             },

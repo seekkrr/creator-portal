@@ -115,7 +115,7 @@ export function WaypointsStep({ defaultValues, initialCenter, onNext, onBack }: 
                     Create Your Quest Route
                 </h2>
                 <p className="text-neutral-600">
-                    Add waypoints to define the path users will follow. 
+                    Add waypoints to define the path users will follow.
                     <span className="mx-2 font-medium">Drag to reorder, right-click to remove.</span>
                 </p>
             </div>
@@ -257,7 +257,7 @@ export function WaypointsStep({ defaultValues, initialCenter, onNext, onBack }: 
                 <Button
                     type="submit"
                     rightIcon={<ChevronRight className="w-4 h-4" />}
-                    disabled={waypoints.length === 0}
+                    disabled={waypoints.length < 2}
                 >
                     Next
                 </Button>

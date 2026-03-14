@@ -68,7 +68,7 @@ export interface CloudinaryUploadResponse {
 
 // Quest Types
 export type QuestDifficulty = "Easy" | "Medium" | "Hard" | "Expert";
-export type QuestStatus = "Draft" | "Published" | "Archived";
+export type QuestStatus = "Draft" | "Under Review" | "Changes Requested" | "Approved" | "Published" | "Rejected" | "Paused" | "Archived";
 export type QuestTheme = "Adventure" | "Romance" | "Culture" | "Food" | "History" | "Nature" | "Custom";
 
 export interface QuestLocation {
@@ -129,10 +129,10 @@ export interface Quest {
 }
 
 export interface QuestWithDetails extends Quest {
-    metadata?: QuestMetadata;
-    location?: QuestLocation;
-    media?: QuestMedia;
-    steps?: QuestStep[];
+    metadata?: CreateQuestPayload["metadata"];
+    location?: CreateQuestPayload["location"];
+    media?: CreateQuestPayload["media"];
+    steps?: CreateQuestPayload["steps"];
 }
 
 // Form Types for Quest Creation
