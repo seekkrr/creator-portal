@@ -533,10 +533,6 @@ export function PrivacyPolicyPage() {
                 </li>
               </ul>
             </section>
-
-            <div className="text-center text-sm text-neutral-500 pt-8 border-t border-neutral-200">
-              Generated using Free Privacy Policy Generator
-            </div>
           </div>
         </Card>
       </div>

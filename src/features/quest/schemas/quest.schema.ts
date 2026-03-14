@@ -69,7 +69,7 @@ export const waypointSchema = z.object({
 export const waypointsStepSchema = z.object({
     waypoints: z
         .array(waypointSchema)
-        .min(1, "Add at least one waypoint"),
+        .min(2, "Add at least two waypoints (Start and End)"),
 });
 
 export type WaypointsStepData = z.infer<typeof waypointsStepSchema>;

@@ -23,8 +23,16 @@ const CreateQuestPage = lazyRetry(() =>
     import("@features/quest/pages/CreateQuestPage").then((m) => ({ default: m.CreateQuestPage }))
 );
 
+const QuestsPage = lazyRetry(() =>
+    import("@features/quest/pages/QuestsPage").then((m) => ({ default: m.QuestsPage }))
+);
+
 const QuestSuccessPage = lazyRetry(() =>
     import("@features/quest/pages/QuestSuccessPage").then((m) => ({ default: m.QuestSuccessPage }))
+);
+
+const QuestDetailPage = lazyRetry(() =>
+    import("@features/quest/pages/QuestDetailPage").then((m) => ({ default: m.QuestDetailPage }))
 );
 
 const PrivacyPolicyPage = lazyRetry(() =>
@@ -114,10 +122,34 @@ export const router = createBrowserRouter([
                                 ),
                             },
                             {
+                                path: "quests",
+                                element: (
+                                    <SuspenseWrapper>
+                                        <QuestsPage />
+                                    </SuspenseWrapper>
+                                ),
+                            },
+                            {
                                 path: "quest/create",
                                 element: (
                                     <SuspenseWrapper>
                                         <CreateQuestPage />
+                                    </SuspenseWrapper>
+                                ),
+                            },
+                            {
+                                path: "quest/edit/:id",
+                                element: (
+                                    <SuspenseWrapper>
+                                        <CreateQuestPage />
+                                    </SuspenseWrapper>
+                                ),
+                            },
+                            {
+                                path: "quest/view/:id",
+                                element: (
+                                    <SuspenseWrapper>
+                                        <QuestDetailPage />
                                     </SuspenseWrapper>
                                 ),
                             },

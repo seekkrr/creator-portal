@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
-import { useMutation } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Card } from "@components/ui";
 import { questService } from "@services/quest.service";
@@ -16,7 +16,7 @@ import {
     type WaypointDetailsStepData,
     defaultFormValues,
 } from "../schemas/quest.schema";
-import type { CreateQuestFormData, CreateQuestPayload } from "@/types";
+import type { CreateQuestFormData, CreateQuestPayload, QuestStatus } from "@/types";
 
 type Step = 1 | 2 | 3 | 4 | 5;
 
@@ -30,116 +30,105 @@ const stepLabels: Record<Step, string> = {
 
 const SESSION_STORAGE_KEY = "quest_creation_form";
 
-// Helper to get initial form data from session storage
-function getInitialFormData(): Partial<CreateQuestFormData> {
-    try {
-        const saved = sessionStorage.getItem(SESSION_STORAGE_KEY);
-        if (saved) {
-            const parsed = JSON.parse(saved);
-            return { ...defaultFormValues, ...parsed.formData };
-        }
-    } catch (e) {
-        console.error("Failed to parse session storage:", e);
-    }
-    return defaultFormValues;
-}
-
-// Helper to get initial step from session storage
-function getInitialStep(): Step {
-    try {
-        const saved = sessionStorage.getItem(SESSION_STORAGE_KEY);
-        if (saved) {
-            const parsed = JSON.parse(saved);
-            return parsed.currentStep ?? 1;
-        }
-    } catch (e) {
-        console.error("Failed to parse session storage:", e);
-    }
-    return 1;
-}
-
 export function CreateQuestPage() {
     const navigate = useNavigate();
-    const [currentStep, setCurrentStep] = useState<Step>(getInitialStep);
-    const [formData, setFormData] = useState<Partial<CreateQuestFormData>>(getInitialFormData);
+    const { id } = useParams<{ id: string }>();
+    const isEditing = !!id;
 
-    // Save to session storage whenever formData or currentStep changes
-    const saveToSession = useCallback(() => {
-        try {
-            sessionStorage.setItem(
-                SESSION_STORAGE_KEY,
-                JSON.stringify({ formData, currentStep })
-            );
-        } catch (e) {
-            console.error("Failed to save to session storage:", e);
+    const [currentStep, setCurrentStep] = useState<Step>(1);
+    const [formData, setFormData] = useState<Partial<CreateQuestFormData>>(defaultFormValues);
+
+    // Fetch quest data if editing
+    const { data: existingQuest, isLoading: isLoadingQuest } = useQuery({
+        queryKey: ["quest", id],
+        queryFn: () => questService.getQuestById(id!),
+        enabled: isEditing,
+    });
+
+    // Populate form data when quest is loaded
+    useEffect(() => {
+        if (existingQuest) {
+            const mappedData: Partial<CreateQuestFormData> = {
+                title: existingQuest.metadata?.title || "",
+                description: Array.isArray(existingQuest.metadata?.description)
+                    ? existingQuest.metadata.description[0] || ""
+                    : typeof existingQuest.metadata?.description === "string"
+                        ? existingQuest.metadata.description
+                        : "",
+                theme: existingQuest.metadata?.theme || "Culture",
+                difficulty: existingQuest.metadata?.difficulty || "Medium",
+                duration: existingQuest.metadata?.duration_minutes,
+                city: existingQuest.location?.region,
+                latitude: existingQuest.location?.start_location.coordinates[1] || 0,
+                longitude: existingQuest.location?.start_location.coordinates[0] || 0,
+                waypoints: existingQuest.location?.route_waypoints?.map(rw => ({
+                    latitude: rw.location.coordinates[1] || 0,
+                    longitude: rw.location.coordinates[0] || 0,
+                    place_name: `Waypoint ${rw.order + 1}`,
+                })) || [],
+                waypointDetails: existingQuest.steps?.map(step => ({
+                    description: step.description || "",
+                    howToReach: step.how_to_reach || "",
+                    images: step.cloudinary_assets || []
+                })) || [],
+                galleryImages: existingQuest.media?.cloudinary_assets || [],
+                sourceUrl: existingQuest.media?.reel_url || "",
+            };
+            setFormData(mappedData);
         }
-    }, [formData, currentStep]);
+    }, [existingQuest]);
+
+    // Save/Load session storage only if NOT editing
+    useEffect(() => {
+        if (isEditing) return;
+        const saved = sessionStorage.getItem(SESSION_STORAGE_KEY);
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                setFormData(prev => ({ ...prev, ...parsed.formData }));
+                setCurrentStep(parsed.currentStep || 1);
+            } catch (e) { console.error(e); }
+        }
+    }, [isEditing]);
 
     useEffect(() => {
-        saveToSession();
-    }, [saveToSession]);
+        if (isEditing) return;
+        sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ formData, currentStep }));
+    }, [formData, currentStep, isEditing]);
 
-    // Clear session storage on successful submit
-    const clearSession = () => {
-        sessionStorage.removeItem(SESSION_STORAGE_KEY);
-    };
+    const clearSession = () => sessionStorage.removeItem(SESSION_STORAGE_KEY);
 
-    // Create quest mutation
-    const createQuestMutation = useMutation({
-        mutationFn: async (data: CreateQuestFormData) => {
-            // Get the last waypoint for end_location (or use start if no waypoints)
-            const lastWaypoint = data.waypoints.length > 0
-                ? data.waypoints[data.waypoints.length - 1]
-                : null;
-
-            const startCoords = [data.longitude ?? 0, data.latitude ?? 0];
-            const endCoords = lastWaypoint
-                ? [lastWaypoint.longitude, lastWaypoint.latitude]
-                : startCoords;
+    // Save/Update quest mutation
+    const questMutation = useMutation({
+        mutationFn: async ({ data, status }: { data: CreateQuestFormData; status: QuestStatus }) => {
+            const startWaypoint = data.waypoints[0];
+            const endWaypoint = data.waypoints[data.waypoints.length - 1];
 
             const payload: CreateQuestPayload = {
                 metadata: {
                     title: data.title,
-                    description: [data.description], // Backend expects array
+                    description: [data.description],
                     theme: data.theme,
                     difficulty: data.difficulty,
                     duration_minutes: data.duration ?? 60,
                 },
                 location: {
                     region: data.city ?? "Unknown",
-                    start_location: {
-                        type: "Point" as const,
-                        coordinates: startCoords,
-                    },
-                    end_location: {
-                        type: "Point" as const,
-                        coordinates: endCoords,
-                    },
+                    start_location: { type: "Point", coordinates: [startWaypoint!.longitude, startWaypoint!.latitude] },
+                    end_location: { type: "Point", coordinates: [endWaypoint!.longitude, endWaypoint!.latitude] },
                     route_waypoints: data.waypoints.map((wp, index) => ({
                         order: index,
-                        location: {
-                            type: "Point" as const,
-                            coordinates: [wp.longitude, wp.latitude],
-                        },
+                        location: { type: "Point", coordinates: [wp.longitude, wp.latitude] },
                     })),
-                    // Route geometry - LineString of all coordinates
-                    route_geometry: data.waypoints.length > 0 ? {
-                        type: "LineString" as const,
-                        coordinates: [
-                            startCoords,
-                            ...data.waypoints.map(wp => [wp.longitude, wp.latitude]),
-                        ],
-                    } : undefined,
-                    map_data: {
-                        zoom_level: 14,
-                        map_style: "standard",
+                    route_geometry: {
+                        type: "LineString",
+                        coordinates: data.waypoints.map(wp => [wp.longitude, wp.latitude]),
                     },
+                    map_data: { zoom_level: 14, map_style: "standard" },
                 },
                 media: {
                     cloudinary_assets: data.galleryImages || [],
-                    mapbox_reference: {
-                        style_id: "mapbox/standard",
-                    },
+                    mapbox_reference: { style_id: "mapbox/standard" },
                     reel_url: data.sourceUrl,
                 },
                 steps: data.waypoints.map((wp, index) => {
@@ -153,56 +142,51 @@ export function CreateQuestPage() {
                         cloudinary_assets: details?.images || [],
                     };
                 }),
-                status: "Draft",
-                price: 0, // Free for draft quests
+                status,
+                price: 0,
                 currency: "INR",
                 booking_enabled: false,
             };
 
-            return questService.createQuest(payload);
+            if (isEditing) {
+                return questService.updateQuest(id!, payload);
+            } else {
+                return questService.createQuest(payload);
+            }
         },
         onSuccess: () => {
             clearSession();
-            toast.success("Quest created successfully!");
+            toast.success(isEditing ? "Quest updated successfully!" : "Quest created successfully!");
             navigate("/creator/quest/success");
         },
         onError: (error) => {
-            toast.error(error instanceof Error ? error.message : "Failed to create quest");
+            toast.error(error instanceof Error ? error.message : "Failed to save quest");
         },
     });
 
-    // Step handlers - update formData and save to session
-    const handleStep1Next = (data: LocationStepData) => {
-        setFormData((prev) => ({ ...prev, ...data }));
-        setCurrentStep(2);
-    };
-
-    const handleStep2Next = (data: DetailsStepData) => {
-        setFormData((prev) => ({ ...prev, ...data }));
-        setCurrentStep(3);
-    };
-
-    const handleStep3Next = (data: WaypointsStepData) => {
-        setFormData((prev) => ({ ...prev, ...data }));
-        setCurrentStep(4);
-    };
-
-    const handleStep4Next = (data: WaypointDetailsStepData) => {
-        setFormData((prev) => ({ ...prev, ...data }));
-        setCurrentStep(5);
-    }
-
-    const handleBack = (data?: WaypointsStepData | WaypointDetailsStepData) => {
-        // Save data if provided
-        if (data) {
-            setFormData((prev) => ({ ...prev, ...data }));
+    const handleStep1Next = (data: LocationStepData) => { setFormData(prev => ({ ...prev, ...data })); setCurrentStep(2); };
+    const handleStep2Next = (data: DetailsStepData) => { setFormData(prev => ({ ...prev, ...data })); setCurrentStep(3); };
+    const handleStep3Next = (data: WaypointsStepData) => { setFormData(prev => ({ ...prev, ...data })); setCurrentStep(4); };
+    const handleStep4Next = (data: WaypointDetailsStepData) => { setFormData(prev => ({ ...prev, ...data })); setCurrentStep(5); };
+    const handleBack = (data?: any) => { if (data) setFormData(prev => ({ ...prev, ...data })); setCurrentStep(prev => (prev > 1 ? (prev - 1) as Step : prev)); };
+    const handleSubmit = (status: QuestStatus) => {
+        if (!formData.waypoints || formData.waypoints.length < 2) {
+            toast.error("Quest must have at least two locations (Start and End)");
+            return;
         }
-        setCurrentStep((prev) => (prev > 1 ? (prev - 1) as Step : prev));
+        questMutation.mutate({ data: formData as CreateQuestFormData, status });
     };
 
-    const handleSubmit = () => {
-        createQuestMutation.mutate(formData as CreateQuestFormData);
-    };
+    if (isEditing && isLoadingQuest) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+                    <p className="text-slate-500">Loading quest details...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="animate-fade-in max-w-4xl mx-auto">
@@ -210,38 +194,16 @@ export function CreateQuestPage() {
             <div className="mb-8">
                 <div className="flex items-center justify-between">
                     {([1, 2, 3, 4, 5] as const).map((step) => (
-                        <div
-                            key={step}
-                            className={`flex items-center ${step < 5 ? "flex-1" : ""}`}
-                        >
+                        <div key={step} className={`flex items-center ${step < 5 ? "flex-1" : ""}`}>
                             <div className="flex flex-col items-center">
-                                <div
-                                    className={`w-10 h-10 rounded-full flex items-center justify-center font-medium transition-colors ${step === currentStep
-                                        ? "bg-indigo-600 text-white"
-                                        : step < currentStep
-                                            ? "bg-green-500 text-white"
-                                            : "bg-neutral-200 text-neutral-500"
-                                        }`}
-                                >
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-medium transition-colors ${step === currentStep ? "bg-indigo-600 text-white" : step < currentStep ? "bg-green-500 text-white" : "bg-neutral-200 text-neutral-500"}`}>
                                     {step < currentStep ? "✓" : step}
                                 </div>
-                                <span
-                                    className={`mt-2 text-xs font-medium ${step === currentStep
-                                        ? "text-indigo-600"
-                                        : step < currentStep
-                                            ? "text-green-600"
-                                            : "text-neutral-500"
-                                        }`}
-                                >
+                                <span className={`mt-2 text-xs font-medium ${step === currentStep ? "text-indigo-600" : step < currentStep ? "text-green-600" : "text-neutral-500"}`}>
                                     {stepLabels[step]}
                                 </span>
                             </div>
-                            {step < 5 && (
-                                <div
-                                    className={`flex-1 h-1 mx-4 rounded ${step < currentStep ? "bg-green-500" : "bg-neutral-200"
-                                        }`}
-                                />
-                            )}
+                            {step < 5 && <div className={`flex-1 h-1 mx-4 rounded ${step < currentStep ? "bg-green-500" : "bg-neutral-200"}`} />}
                         </div>
                     ))}
                 </div>
@@ -249,43 +211,11 @@ export function CreateQuestPage() {
 
             {/* Step Content */}
             <Card padding="lg" shadow="md">
-                {currentStep === 1 && (
-                    <LocationStep defaultValues={formData} onNext={handleStep1Next} />
-                )}
-                {currentStep === 2 && (
-                    <DetailsStep
-                        defaultValues={formData}
-                        onNext={handleStep2Next}
-                        onBack={handleBack}
-                    />
-                )}
-                {currentStep === 3 && (
-                    <WaypointsStep
-                        defaultValues={formData}
-                        initialCenter={
-                            formData.latitude && formData.longitude
-                                ? { lat: formData.latitude, lng: formData.longitude }
-                                : undefined
-                        }
-                        onNext={handleStep3Next}
-                        onBack={handleBack}
-                    />
-                )}
-                {currentStep === 4 && (
-                    <WaypointDetailsStep
-                        defaultValues={formData}
-                        onNext={handleStep4Next}
-                        onBack={handleBack as any}
-                    />
-                )}
-                {currentStep === 5 && (
-                    <ReviewStep
-                        formData={formData}
-                        onBack={handleBack}
-                        onSubmit={handleSubmit}
-                        isSubmitting={createQuestMutation.isPending}
-                    />
-                )}
+                {currentStep === 1 && <LocationStep defaultValues={formData} onNext={handleStep1Next} />}
+                {currentStep === 2 && <DetailsStep defaultValues={formData} onNext={handleStep2Next} onBack={handleBack} />}
+                {currentStep === 3 && <WaypointsStep defaultValues={formData} initialCenter={formData.latitude && formData.longitude ? { lat: formData.latitude, lng: formData.longitude } : undefined} onNext={handleStep3Next} onBack={handleBack} />}
+                {currentStep === 4 && <WaypointDetailsStep defaultValues={formData} onNext={handleStep4Next} onBack={handleBack as any} />}
+                {currentStep === 5 && <ReviewStep formData={formData} onBack={handleBack} onSubmit={handleSubmit} isSubmitting={questMutation.isPending} />}
             </Card>
         </div>
     );

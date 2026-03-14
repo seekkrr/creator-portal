@@ -1,15 +1,18 @@
 import { Link } from "react-router-dom";
 import { useAuthStore } from "@store/auth.store";
-import { MapPin, Compass, Trophy } from "lucide-react";
+import { MapPin, Compass, Trophy, AlertCircle, Clock } from "lucide-react";
 import { useState, useEffect } from "react";
+import { creatorService, CreatorStats } from "@services/creator.service";
+
+// ... (StackedHeroCards remains same)
 
 function StackedHeroCards() {
     const [activeIndex, setActiveIndex] = useState(0);
     const cards = [
-        { id: 1, src: "/hiker.png", alt: "Adventure 1", color: "bg-neutral-100" },
-        { id: 2, src: "/cafe.png", alt: "Adventure 2", color: "bg-indigo-50" },
-        { id: 3, src: "/dancing.png", alt: "Adventure 3", color: "bg-green-50" },
-        { id: 4, src: "/old_man.png", alt: "Adventure 4", color: "bg-amber-50" },
+        { id: 1, src: "/hiker.png", alt: "Hiker looking at scenic mountains", color: "bg-neutral-100" },
+        { id: 2, src: "/cafe.png", alt: "Cozy cafe table setting", color: "bg-indigo-50" },
+        { id: 3, src: "/dancing.png", alt: "Group of people dancing outdoors", color: "bg-green-50" },
+        { id: 4, src: "/old_man.png", alt: "Portrait of an elderly man with traditional headwear", color: "bg-amber-50" },
     ];
 
     useEffect(() => {
@@ -25,10 +28,6 @@ function StackedHeroCards() {
             {cards.map((card, index) => {
                 const position = (index - activeIndex + cards.length) % cards.length;
 
-                // Active Card (Front) -> Position 0
-                // Next Cards -> Position 1, 2
-                // Exiting Card (Previously Front) -> Position 3 (cards.length - 1)
-
                 const isExiting = position === cards.length - 1;
                 const isVisible = position <= 2 || isExiting;
 
@@ -40,13 +39,12 @@ function StackedHeroCards() {
                 let rotate = position * 5;
                 let opacity = 1 - position * 0.15;
 
-                // Ghost Exit Animation for the card leaving the front
                 if (isExiting) {
-                    zIndex = 40; // Stay on top
-                    scale = 1.1; // Expand slightly
+                    zIndex = 40;
+                    scale = 1.1;
                     translateX = 0;
                     rotate = 0;
-                    opacity = 0; // Fade out completely
+                    opacity = 0;
                 }
 
                 return (
@@ -75,12 +73,47 @@ function StackedHeroCards() {
 }
 
 export function DashboardPage() {
-    const { user } = useAuthStore();
+    const { user, creator } = useAuthStore();
+    const [stats, setStats] = useState<CreatorStats | null>(null);
+
+    useEffect(() => {
+        async function fetchStats() {
+            if (user?._id) {
+                try {
+                    const data = await creatorService.getStats(user._id);
+                    setStats(data.stats);
+                } catch (error) {
+                    console.error("Failed to fetch dashboard stats:", error);
+                }
+            }
+        }
+        fetchStats();
+    }, [user?._id]);
+
+    const isRejected = creator?.status === "rejected";
+    const isApproved = creator?.status === "approved";
 
     return (
-        <div className="animate-fade-in font-sans space-y-12 lg:space-y-32">
+        <div className="animate-fade-in font-sans space-y-12 lg:space-y-24">
+            {/* Approval Status Banner */}
+            {!isApproved && (
+                <div className={`p-4 rounded-2xl flex items-center gap-4 ${isRejected ? 'bg-red-50 text-red-700 border border-red-100' : 'bg-amber-50 text-amber-700 border border-amber-100'}`}>
+                    {isRejected ? <AlertCircle className="w-5 h-5" /> : <Clock className="w-5 h-5 animate-pulse" />}
+                    <div>
+                        <p className="font-semibold">
+                            {isRejected ? "Application Rejected" : "Verification in Progress"}
+                        </p>
+                        <p className="text-sm opacity-90">
+                            {isRejected
+                                ? "Your creator application was not approved. You can still create draft quests, but cannot submit them for review."
+                                : "We're currently reviewing your creator application. You can start building your quests as drafts while you wait!"}
+                        </p>
+                    </div>
+                </div>
+            )}
+
             {/* Hero Section */}
-            <div className="flex flex-col lg:flex-row gap-8 lg:gap-24 items-center justify-between mt-4 lg:mt-8">
+            <div className="flex flex-col lg:flex-row gap-8 lg:gap-24 items-center justify-between mt-4">
                 <div className="space-y-6 lg:space-y-10 max-w-2xl flex-1">
                     <h1 className="text-4xl lg:text-7xl font-light text-neutral-900 leading-tight tracking-tight">
                         Welcome to SeekKrr, {user?.first_name ? `${user.first_name}` : "Creator"}
@@ -114,35 +147,41 @@ export function DashboardPage() {
                 </div>
             </div>
 
-            {/* Quick Stats - Modernized */}
+            {/* Quick Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white p-5 rounded-2xl border border-neutral-100 shadow-sm hover:shadow-lg hover:border-indigo-100 transition-all duration-300 group flex items-center gap-4">
-                    <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 group-hover:scale-110 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300 shadow-sm flex-shrink-0">
-                        <MapPin className="w-6 h-6" />
-                    </div>
-                    <div>
-                        <p className="text-md font-medium text-neutral-500">Quests Created</p>
-                        <p className="text-2xl font-bold text-neutral-900 mt-1">0</p>
-                    </div>
-                </div>
-
-                <div className="bg-white p-5 rounded-2xl border border-neutral-100 shadow-sm hover:shadow-lg hover:border-green-100 transition-all duration-300 group flex items-center gap-4">
-                    <div className="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center text-green-600 group-hover:scale-110 group-hover:bg-green-600 group-hover:text-white transition-all duration-300 shadow-sm flex-shrink-0">
-                        <Compass className="w-6 h-6" />
-                    </div>
-                    <div>
-                        <p className="text-md font-medium text-neutral-500">Active Explorers</p>
-                        <p className="text-2xl font-bold text-neutral-900 mt-1">0</p>
+                <div className="bg-white p-6 rounded-2xl border border-neutral-100 shadow-sm hover:shadow-md transition-all">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600">
+                            <MapPin className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium text-neutral-500 uppercase tracking-wider">Quests Published</p>
+                            <p className="text-3xl font-bold text-neutral-900">{stats?.total_quests ?? 0}</p>
+                        </div>
                     </div>
                 </div>
 
-                <div className="bg-white p-5 rounded-2xl border border-neutral-100 shadow-sm hover:shadow-lg hover:border-amber-100 transition-all duration-300 group flex items-center gap-4">
-                    <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600 group-hover:scale-110 group-hover:bg-amber-600 group-hover:text-white transition-all duration-300 shadow-sm flex-shrink-0">
-                        <Trophy className="w-6 h-6" />
+                <div className="bg-white p-6 rounded-2xl border border-neutral-100 shadow-sm hover:shadow-md transition-all">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center text-green-600">
+                            <Compass className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium text-neutral-500 uppercase tracking-wider">Impressions</p>
+                            <p className="text-3xl font-bold text-neutral-900">{stats?.impressions ?? 0}</p>
+                        </div>
                     </div>
-                    <div>
-                        <p className="text-md font-medium text-neutral-500">Completions</p>
-                        <p className="text-2xl font-bold text-neutral-900 mt-1">0</p>
+                </div>
+
+                <div className="bg-white p-6 rounded-2xl border border-neutral-100 shadow-sm hover:shadow-md transition-all">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600">
+                            <Trophy className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium text-neutral-500 uppercase tracking-wider">Total Earnings</p>
+                            <p className="text-3xl font-bold text-neutral-900">₹{stats?.total_earnings?.toLocaleString() ?? 0}</p>
+                        </div>
                     </div>
                 </div>
             </div>
