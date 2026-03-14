@@ -119,6 +119,11 @@ export interface Quest {
     price?: number;
     currency?: string;
     booking_enabled: boolean;
+    review_history?: Array<{ admin_id: string; comment: string; timestamp: string }>;
+    quest_title?: string;
+    quest_region?: string;
+    quest_image?: string;
+    view_count?: number;
     created_at: string;
     updated_at: string;
 }
