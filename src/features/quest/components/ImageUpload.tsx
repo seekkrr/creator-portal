@@ -37,12 +37,11 @@ export function ImageUpload({
             setProgress(0);
             setError(null);
 
-            // Validate file size (max 5MB)
-            if (file.size > 5 * 1024 * 1024) {
-                setError("Image size must be less than 5MB");
+            // Validate file size (max 10MB)
+            if (file.size > 10 * 1024 * 1024) {
+                setError("Image size must be less than 10MB");
                 setIsUploading(false); // Reset uploading state if validation fails
                 return;
-            }
             }
 
             try {
@@ -216,7 +215,7 @@ export function ImageUpload({
                                 <p className="text-sm font-medium text-slate-700 mb-1">
                                     {dragActive ? "Drop image here" : "Click or drag to upload"}
                                 </p>
-                                <p className="text-xs text-slate-500">PNG, JPG up to 5MB</p>
+                                <p className="text-xs text-slate-500">PNG, JPG up to 10MB</p>
                             </>
                         )}
                     </div>

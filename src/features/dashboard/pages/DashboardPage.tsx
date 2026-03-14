@@ -9,10 +9,10 @@ import { creatorService, CreatorStats } from "@services/creator.service";
 function StackedHeroCards() {
     const [activeIndex, setActiveIndex] = useState(0);
     const cards = [
-        { id: 1, src: "/hiker.png", alt: "Adventure 1", color: "bg-neutral-100" },
-        { id: 2, src: "/cafe.png", alt: "Adventure 2", color: "bg-indigo-50" },
-        { id: 3, src: "/dancing.png", alt: "Adventure 3", color: "bg-green-50" },
-        { id: 4, src: "/old_man.png", alt: "Adventure 4", color: "bg-amber-50" },
+        { id: 1, src: "/hiker.png", alt: "Hiker looking at scenic mountains", color: "bg-neutral-100" },
+        { id: 2, src: "/cafe.png", alt: "Cozy cafe table setting", color: "bg-indigo-50" },
+        { id: 3, src: "/dancing.png", alt: "Group of people dancing outdoors", color: "bg-green-50" },
+        { id: 4, src: "/old_man.png", alt: "Portrait of an elderly man with traditional headwear", color: "bg-amber-50" },
     ];
 
     useEffect(() => {

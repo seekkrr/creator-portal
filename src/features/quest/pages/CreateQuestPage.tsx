@@ -52,8 +52,10 @@ export function CreateQuestPage() {
                 title: existingQuest.metadata?.title || "",
                 description: Array.isArray(existingQuest.metadata?.description)
                     ? existingQuest.metadata.description[0] || ""
-                    : (existingQuest.metadata?.description as any) || "",
-                theme: existingQuest.metadata?.theme as any || "Culture",
+                    : typeof existingQuest.metadata?.description === "string"
+                        ? existingQuest.metadata.description
+                        : "",
+                theme: existingQuest.metadata?.theme || "Culture",
                 difficulty: existingQuest.metadata?.difficulty || "Medium",
                 duration: existingQuest.metadata?.duration_minutes,
                 city: existingQuest.location?.region,
@@ -112,8 +114,8 @@ export function CreateQuestPage() {
                 },
                 location: {
                     region: data.city ?? "Unknown",
-                    start_location: { type: "Point", coordinates: [startWaypoint.longitude, startWaypoint.latitude] },
-                    end_location: { type: "Point", coordinates: [endWaypoint.longitude, endWaypoint.latitude] },
+                    start_location: { type: "Point", coordinates: [startWaypoint!.longitude, startWaypoint!.latitude] },
+                    end_location: { type: "Point", coordinates: [endWaypoint!.longitude, endWaypoint!.latitude] },
                     route_waypoints: data.waypoints.map((wp, index) => ({
                         order: index,
                         location: { type: "Point", coordinates: [wp.longitude, wp.latitude] },

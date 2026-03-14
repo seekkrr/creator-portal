@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Edit2, MoreVertical, AlertTriangle } from "lucide-react";
-import { Card, Button } from "@components/ui";
+import { Card, Button, Input } from "@components/ui";
 import { questService } from "@services/quest.service";
 import { useAuthStore } from "@store/auth.store";
 import type { QuestStatus } from "@/types";
@@ -22,6 +22,9 @@ export function QuestsPage() {
         : TABS.filter(tab => tab === "Draft");
 
     const [activeTab, setActiveTab] = useState<Tab>("Draft");
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [confirmText, setConfirmText] = useState("");
+    const [questToDelete, setQuestToDelete] = useState<string | null>(null);
 
     // Reset to Draft if current tab is no longer available
     React.useEffect(() => {
@@ -57,22 +60,31 @@ export function QuestsPage() {
         }
     };
 
-    const handleQuestDelete = async (questId: string) => {
-        if (confirm("Are you sure you want to delete this quest?")) {
-            const promise = questService.deleteQuest(questId);
+    const handleQuestDelete = (questId: string) => {
+        setQuestToDelete(questId);
+        setIsDeleteModalOpen(true);
+    };
 
-            toast.promise(promise, {
-                loading: 'Deleting quest...',
-                success: 'Quest archived successfully',
-                error: 'Failed to delete quest',
-            });
+    const confirmDelete = async () => {
+        if (!questToDelete || confirmText !== "CONFIRM") return;
 
-            try {
-                await promise;
-                refetch();
-            } catch (error) {
-                console.error("Error deleting quest:", error);
-            }
+        const promise = questService.deleteQuest(questToDelete);
+
+        toast.promise(promise, {
+            loading: 'Deleting quest...',
+            success: 'Quest archived successfully',
+            error: 'Failed to delete quest',
+        });
+
+        try {
+            await promise;
+            refetch();
+        } catch (error) {
+            console.error("Error deleting quest:", error);
+        } finally {
+            setIsDeleteModalOpen(false);
+            setQuestToDelete(null);
+            setConfirmText("");
         }
     };
 
@@ -105,6 +117,58 @@ export function QuestsPage() {
                     Create New Quest
                 </Button>
             </div>
+
+            {/* Delete Confirmation Modal */}
+            {isDeleteModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+                    <Card className="w-full max-w-md shadow-2xl border-red-100 overflow-hidden animate-scale-up">
+                        <div className="p-6">
+                            <div className="flex items-center gap-3 text-red-600 mb-4">
+                                <div className="p-2 bg-red-50 rounded-full">
+                                    <AlertTriangle className="w-6 h-6" />
+                                </div>
+                                <h3 className="text-xl font-bold">Delete Quest?</h3>
+                            </div>
+
+                            <p className="text-slate-600 mb-6">
+                                This action will archive your quest. To confirm, please type <span className="font-bold text-slate-900 select-none">CONFIRM</span> below.
+                            </p>
+
+                            <div className="space-y-4">
+                                <Input
+                                    placeholder="Type CONFIRM to delete"
+                                    value={confirmText}
+                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfirmText(e.target.value)}
+                                    className="border-red-100 focus:border-red-500 focus:ring-red-200"
+                                    autoFocus
+                                />
+
+                                <div className="flex gap-3 pt-2">
+                                    <Button
+                                        variant="ghost"
+                                        fullWidth
+                                        onClick={() => {
+                                            setIsDeleteModalOpen(false);
+                                            setConfirmText("");
+                                            setQuestToDelete(null);
+                                        }}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        variant="danger"
+                                        fullWidth
+                                        disabled={confirmText !== "CONFIRM"}
+                                        onClick={confirmDelete}
+                                    >
+                                        Delete Forever
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    </Card>
+                </div>
+            )}
 
             <Card className="overflow-hidden border border-slate-200 shadow-sm">
                 <div className="flex items-center overflow-x-auto border-b border-slate-200">

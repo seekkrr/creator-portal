@@ -128,11 +128,69 @@ export interface Quest {
     updated_at: string;
 }
 
+export interface QuestDetailsMetadata {
+    title: string;
+    description: string[] | string;
+    keywords?: string[];
+    theme: QuestTheme;
+    difficulty: QuestDifficulty;
+    price?: number;
+    max_points?: number;
+    duration_minutes?: number;
+    hints_allowed?: number;
+}
+
+export interface QuestDetailsLocation {
+    region: string;
+    start_location: {
+        type: "Point";
+        coordinates: number[];
+        mapbox_feature_id?: string;
+    };
+    end_location: {
+        type: "Point";
+        coordinates: number[];
+        mapbox_feature_id?: string;
+    };
+    route_waypoints?: Array<{
+        order: number;
+        location: {
+            type: "Point";
+            coordinates: number[];
+            mapbox_waypoint_id?: string;
+        };
+        estimated_time_minutes?: number;
+        distance_from_previous_km?: number | null;
+    }>;
+    route_geometry?: {
+        type: "LineString";
+        coordinates: number[][];
+    };
+    map_data?: {
+        zoom_level: number;
+        map_style: string;
+    };
+}
+
+export interface QuestDetailsMedia {
+    cloudinary_assets?: CloudinaryAsset[];
+    reel_url?: string;
+}
+
+export interface QuestDetailsStep {
+    order: number;
+    title: string;
+    description: string;
+    how_to_reach?: string;
+    waypoint_order?: number;
+    cloudinary_assets?: CloudinaryAsset[];
+}
+
 export interface QuestWithDetails extends Quest {
-    metadata?: CreateQuestPayload["metadata"];
-    location?: CreateQuestPayload["location"];
-    media?: CreateQuestPayload["media"];
-    steps?: CreateQuestPayload["steps"];
+    metadata?: QuestDetailsMetadata;
+    location?: QuestDetailsLocation;
+    media?: QuestDetailsMedia;
+    steps?: QuestDetailsStep[];
 }
 
 // Form Types for Quest Creation
