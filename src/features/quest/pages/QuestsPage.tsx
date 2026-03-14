@@ -183,7 +183,7 @@ export function QuestsPage() {
                 </div>
             )}
 
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col h-full flex-1">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col">
                 <div className="flex items-center overflow-x-auto border-b border-slate-200">
                     {availableTabs.map((tab) => (
                         <button
@@ -204,8 +204,8 @@ export function QuestsPage() {
                     ))}
                 </div>
 
-                <div className="p-0 flex-1 overflow-hidden flex flex-col">
-                    <div className="w-full h-[calc(100vh-280px)] overflow-y-auto overflow-x-auto">
+                <div className="p-0 relative">
+                    <div className="w-full overflow-y-auto overflow-x-auto max-h-[60vh] min-h-[300px]">
                         <table className="w-full text-left border-collapse min-w-[900px] table-fixed">
                             <thead className="sticky top-0 z-20 bg-slate-50 shadow-sm outline outline-1 outline-slate-200">
                                 <tr className="border-b border-slate-200">
