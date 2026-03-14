@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Edit2, MoreVertical, AlertTriangle } from "lucide-react";
 import { Card, Button, Input } from "@components/ui";
@@ -25,6 +25,16 @@ export function QuestsPage() {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [confirmText, setConfirmText] = useState("");
     const [questToDelete, setQuestToDelete] = useState<string | null>(null);
+    const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+    const [dropdownPosition, setDropdownPosition] = useState<'bottom' | 'top'>('bottom');
+    const queryClient = useQueryClient();
+
+    // Close dropdown when clicking outside
+    React.useEffect(() => {
+        const handleClickOutside = () => setOpenDropdownId(null);
+        document.addEventListener("click", handleClickOutside);
+        return () => document.removeEventListener("click", handleClickOutside);
+    }, []);
 
     // Reset to Draft if current tab is no longer available
     React.useEffect(() => {
@@ -48,12 +58,14 @@ export function QuestsPage() {
 
         toast.promise(promise, {
             loading: 'Updating status...',
-            success: `Quest submitted for review!`,
+            success: `Quest status updated seamlessly!`,
             error: 'Failed to update status',
         });
 
         try {
             await promise;
+            // Instantly invalidate queries to ensure seamless data swap
+            await queryClient.invalidateQueries({ queryKey: ["creator-quests"] });
             refetch();
         } catch (error) {
             console.error("Error updating quest status:", error);
@@ -72,12 +84,13 @@ export function QuestsPage() {
 
         toast.promise(promise, {
             loading: 'Deleting quest...',
-            success: 'Quest archived successfully',
+            success: 'Quest deleted successfully',
             error: 'Failed to delete quest',
         });
 
         try {
             await promise;
+            await queryClient.invalidateQueries({ queryKey: ["creator-quests"] });
             refetch();
         } catch (error) {
             console.error("Error deleting quest:", error);
@@ -104,15 +117,15 @@ export function QuestsPage() {
     };
 
     return (
-        <div className="animate-fade-in space-y-6">
-            <div className="flex justify-between items-center">
+        <div className="animate-fade-in space-y-4 w-full max-w-6xl mx-auto pb-6 px-4 sm:px-6 lg:px-8">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-bold text-slate-900">My Quests</h1>
                     <p className="text-slate-500 mt-1">Manage your quest creations and drafts</p>
                 </div>
                 <Button
                     onClick={() => navigate("/creator/quest/create")}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white w-full sm:w-auto"
                 >
                     Create New Quest
                 </Button>
@@ -170,7 +183,7 @@ export function QuestsPage() {
                 </div>
             )}
 
-            <Card className="overflow-hidden border border-slate-200 shadow-sm">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col h-full flex-1">
                 <div className="flex items-center overflow-x-auto border-b border-slate-200">
                     {availableTabs.map((tab) => (
                         <button
@@ -191,16 +204,16 @@ export function QuestsPage() {
                     ))}
                 </div>
 
-                <div className="p-0">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-slate-50 border-b border-slate-200">
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider">Title</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider">Created</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider">Views</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Actions</th>
+                <div className="p-0 flex-1 overflow-hidden flex flex-col">
+                    <div className="w-full h-[calc(100vh-280px)] overflow-y-auto overflow-x-auto">
+                        <table className="w-full text-left border-collapse min-w-[900px] table-fixed">
+                            <thead className="sticky top-0 z-20 bg-slate-50 shadow-sm outline outline-1 outline-slate-200">
+                                <tr className="border-b border-slate-200">
+                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[35%]">Title</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[20%] text-center">Status</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[15%] text-center">Created</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[10%] text-center">Views</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[20%] text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
@@ -238,83 +251,122 @@ export function QuestsPage() {
                                                     <td className="py-4 px-6 font-medium text-slate-900 truncate max-w-[200px]" title={quest.quest_title || quest.metadata_id}>
                                                         {quest.quest_title || quest.metadata_id}
                                                     </td>
-                                                    <td className="py-4 px-6">
+                                                    <td className="py-4 px-6 text-center">
                                                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wider ${getStatusColor(quest.status as QuestStatus)}`}>
                                                             {quest.status}
                                                         </span>
                                                     </td>
-                                                    <td className="py-4 px-6 text-sm text-slate-500 whitespace-nowrap">
+                                                    <td className="py-4 px-6 text-sm text-slate-500 whitespace-nowrap text-center">
                                                         {new Date(quest.created_at).toLocaleDateString()}
                                                     </td>
-                                                    <td className="py-4 px-6 text-sm text-slate-500">
+                                                    <td className="py-4 px-6 text-sm text-slate-500 whitespace-nowrap text-center">
                                                         {quest.view_count || 0}
                                                     </td>
-                                                    <td className="py-4 px-6 text-right">
-                                                        <div className="flex items-center justify-end gap-2">
+                                                    <td className="py-4 px-6 text-right relative">
+                                                        <div className="flex items-center justify-end whitespace-nowrap">
                                                             {['Draft', 'Changes Requested', 'Approved', 'Published'].includes(quest.status as string) && (
                                                                 <Button
                                                                     variant="primary"
                                                                     size="sm"
                                                                     onClick={() => navigate(`/creator/quest/edit/${quest._id}`)}
-                                                                    className="text-xs py-1 h-8 px-3 shadow-none bg-indigo-50 text-indigo-700 border border-indigo-100 hover:bg-indigo-600 hover:text-white"
+                                                                    className="h-9 px-4 bg-indigo-50 text-indigo-700 border border-indigo-100 hover:bg-indigo-600 hover:text-white rounded-lg font-medium shadow-none transition-colors mr-3 flex items-center whitespace-nowrap flex-shrink-0"
                                                                 >
-                                                                    <Edit2 className="w-3 h-3 mr-1.5" /> Edit
+                                                                    <div className="flex items-center gap-1.5 px-0.5 min-w-max">
+                                                                        <Edit2 className="w-4 h-4 shrink-0" /> Edit
+                                                                    </div>
                                                                 </Button>
                                                             )}
-                                                            <div className="relative group/actions">
-                                                                <Button variant="ghost" className="p-2 h-8 w-8 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 border border-transparent">
+                                                            <div className="relative">
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        const rect = e.currentTarget.getBoundingClientRect();
+                                                                        const spaceBelow = window.innerHeight - rect.bottom;
+                                                                        if (spaceBelow < 200) {
+                                                                            setDropdownPosition('top');
+                                                                        } else {
+                                                                            setDropdownPosition('bottom');
+                                                                        }
+                                                                        setOpenDropdownId(openDropdownId === quest._id ? null : quest._id);
+                                                                    }}
+                                                                    className={`p-2 h-9 w-9 border border-transparent rounded-lg flex items-center justify-center transition-colors
+                                                                        ${openDropdownId === quest._id ? 'bg-neutral-100 text-neutral-900' : 'text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100'}`}
+                                                                >
                                                                     <MoreVertical className="w-4 h-4" />
                                                                 </Button>
-                                                                <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-neutral-200 rounded-lg shadow-xl opacity-0 invisible group-hover/actions:opacity-100 group-hover/actions:visible transition-all z-50 py-1">
-                                                                    <button
-                                                                        onClick={() => navigate(`/creator/quest/view/${quest._id}`)}
-                                                                        className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 flex items-center gap-2"
+
+                                                                {openDropdownId === quest._id && (
+                                                                    <div
+                                                                        className={`absolute right-0 w-48 bg-white border border-neutral-200 rounded-xl shadow-xl z-[100] py-1.5 animate-fade-in ${dropdownPosition === 'top' ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
+                                                                            }`}
+                                                                        onClick={(e) => e.stopPropagation()}
                                                                     >
-                                                                        View Details
-                                                                    </button>
-                                                                    {isApproved && ['Draft', 'Changes Requested'].includes(quest.status as string) && (
                                                                         <button
-                                                                            onClick={() => handleUpdateStatus(quest._id, 'Under Review')}
-                                                                            className="w-full text-left px-4 py-2 text-sm text-indigo-600 hover:bg-indigo-50 flex items-center gap-2"
+                                                                            onClick={() => { navigate(`/creator/quest/view/${quest._id}`); setOpenDropdownId(null); }}
+                                                                            className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-slate-50 flex items-center gap-2 font-medium"
                                                                         >
-                                                                            Submit for Review
+                                                                            View Details
                                                                         </button>
-                                                                    )}
-                                                                    <button
-                                                                        onClick={() => handleQuestDelete(quest._id)}
-                                                                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                                                                    >
-                                                                        Delete Quest
-                                                                    </button>
-                                                                </div>
+                                                                        {isApproved && ['Draft', 'Changes Requested'].includes(quest.status as string) && (
+                                                                            <button
+                                                                                onClick={() => { handleUpdateStatus(quest._id, 'Under Review'); setOpenDropdownId(null); }}
+                                                                                className="w-full text-left px-4 py-2 text-sm text-indigo-600 hover:bg-indigo-50 flex items-center gap-2 font-medium"
+                                                                            >
+                                                                                Submit for Review
+                                                                            </button>
+                                                                        )}
+                                                                        <button
+                                                                            onClick={() => { handleQuestDelete(quest._id); setOpenDropdownId(null); }}
+                                                                            className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 font-medium"
+                                                                        >
+                                                                            Delete Quest
+                                                                        </button>
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     </td>
                                                 </tr>
 
                                                 {/* Mobile View */}
-                                                <div className="md:hidden p-4 border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                                                    <div className="flex justify-between items-start mb-2">
-                                                        <div className="font-semibold text-slate-900 line-clamp-1 pr-8">
+                                                <div className="md:hidden p-5 border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                                                    <div className="flex justify-between items-start mb-3">
+                                                        <div className="font-semibold text-slate-900 pr-8 text-base">
                                                             {quest.quest_title || quest.metadata_id}
                                                         </div>
-                                                        <div className="relative group/actions">
-                                                            <MoreVertical className="w-5 h-5 text-neutral-400 p-1" />
-                                                            <div className="absolute right-0 top-0 w-32 bg-white border border-neutral-200 rounded-lg shadow-lg opacity-0 invisible group-hover/actions:opacity-100 group-hover/actions:visible transition-all z-10 py-1">
-                                                                <button onClick={() => navigate(`/creator/quest/view/${quest._id}`)} className="w-full text-left px-3 py-1.5 text-xs text-neutral-700">View Details</button>
-                                                                {isApproved && ['Draft', 'Changes Requested'].includes(quest.status as string) && (
-                                                                    <button onClick={() => handleUpdateStatus(quest._id, 'Under Review')} className="w-full text-left px-3 py-1.5 text-xs text-indigo-600">Submit Review</button>
-                                                                )}
-                                                                <button onClick={() => navigate(`/creator/quest/edit/${quest._id}`)} className="w-full text-left px-3 py-1.5 text-xs text-neutral-700">Edit</button>
-                                                                <button onClick={() => handleQuestDelete(quest._id)} className="w-full text-left px-3 py-1.5 text-xs text-red-600">Delete</button>
-                                                            </div>
+                                                        <div className="relative">
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setOpenDropdownId(openDropdownId === quest._id ? null : quest._id);
+                                                                }}
+                                                                className={`p-2 rounded-lg transition-colors ${openDropdownId === quest._id ? 'bg-neutral-100' : 'hover:bg-neutral-100'}`}
+                                                            >
+                                                                <MoreVertical className="w-5 h-5 text-neutral-500" />
+                                                            </button>
+
+                                                            {openDropdownId === quest._id && (
+                                                                <div
+                                                                    className="absolute right-0 top-full mt-1 w-44 bg-white border border-neutral-200 rounded-xl shadow-xl z-50 py-1.5 animate-fade-in"
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                >
+                                                                    <button onClick={() => { navigate(`/creator/quest/view/${quest._id}`); setOpenDropdownId(null); }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-neutral-700 hover:bg-slate-50">View Details</button>
+                                                                    {isApproved && ['Draft', 'Changes Requested'].includes(quest.status as string) && (
+                                                                        <button onClick={() => { handleUpdateStatus(quest._id, 'Under Review'); setOpenDropdownId(null); }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-indigo-600 hover:bg-indigo-50">Submit Review</button>
+                                                                    )}
+                                                                    <button onClick={() => { navigate(`/creator/quest/edit/${quest._id}`); setOpenDropdownId(null); }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-neutral-700 hover:bg-slate-50">Edit Quest</button>
+                                                                    <button onClick={() => { handleQuestDelete(quest._id); setOpenDropdownId(null); }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50">Delete</button>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
-                                                    <div className="flex items-center gap-2 mb-3">
-                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase ${getStatusColor(quest.status as QuestStatus)}`}>
+                                                    <div className="flex items-center gap-3 mb-4">
+                                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${getStatusColor(quest.status as QuestStatus)}`}>
                                                             {quest.status}
                                                         </span>
-                                                        <span className="text-xs text-slate-400">{new Date(quest.created_at).toLocaleDateString()}</span>
+                                                        <span className="text-xs font-medium text-slate-500">{new Date(quest.created_at).toLocaleDateString()}</span>
+                                                        <span className="text-xs font-medium text-slate-500 text-right ms-auto">{quest.view_count || 0} views</span>
                                                     </div>
                                                     {['Draft', 'Changes Requested', 'Approved', 'Published'].includes(quest.status as string) && (
                                                         <Button
@@ -322,7 +374,7 @@ export function QuestsPage() {
                                                             fullWidth
                                                             size="sm"
                                                             onClick={() => navigate(`/creator/quest/edit/${quest._id}`)}
-                                                            className="text-xs bg-indigo-50 text-indigo-700 border border-indigo-100 hover:bg-indigo-600 hover:text-white mb-2"
+                                                            className="text-sm h-10 font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100 hover:bg-indigo-600 hover:text-white mb-2 shadow-none rounded-xl"
                                                         >
                                                             Edit Quest
                                                         </Button>
@@ -330,17 +382,29 @@ export function QuestsPage() {
                                                 </div>
 
                                                 {((quest.status as string) === 'Changes Requested') && latestComment && (
-                                                    <tr className="bg-orange-50/50">
-                                                        <td colSpan={5} className="py-3 px-6 border-l-4 border-orange-500">
-                                                            <div className="flex items-start gap-2 text-sm text-orange-800">
-                                                                <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0 text-orange-600" />
-                                                                <div>
-                                                                    <span className="font-semibold text-orange-900">Admin Feedback: </span>
-                                                                    {latestComment}
+                                                    <tr className="bg-orange-50/40 hidden md:table-row">
+                                                        <td colSpan={5} className="py-4 pl-5 pr-6 border-l-4 border-orange-500 align-top">
+                                                            <div className="flex items-start gap-3">
+                                                                <AlertTriangle className="w-5 h-5 mt-0.5 flex-shrink-0 text-orange-600" />
+                                                                <div className="max-w-[800px]">
+                                                                    <span className="font-semibold text-orange-900 mb-1 block">Admin Feedback</span>
+                                                                    <p className="text-orange-800 text-sm leading-relaxed whitespace-pre-wrap">{latestComment}</p>
                                                                 </div>
                                                             </div>
                                                         </td>
                                                     </tr>
+                                                )}
+                                                {/* Mobile admin feedback */}
+                                                {((quest.status as string) === 'Changes Requested') && latestComment && (
+                                                    <div className="md:hidden bg-orange-50/40 p-4 border-l-4 border-orange-500 mb-2 rounded-r-lg">
+                                                        <div className="flex items-start gap-3">
+                                                            <AlertTriangle className="w-5 h-5 flex-shrink-0 text-orange-600" />
+                                                            <div>
+                                                                <span className="font-semibold text-orange-900 block mb-1">Admin Feedback</span>
+                                                                <p className="text-orange-800 text-sm leading-relaxed whitespace-pre-wrap">{latestComment}</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 )}
                                             </React.Fragment>
                                         );
@@ -350,7 +414,7 @@ export function QuestsPage() {
                         </table>
                     </div>
                 </div>
-            </Card>
+            </div>
         </div>
     );
 }
