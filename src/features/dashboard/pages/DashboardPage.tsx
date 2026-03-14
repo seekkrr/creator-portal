@@ -11,8 +11,8 @@ function StackedHeroCards() {
     const cards = [
         { id: 1, src: "/hiker.png", alt: "Adventure 1", color: "bg-neutral-100" },
         { id: 2, src: "/cafe.png", alt: "Adventure 2", color: "bg-indigo-50" },
-        { id: 3, src: "/dancing.png", alt: "Adventure 2", color: "bg-green-50" },
-        { id: 4, src: "/old_man.png", alt: "Adventure 2", color: "bg-amber-50" },
+        { id: 3, src: "/dancing.png", alt: "Adventure 3", color: "bg-green-50" },
+        { id: 4, src: "/old_man.png", alt: "Adventure 4", color: "bg-amber-50" },
     ];
 
     useEffect(() => {
