@@ -155,7 +155,7 @@ export function DashboardPage() {
                             <MapPin className="w-6 h-6" />
                         </div>
                         <div>
-                            <p className="text-sm font-medium text-neutral-500 uppercase tracking-wider">Quests Created</p>
+                            <p className="text-sm font-medium text-neutral-500 uppercase tracking-wider">Quests Published</p>
                             <p className="text-3xl font-bold text-neutral-900">{stats?.total_quests ?? 0}</p>
                         </div>
                     </div>
