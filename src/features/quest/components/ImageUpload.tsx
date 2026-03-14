@@ -33,15 +33,16 @@ export function ImageUpload({
                 return;
             }
 
-            // Validate file size (max 5MB)
-            if (file.size > 5 * 1024 * 1024) {
-                setError("Image size must be less than 5MB");
-                return;
-            }
-
             setIsUploading(true);
             setProgress(0);
             setError(null);
+
+            // Validate file size (max 10MB)
+            if (file.size > 5 * 1024 * 1024) {
+                setError("Image size must be less than 5MB");
+                setIsUploading(false); // Reset uploading state if validation fails
+                return;
+            }
 
             try {
                 const result = await cloudinaryService.uploadImage(file, {

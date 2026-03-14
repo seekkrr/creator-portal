@@ -12,9 +12,23 @@ type Tab = QuestStatus;
 const TABS: Tab[] = ["Draft", "Under Review", "Changes Requested", "Published", "Rejected"];
 
 export function QuestsPage() {
-    const { user } = useAuthStore();
+    const { user, creator } = useAuthStore();
     const navigate = useNavigate();
+
+    // Filter tabs based on creator status
+    const isApproved = creator?.status === "approved";
+    const availableTabs = isApproved
+        ? TABS
+        : TABS.filter(tab => tab === "Draft");
+
     const [activeTab, setActiveTab] = useState<Tab>("Draft");
+
+    // Reset to Draft if current tab is no longer available
+    React.useEffect(() => {
+        if (!availableTabs.includes(activeTab)) {
+            setActiveTab("Draft");
+        }
+    }, [availableTabs, activeTab]);
 
     const { data, isLoading, refetch } = useQuery({
         queryKey: ["creator-quests", activeTab],
@@ -94,7 +108,7 @@ export function QuestsPage() {
 
             <Card className="overflow-hidden border border-slate-200 shadow-sm">
                 <div className="flex items-center overflow-x-auto border-b border-slate-200">
-                    {TABS.map((tab) => (
+                    {availableTabs.map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
@@ -194,7 +208,7 @@ export function QuestsPage() {
                                                                     >
                                                                         View Details
                                                                     </button>
-                                                                    {['Draft', 'Changes Requested'].includes(quest.status as string) && (
+                                                                    {isApproved && ['Draft', 'Changes Requested'].includes(quest.status as string) && (
                                                                         <button
                                                                             onClick={() => handleUpdateStatus(quest._id, 'Under Review')}
                                                                             className="w-full text-left px-4 py-2 text-sm text-indigo-600 hover:bg-indigo-50 flex items-center gap-2"
@@ -224,7 +238,7 @@ export function QuestsPage() {
                                                             <MoreVertical className="w-5 h-5 text-neutral-400 p-1" />
                                                             <div className="absolute right-0 top-0 w-32 bg-white border border-neutral-200 rounded-lg shadow-lg opacity-0 invisible group-hover/actions:opacity-100 group-hover/actions:visible transition-all z-10 py-1">
                                                                 <button onClick={() => navigate(`/creator/quest/view/${quest._id}`)} className="w-full text-left px-3 py-1.5 text-xs text-neutral-700">View Details</button>
-                                                                {['Draft', 'Changes Requested'].includes(quest.status as string) && (
+                                                                {isApproved && ['Draft', 'Changes Requested'].includes(quest.status as string) && (
                                                                     <button onClick={() => handleUpdateStatus(quest._id, 'Under Review')} className="w-full text-left px-3 py-1.5 text-xs text-indigo-600">Submit Review</button>
                                                                 )}
                                                                 <button onClick={() => navigate(`/creator/quest/edit/${quest._id}`)} className="w-full text-left px-3 py-1.5 text-xs text-neutral-700">Edit</button>

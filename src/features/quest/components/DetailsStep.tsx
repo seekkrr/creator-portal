@@ -178,7 +178,7 @@ export function DetailsStep({ defaultValues, onNext, onBack }: DetailsStepProps)
                 <Button
                     type="button"
                     variant="outline"
-                    onClick={onBack}
+                    onClick={() => onBack()}
                     leftIcon={<ChevronLeft className="w-4 h-4" />}
                 >
                     Back

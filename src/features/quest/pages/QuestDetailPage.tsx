@@ -10,12 +10,15 @@ import { Card, Button, Badge, Input } from "@components/ui";
 import { WaypointMapComponent } from "@features/map/components/WaypointMapComponent";
 import { useState, ChangeEvent } from "react";
 import { toast } from "sonner";
+import { useAuthStore } from "@store/auth.store";
 import type { QuestStatus } from "@/types";
 
 
 export function QuestDetailPage() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const { creator } = useAuthStore();
+    const isApproved = creator?.status === "approved";
     const [expandedSteps, setExpandedSteps] = useState<Set<number>>(new Set());
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [confirmText, setConfirmText] = useState("");
@@ -164,14 +167,22 @@ export function QuestDetailPage() {
 
                 <div className="flex flex-wrap items-center gap-3">
                     {["Draft", "Changes Requested"].includes(quest.status) && (
-                        <Button
-                            variant="primary"
-                            onClick={() => handleUpdateStatus('Under Review')}
-                            leftIcon={<Send className="w-4 h-4" />}
-                            className="bg-indigo-600 hover:bg-indigo-700"
-                        >
-                            Submit Review
-                        </Button>
+                        <div className="relative group">
+                            <Button
+                                variant="primary"
+                                onClick={() => handleUpdateStatus('Under Review')}
+                                leftIcon={<Send className="w-4 h-4" />}
+                                className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
+                                disabled={!isApproved}
+                            >
+                                Submit Review
+                            </Button>
+                            {!isApproved && (
+                                <div className="absolute bottom-full mb-2 right-1/2 -translate-x-1/2 w-48 p-2 bg-neutral-900 text-white text-[10px] rounded shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 text-center">
+                                    Your account must be approved by an admin before you can submit quests for review.
+                                </div>
+                            )}
+                        </div>
                     )}
 
                     {["Draft", "Changes Requested", "Approved", "Published"].includes(quest.status) && (

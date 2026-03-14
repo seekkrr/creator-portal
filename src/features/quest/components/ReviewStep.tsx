@@ -1,6 +1,7 @@
 import { ChevronLeft, Check, MapPin, Clock, AlertCircle } from "lucide-react";
 import { Button, Card, Badge } from "@components/ui";
 import { WaypointMapComponent } from "@features/map";
+import { useAuthStore } from "@store/auth.store";
 import type { CreateQuestFormData, QuestDifficulty, QuestStatus } from "@/types";
 
 interface ReviewStepProps {
@@ -18,7 +19,9 @@ const difficultyColors: Record<QuestDifficulty, "success" | "info" | "warning" |
 };
 
 export function ReviewStep({ formData, onBack, onSubmit, isSubmitting }: ReviewStepProps) {
+    const { creator } = useAuthStore();
     const { title, description, difficulty, duration, waypoints = [], latitude, longitude } = formData;
+    const isApproved = creator?.status === "approved";
 
     // Calculate map center from first waypoint or location step
     const mapCenter = waypoints.length > 0 && waypoints[0]
@@ -133,7 +136,7 @@ export function ReviewStep({ formData, onBack, onSubmit, isSubmitting }: ReviewS
                 <Button
                     type="button"
                     variant="outline"
-                    onClick={onBack}
+                    onClick={() => onBack()}
                     leftIcon={<ChevronLeft className="w-4 h-4" />}
                     disabled={isSubmitting}
                 >
@@ -148,14 +151,21 @@ export function ReviewStep({ formData, onBack, onSubmit, isSubmitting }: ReviewS
                     >
                         Save as Draft
                     </Button>
-                    <Button
-                        onClick={() => onSubmit("Under Review")}
-                        isLoading={isSubmitting}
-                        disabled={isSubmitting || (waypoints?.length ?? 0) < 2}
-                        leftIcon={<Check className="w-4 h-4" />}
-                    >
-                        Submit for Review
-                    </Button>
+                    <div className="relative group">
+                        <Button
+                            onClick={() => onSubmit("Under Review")}
+                            isLoading={isSubmitting}
+                            disabled={isSubmitting || (waypoints?.length ?? 0) < 2 || !isApproved}
+                            leftIcon={<Check className="w-4 h-4" />}
+                        >
+                            Submit for Review
+                        </Button>
+                        {!isApproved && (
+                            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 p-2 bg-neutral-900 text-white text-[10px] rounded shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 text-center">
+                                Your account must be approved by an admin before you can submit quests for review.
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

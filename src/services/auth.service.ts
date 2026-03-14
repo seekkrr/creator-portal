@@ -52,16 +52,26 @@ export const authService = {
         }).join(''));
 
         const payload = JSON.parse(jsonPayload);
-        const userId = payload.sub || payload.user_id; // Adjust based on your JWT payload
+        const userId = payload.sub || payload.user_id;
 
         const response = await api.get<{ user: User }>(`/api/core/users/${userId}`);
+        const user = response.data.user;
 
-        // Transform response to match AuthMeResponse structure if needed, 
-        // or just return the user object if the UI expects that.
-        // The backend returns { user: {...}, contact: {...}, profile: {...} }
+        let creator: Creator | undefined = undefined;
+        if (user.is_creator) {
+            try {
+                const creatorResponse = await api.get<{ creator_profile: Creator }>(
+                    API_ENDPOINTS.CREATORS.BY_USER_ID(userId)
+                );
+                creator = creatorResponse.data.creator_profile;
+            } catch (error) {
+                console.error("Failed to fetch creator details:", error);
+            }
+        }
+
         return {
-            user: response.data.user,
-            creator: undefined // You might want to fetch creator details separately or if included
+            user,
+            creator
         };
     },
 
