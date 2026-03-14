@@ -23,6 +23,10 @@ const CreateQuestPage = lazyRetry(() =>
     import("@features/quest/pages/CreateQuestPage").then((m) => ({ default: m.CreateQuestPage }))
 );
 
+const QuestsPage = lazyRetry(() =>
+    import("@features/quest/pages/QuestsPage").then((m) => ({ default: m.QuestsPage }))
+);
+
 const QuestSuccessPage = lazyRetry(() =>
     import("@features/quest/pages/QuestSuccessPage").then((m) => ({ default: m.QuestSuccessPage }))
 );
@@ -110,6 +114,14 @@ export const router = createBrowserRouter([
                                 element: (
                                     <SuspenseWrapper>
                                         <DashboardPage />
+                                    </SuspenseWrapper>
+                                ),
+                            },
+                            {
+                                path: "quests",
+                                element: (
+                                    <SuspenseWrapper>
+                                        <QuestsPage />
                                     </SuspenseWrapper>
                                 ),
                             },
