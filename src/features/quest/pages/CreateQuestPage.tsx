@@ -99,8 +99,8 @@ export function CreateQuestPage() {
     // Save/Update quest mutation
     const questMutation = useMutation({
         mutationFn: async ({ data, status }: { data: CreateQuestFormData; status: QuestStatus }) => {
-            const startWaypoint = data.waypoints[0]!;
-            const endWaypoint = data.waypoints[data.waypoints.length - 1]!;
+            const startWaypoint = data.waypoints[0];
+            const endWaypoint = data.waypoints[data.waypoints.length - 1];
 
             const payload: CreateQuestPayload = {
                 metadata: {
