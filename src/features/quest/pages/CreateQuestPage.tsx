@@ -87,15 +87,12 @@ export function CreateQuestPage() {
     // Create quest mutation
     const createQuestMutation = useMutation({
         mutationFn: async (data: CreateQuestFormData) => {
-            // Get the last waypoint for end_location (or use start if no waypoints)
-            const lastWaypoint = data.waypoints.length > 0
-                ? data.waypoints[data.waypoints.length - 1]
-                : null;
+            // Get start and end waypoints (schema guarantees at least 2)
+            const startWaypoint = data.waypoints[0]!;
+            const endWaypoint = data.waypoints[data.waypoints.length - 1]!;
 
-            const startCoords = [data.longitude ?? 0, data.latitude ?? 0];
-            const endCoords = lastWaypoint
-                ? [lastWaypoint.longitude, lastWaypoint.latitude]
-                : startCoords;
+            const startCoords = [startWaypoint.longitude, startWaypoint.latitude];
+            const endCoords = [endWaypoint.longitude, endWaypoint.latitude];
 
             const payload: CreateQuestPayload = {
                 metadata: {
@@ -123,13 +120,10 @@ export function CreateQuestPage() {
                         },
                     })),
                     // Route geometry - LineString of all coordinates
-                    route_geometry: data.waypoints.length > 0 ? {
+                    route_geometry: {
                         type: "LineString" as const,
-                        coordinates: [
-                            startCoords,
-                            ...data.waypoints.map(wp => [wp.longitude, wp.latitude]),
-                        ],
-                    } : undefined,
+                        coordinates: data.waypoints.map(wp => [wp.longitude, wp.latitude]),
+                    },
                     map_data: {
                         zoom_level: 14,
                         map_style: "standard",
