@@ -35,7 +35,7 @@ export function QuestsPage() {
         queryFn: () => questService.listQuests({
             status: activeTab,
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            created_by: (user as any)?._id || (user as any)?.id
+            created_by: user?._id
         }),
         enabled: !!user,
     });
