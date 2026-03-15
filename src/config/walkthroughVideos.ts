@@ -26,5 +26,5 @@ export const WALKTHROUGH_VIDEOS = {
 
     /** Used by the Dashboard page. */
     HOW_TO_VIDEO_URL:
-        "https://res.cloudinary.com/seekkrr/video/upload/v1773575323/Quest_Creation_vnfst7.mp4",
+        "https://res.cloudinary.com/seekkrr/video/upload/v1773576724/Quest_Creation_Walkthrough_1_mysjlw.mp4",
 } as const;
