@@ -66,12 +66,14 @@ export function VideoWalkthroughModal({
 
     // Prevent scroll on the body while open
     useEffect(() => {
-        if (isOpen) {
-            document.body.style.overflow = "hidden";
-        } else {
-            document.body.style.overflow = "";
-        }
-        return () => { document.body.style.overflow = ""; };
+        if (!isOpen) return;
+
+        const originalOverflow = window.getComputedStyle(document.body).overflow;
+        document.body.style.overflow = "hidden";
+
+        return () => {
+            document.body.style.overflow = originalOverflow;
+        };
     }, [isOpen]);
 
     if (!isOpen) return null;
