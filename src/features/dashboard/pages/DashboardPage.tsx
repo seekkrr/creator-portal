@@ -89,9 +89,10 @@ function HowToVideoPlayer() {
     const [playing, setPlaying] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
     // Thumbnail: first frame, auto-format image, 1280px wide
-    const thumbnailUrl = WALKTHROUGH_VIDEOS.HOW_TO_VIDEO_URL
-        .replace("/video/upload/", "/video/upload/q_auto/f_auto/so_0/")
-        .replace(/\.mp4$/, ".jpg");
+    const thumbnailUrl = buildCloudinaryUrl(
+        WALKTHROUGH_VIDEOS.HOW_TO_VIDEO_URL,
+        "q_auto/f_auto/so_0/"
+    ).replace(/\.mp4$/, ".jpg");
     // Optimised video URL — only computed / used after click
     const videoSrc = buildCloudinaryUrl(WALKTHROUGH_VIDEOS.HOW_TO_VIDEO_URL, "q_auto/f_auto/");
 
