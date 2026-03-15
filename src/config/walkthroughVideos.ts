@@ -23,4 +23,8 @@ export const WALKTHROUGH_VIDEOS = {
     /** Used by the Waypoint Details step. */
     WAYPOINT_DETAILS:
         "https://res.cloudinary.com/seekkrr/video/upload/v1773572709/Waypoints_detail_without_watermark_jos4au.mp4",
+
+    /** Used by the Dashboard page. */
+    HOW_TO_VIDEO_URL:
+        "https://res.cloudinary.com/seekkrr/video/upload/v1773575323/Quest_Creation_vnfst7.mp4",
 } as const;

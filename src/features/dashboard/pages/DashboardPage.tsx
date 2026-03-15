@@ -1,8 +1,9 @@
 import { Link } from "react-router-dom";
 import { useAuthStore } from "@store/auth.store";
-import { MapPin, Compass, Trophy, AlertCircle, Clock } from "lucide-react";
-import { useState, useEffect } from "react";
+import { MapPin, Compass, Trophy, AlertCircle, Clock, Play } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import { creatorService, CreatorStats } from "@services/creator.service";
+import { WALKTHROUGH_VIDEOS } from "@config/walkthroughVideos";
 
 // ... (StackedHeroCards remains same)
 
@@ -60,6 +61,7 @@ function StackedHeroCards() {
                         <img
                             src={card.src}
                             alt={card.alt}
+                            loading="lazy"
                             className="w-full h-full object-cover"
                         />
                         {position > 0 && !isExiting && (
@@ -68,6 +70,78 @@ function StackedHeroCards() {
                     </div>
                 );
             })}
+        </div>
+    );
+}
+
+/* ------------------------------------------------------------------
+   Lazy-loaded video player for the How to Create section.
+   Shows a Cloudinary thumbnail immediately; only fetches the video
+   when the user explicitly clicks the play button.
+   ------------------------------------------------------------------ */
+
+/** Build an optimised Cloudinary URL by inserting transform segments. */
+function buildCloudinaryUrl(base: string, transforms: string): string {
+    return base.replace(/(\/video\/upload\/)(v\d+\/)/, `$1${transforms}$2`);
+}
+
+function HowToVideoPlayer() {
+    const [playing, setPlaying] = useState(false);
+    const videoRef = useRef<HTMLVideoElement>(null);
+    // Thumbnail: first frame, auto-format image, 1280px wide
+    const thumbnailUrl = WALKTHROUGH_VIDEOS.HOW_TO_VIDEO_URL
+        .replace("/video/upload/", "/video/upload/q_auto/f_auto/so_0/")
+        .replace(/\.mp4$/, ".jpg");
+    // Optimised video URL — only computed / used after click
+    const videoSrc = buildCloudinaryUrl(WALKTHROUGH_VIDEOS.HOW_TO_VIDEO_URL, "q_auto/f_auto/");
+
+    const handlePlay = () => {
+        setPlaying(true);
+        // Let the browser paint the video element first, then autoplay
+        requestAnimationFrame(() => {
+            videoRef.current?.play().catch(() => {/* silent */ });
+        });
+    };
+
+    return (
+        <div className="how-to-video-wrap">
+            {!playing ? (
+                /* ── Thumbnail state ── */
+                <button
+                    className="how-to-video-thumb"
+                    onClick={handlePlay}
+                    aria-label="Play how to create a quest walkthrough"
+                >
+                    <img
+                        src={thumbnailUrl}
+                        alt="Quest creation walkthrough thumbnail"
+                        loading="lazy"
+                        decoding="async"
+                        className="how-to-video-img"
+                    />
+                    {/* Gradient overlay */}
+                    <div className="how-to-video-overlay" />
+                    {/* Play button */}
+                    <div className="how-to-play-btn" aria-hidden="true">
+                        <Play className="w-7 h-7 text-white fill-white" />
+                    </div>
+                    {/* Duration badge */}
+                    <span className="how-to-video-badge">Watch demo</span>
+                </button>
+            ) : (
+                /* ── Video state: only rendered after click ── */
+                <video
+                    ref={videoRef}
+                    className="how-to-video-player"
+                    controls
+                    playsInline
+                    preload="none"
+                    autoPlay
+                >
+                    <source src={videoSrc} />
+                    <source src={WALKTHROUGH_VIDEOS.HOW_TO_VIDEO_URL} type="video/mp4" />
+                </video>
+            )}
         </div>
     );
 }
@@ -186,76 +260,57 @@ export function DashboardPage() {
                 </div>
             </div>
 
-            {/* Getting Started - Modernized */}
-            <div>
-                <h2 className="text-2xl font-medium text-neutral-900 mb-6 tracking-tight">
-                    How to create a Quest ?
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="group p-6 bg-white rounded-3xl border border-neutral-100 hover:border-indigo-100 hover:shadow-xl transition-all duration-300">
-                        <div className="flex items-start gap-5">
-                            <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-lg shadow-indigo-200 shadow-lg group-hover:scale-110 transition-transform flex-shrink-0">
-                                1
-                            </div>
-                            <div>
-                                <h3 className="text-lg font-semibold text-neutral-900 mb-2">
-                                    Add Destination or Content Link
-                                </h3>
-                                <p className="text-sm text-neutral-600 leading-relaxed">
-                                    Click Create Quest and enter the location. You can also add a link to your content
-                                </p>
-                            </div>
-                        </div>
-                    </div>
+            {/* How to Create a Quest — video first, then steps */}
+            <div className="space-y-8">
+                <div>
+                    <h2 className="text-2xl font-medium text-neutral-900 tracking-tight">
+                        How to create a Quest?
+                    </h2>
+                    <p className="text-neutral-500 mt-1 text-sm">
+                        Watch the full walkthrough or follow the steps below.
+                    </p>
+                </div>
 
-                    <div className="group p-6 bg-white rounded-3xl border border-neutral-100 hover:border-indigo-100 hover:shadow-xl transition-all duration-300">
-                        <div className="flex items-start gap-5">
-                            <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-lg shadow-indigo-200 shadow-lg group-hover:scale-110 transition-transform flex-shrink-0">
-                                2
-                            </div>
-                            <div>
-                                <h3 className="text-lg font-semibold text-neutral-900 mb-2">
-                                    Add Quest Details
-                                </h3>
-                                <p className="text-sm text-neutral-600 leading-relaxed">
-                                    Add the name of the quest, description and duration of the quest
-                                </p>
-                            </div>
-                        </div>
-                    </div>
+                {/* Video */}
+                <HowToVideoPlayer />
 
-                    <div className="group p-6 bg-white rounded-3xl border border-neutral-100 hover:border-indigo-100 hover:shadow-xl transition-all duration-300">
-                        <div className="flex items-start gap-5">
-                            <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-lg shadow-indigo-200 shadow-lg group-hover:scale-110 transition-transform flex-shrink-0">
-                                3
+                {/* Steps — horizontal scroll on mobile, 4-col on desktop */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                    {[
+                        {
+                            n: 1,
+                            title: "Add Destination or Content Link",
+                            desc: "Click Create Quest and enter the location, or paste a link to your content.",
+                        },
+                        {
+                            n: 2,
+                            title: "Add Quest Details",
+                            desc: "Give your quest a name, description, theme, and estimated duration.",
+                        },
+                        {
+                            n: 3,
+                            title: "Add Locations",
+                            desc: "Guide travelers by pinning waypoints on the map and adding navigation tips.",
+                        },
+                        {
+                            n: 4,
+                            title: "Earn Rewards",
+                            desc: "Get recognised and earn commission as explorers complete your quests.",
+                        },
+                    ].map(({ n, title, desc }) => (
+                        <div
+                            key={n}
+                            className="group p-5 bg-white rounded-2xl border border-neutral-100 hover:border-indigo-100 hover:shadow-lg transition-all duration-300 flex flex-col gap-3"
+                        >
+                            <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-base shadow-indigo-200 shadow-md group-hover:scale-110 transition-transform flex-shrink-0">
+                                {n}
                             </div>
                             <div>
-                                <h3 className="text-lg font-semibold text-neutral-900 mb-2">
-                                    Add Locations
-                                </h3>
-                                <p className="text-sm text-neutral-600 leading-relaxed">
-                                    Guide travelers on how to reach and
-                                    what to expect by pinning locations on the map
-                                </p>
+                                <h3 className="text-sm font-semibold text-neutral-900 mb-1">{title}</h3>
+                                <p className="text-xs text-neutral-500 leading-relaxed">{desc}</p>
                             </div>
                         </div>
-                    </div>
-
-                    <div className="group p-6 bg-white rounded-3xl border border-neutral-100 hover:border-indigo-100 hover:shadow-xl transition-all duration-300">
-                        <div className="flex items-start gap-5">
-                            <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-lg shadow-indigo-200 shadow-lg group-hover:scale-110 transition-transform flex-shrink-0">
-                                4
-                            </div>
-                            <div>
-                                <h3 className="text-lg font-semibold text-neutral-900 mb-2">
-                                    Earn Rewards
-                                </h3>
-                                <p className="text-sm text-neutral-600 leading-relaxed">
-                                    Get recognized and earn commission as more explorers complete your quests
-                                </p>
-                            </div>
-                        </div>
-                    </div>
+                    ))}
                 </div>
             </div>
         </div>

@@ -354,3 +354,112 @@ body {
   opacity: 1;
 }
 
+/* =========================================================
+   HowToVideoPlayer — Dashboard homepage
+   ========================================================= */
+
+/* 16:9 aspect-ratio wrapper */
+.how-to-video-wrap {
+  position: relative;
+  width: 100%;
+  border-radius: 1rem;
+  overflow: hidden;
+  background: #0f0f0f;
+  aspect-ratio: 16 / 9;
+  box-shadow: 0 8px 32px -4px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.06);
+}
+
+/* Full-size thumbnail button */
+.how-to-video-thumb {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  background: #0f0f0f;
+  display: block;
+}
+
+/* Thumbnail image */
+.how-to-video-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 400ms ease, filter 400ms ease;
+}
+.how-to-video-thumb:hover .how-to-video-img {
+  transform: scale(1.025);
+  filter: brightness(0.82);
+}
+
+/* Dark gradient overlay */
+.how-to-video-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(0,0,0,0.55) 0%,
+    rgba(0,0,0,0.10) 50%,
+    rgba(0,0,0,0.0) 100%
+  );
+  pointer-events: none;
+}
+
+/* Centred play button */
+.how-to-play-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.18);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 2px solid rgba(255,255,255,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 200ms, transform 200ms, box-shadow 200ms;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.30);
+}
+.how-to-video-thumb:hover .how-to-play-btn {
+  background: rgba(99,102,241,0.82);
+  border-color: transparent;
+  transform: translate(-50%, -50%) scale(1.10);
+  box-shadow: 0 8px 32px rgba(99,102,241,0.45);
+}
+
+/* "Watch demo" badge bottom-right */
+.how-to-video-badge {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  pointer-events: none;
+}
+
+/* Native video player after click */
+.how-to-video-player {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  background: #000;
+}
+
+
