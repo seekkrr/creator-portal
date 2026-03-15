@@ -6,6 +6,8 @@ import { Button, FloatingInput } from "@components/ui";
 import { MapboxLocationSearch, type SelectedLocation } from "@components/MapboxLocationSearch";
 import { locationStepSchema, type LocationStepData } from "../schemas/quest.schema";
 import { config } from "@config/env";
+import { VideoWalkthroughModal, VideoHelpButton } from "@components/VideoWalkthroughModal";
+import { WALKTHROUGH_VIDEOS } from "@config/walkthroughVideos";
 
 interface LocationStepProps {
     defaultValues: Partial<LocationStepData>;
@@ -141,8 +143,20 @@ export function LocationStep({ defaultValues, onNext }: LocationStepProps) {
         ? !!selectedLocation
         : !!(sourceUrl && sourceUrl.trim());
 
+    const [isModalOpen, setIsModalOpen] = useState(false);
+
     return (
+        <>
         <form onSubmit={handleSubmit(onSubmit)} className="min-h-[60vh] flex flex-col justify-center">
+            {/* Step Header with Help Button */}
+            <div className="flex items-center justify-between mb-6">
+                <div>
+                    <h2 className="text-xl font-semibold text-neutral-900">Set Quest Location</h2>
+                    <p className="text-sm text-neutral-500 mt-0.5">Choose a city or share a reel URL to get started</p>
+                </div>
+                <VideoHelpButton onClick={() => setIsModalOpen(true)} label="Watch walkthrough" />
+            </div>
+
             {/* Main Content Container */}
             <div className="grid lg:grid-cols-[1fr_auto_1fr] md:grid-cols-1 gap-6 lg:gap-0 items-stretch w-full">
 
@@ -304,5 +318,13 @@ export function LocationStep({ defaultValues, onNext }: LocationStepProps) {
                 </Button>
             </div>
         </form>
+
+        <VideoWalkthroughModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            videoUrl={WALKTHROUGH_VIDEOS.LOCATION}
+            title="Location & Details Walkthrough"
+        />
+        </>
     );
 }

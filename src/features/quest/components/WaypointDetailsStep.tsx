@@ -11,6 +11,8 @@ import { Button, Textarea } from "@/components/ui";
 import { ImageUpload } from "./ImageUpload";
 import { WaypointMapComponent } from "@features/map";
 import type { CloudinaryAsset, QuestLocation } from "@/types";
+import { VideoWalkthroughModal, VideoHelpButton } from "@components/VideoWalkthroughModal";
+import { WALKTHROUGH_VIDEOS } from "@config/walkthroughVideos";
 
 interface WaypointDetailsStepProps {
     defaultValues: Partial<CreateQuestFormData>;
@@ -55,6 +57,7 @@ export function WaypointDetailsStep({ defaultValues, onNext, onBack }: WaypointD
     // Manage accordion state
     const [openIndex, setOpenIndex] = useState<number | null>(null);
     const [activeWaypoint, setActiveWaypoint] = useState<QuestLocation | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     // Update active waypoint when accordion changes
     useEffect(() => {
@@ -124,12 +127,16 @@ export function WaypointDetailsStep({ defaultValues, onNext, onBack }: WaypointD
             : { lng: 77.5946, lat: 12.9716 };
 
     return (
+        <>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-            <div className="space-y-4">
-                <h2 className="text-2xl font-bold tracking-tight">Waypoint Details</h2>
-                <p className="text-neutral-500">
-                    Add detailed instructions and activities for each stop on your quest.
-                </p>
+            <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                    <h2 className="text-2xl font-bold tracking-tight">Waypoint Details</h2>
+                    <p className="text-neutral-500">
+                        Add detailed instructions and activities for each stop on your quest.
+                    </p>
+                </div>
+                <VideoHelpButton onClick={() => setIsModalOpen(true)} label="Watch walkthrough" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-8 items-start">
@@ -351,5 +358,13 @@ export function WaypointDetailsStep({ defaultValues, onNext, onBack }: WaypointD
                 </Button>
             </div>
         </form>
+
+        <VideoWalkthroughModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            videoUrl={WALKTHROUGH_VIDEOS.WAYPOINT_DETAILS}
+            title="Waypoint Details Walkthrough"
+        />
+        </>
     );
 }

@@ -6,6 +6,8 @@ import { Button, Card } from "@components/ui";
 import { WaypointMapComponent, LocationSearch } from "@features/map";
 import { waypointsStepSchema, type WaypointsStepData } from "../schemas/quest.schema";
 import type { QuestLocation } from "@/types";
+import { VideoWalkthroughModal, VideoHelpButton } from "@components/VideoWalkthroughModal";
+import { WALKTHROUGH_VIDEOS } from "@config/walkthroughVideos";
 
 interface WaypointsStepProps {
     defaultValues: Partial<WaypointsStepData>;
@@ -17,6 +19,8 @@ interface WaypointsStepProps {
 export function WaypointsStep({ defaultValues, initialCenter, onNext, onBack }: WaypointsStepProps) {
     // Use initial center from LocationStep or default
     const defaultCenter = initialCenter ?? { lng: 77.5946, lat: 12.9716 };
+
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
     const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -109,15 +113,19 @@ export function WaypointsStep({ defaultValues, initialCenter, onNext, onBack }: 
     };
 
     return (
+        <>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <div>
-                <h2 className="text-xl font-semibold text-neutral-900 mb-2">
-                    Create Your Quest Route
-                </h2>
-                <p className="text-neutral-600">
-                    Add waypoints to define the path users will follow.
-                    <span className="mx-2 font-medium">Drag to reorder, right-click to remove.</span>
-                </p>
+            <div className="flex items-center justify-between">
+                <div>
+                    <h2 className="text-xl font-semibold text-neutral-900 mb-1">
+                        Create Your Quest Route
+                    </h2>
+                    <p className="text-neutral-600">
+                        Add waypoints to define the path users will follow.
+                        <span className="mx-2 font-medium">Drag to reorder, right-click to remove.</span>
+                    </p>
+                </div>
+                <VideoHelpButton onClick={() => setIsModalOpen(true)} label="Watch walkthrough" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -263,5 +271,13 @@ export function WaypointsStep({ defaultValues, initialCenter, onNext, onBack }: 
                 </Button>
             </div>
         </form>
+
+        <VideoWalkthroughModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            videoUrl={WALKTHROUGH_VIDEOS.WAYPOINTS}
+            title="Adding Waypoints Walkthrough"
+        />
+        </>
     );
 }

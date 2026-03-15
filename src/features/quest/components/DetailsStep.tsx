@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -5,6 +6,8 @@ import { Button, Input, Textarea, Badge } from "@components/ui";
 import { MapComponent } from "@features/map";
 import { detailsStepSchema, type DetailsStepData, type QuestTheme } from "../schemas/quest.schema";
 import type { QuestDifficulty } from "@/types";
+import { VideoWalkthroughModal, VideoHelpButton } from "@components/VideoWalkthroughModal";
+import { WALKTHROUGH_VIDEOS } from "@config/walkthroughVideos";
 
 interface DetailsStepProps {
     defaultValues: Partial<DetailsStepData> & {
@@ -67,15 +70,21 @@ export function DetailsStep({ defaultValues, onNext, onBack }: DetailsStepProps)
         ? { lat: defaultValues.latitude, lng: defaultValues.longitude }
         : undefined;
 
+    const [isModalOpen, setIsModalOpen] = useState(false);
+
     return (
+        <>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <div>
-                <h2 className="text-xl font-semibold text-neutral-900 mb-2">
-                    Add Quest Details
-                </h2>
-                <p className="text-neutral-600">
-                    Tell explorers about your adventure
-                </p>
+            <div className="flex items-center justify-between">
+                <div>
+                    <h2 className="text-xl font-semibold text-neutral-900 mb-1">
+                        Add Quest Details
+                    </h2>
+                    <p className="text-neutral-600">
+                        Tell explorers about your adventure
+                    </p>
+                </div>
+                <VideoHelpButton onClick={() => setIsModalOpen(true)} label="Watch walkthrough" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
@@ -188,5 +197,13 @@ export function DetailsStep({ defaultValues, onNext, onBack }: DetailsStepProps)
                 </Button>
             </div>
         </form>
+
+        <VideoWalkthroughModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            videoUrl={WALKTHROUGH_VIDEOS.DETAILS}
+            title="Location & Details Walkthrough"
+        />
+        </>
     );
 }
