@@ -48,6 +48,13 @@ export function CreateQuestPage() {
     // Populate form data when quest is loaded
     useEffect(() => {
         if (existingQuest) {
+            // Prevent editing of Published quests by creators
+            if (existingQuest.status === "Published") {
+                toast.error("Published quests cannot be edited. Please contact an administrator.");
+                navigate("/creator/quests");
+                return;
+            }
+
             const mappedData: Partial<CreateQuestFormData> = {
                 title: existingQuest.metadata?.title || "",
                 description: Array.isArray(existingQuest.metadata?.description)
@@ -76,7 +83,7 @@ export function CreateQuestPage() {
             };
             setFormData(mappedData);
         }
-    }, [existingQuest]);
+    }, [existingQuest, navigate]);
 
     // Save/Load session storage only if NOT editing
     useEffect(() => {

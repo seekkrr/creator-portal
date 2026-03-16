@@ -210,7 +210,7 @@ export function QuestDetailPage() {
             </div>
           )}
 
-          {["Draft", "Changes Requested", "Approved", "Published"].includes(quest.status) && (
+          {["Draft", "Changes Requested", "Approved"].includes(quest.status) && (
             <Button
               variant="secondary"
               onClick={() => navigate(`/creator/quest/edit/${quest._id}`)}
@@ -220,14 +220,16 @@ export function QuestDetailPage() {
             </Button>
           )}
 
-          <Button
-            variant="danger"
-            onClick={() => setIsDeleteModalOpen(true)}
-            leftIcon={<Trash2 className="w-4 h-4" />}
-            className="w-full sm:w-auto justify-center"
-          >
-            Delete
-          </Button>
+          {quest.status !== "Published" && (
+            <Button
+              variant="danger"
+              onClick={() => setIsDeleteModalOpen(true)}
+              leftIcon={<Trash2 className="w-4 h-4" />}
+              className="w-full sm:w-auto justify-center"
+            >
+              Delete
+            </Button>
+          )}
         </div>
       </div>
 

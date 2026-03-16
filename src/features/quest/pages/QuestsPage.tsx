@@ -264,7 +264,7 @@ export function QuestsPage() {
                                                     </td>
                                                     <td className="py-4 px-6 text-right relative">
                                                         <div className="flex items-center justify-end whitespace-nowrap">
-                                                            {['Draft', 'Changes Requested', 'Approved', 'Published'].includes(quest.status as string) && (
+                                                            {['Draft', 'Changes Requested', 'Approved'].includes(quest.status as string) && (
                                                                 <Button
                                                                     variant="primary"
                                                                     size="sm"
@@ -316,12 +316,14 @@ export function QuestsPage() {
                                                                                 Submit for Review
                                                                             </button>
                                                                         )}
-                                                                        <button
-                                                                            onClick={() => { handleQuestDelete(quest._id); setOpenDropdownId(null); }}
-                                                                            className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 font-medium"
-                                                                        >
-                                                                            Delete Quest
-                                                                        </button>
+                                                                        {quest.status !== 'Published' && (
+                                                                            <button
+                                                                                onClick={() => { handleQuestDelete(quest._id); setOpenDropdownId(null); }}
+                                                                                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 font-medium"
+                                                                            >
+                                                                                Delete Quest
+                                                                            </button>
+                                                                        )}
                                                                     </div>
                                                                 )}
                                                             </div>
@@ -355,8 +357,12 @@ export function QuestsPage() {
                                                                     {isApproved && ['Draft', 'Changes Requested'].includes(quest.status as string) && (
                                                                         <button onClick={() => { handleUpdateStatus(quest._id, 'Under Review'); setOpenDropdownId(null); }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-indigo-600 hover:bg-indigo-50">Submit Review</button>
                                                                     )}
-                                                                    <button onClick={() => { navigate(`/creator/quest/edit/${quest._id}`); setOpenDropdownId(null); }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-neutral-700 hover:bg-slate-50">Edit Quest</button>
-                                                                    <button onClick={() => { handleQuestDelete(quest._id); setOpenDropdownId(null); }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50">Delete</button>
+{quest.status !== 'Published' && (
+    <>
+        <button onClick={() => { navigate(`/creator/quest/edit/${quest._id}`); setOpenDropdownId(null); }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-neutral-700 hover:bg-slate-50">Edit Quest</button>
+        <button onClick={() => { handleQuestDelete(quest._id); setOpenDropdownId(null); }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50">Delete</button>
+    </>
+)}
                                                                 </div>
                                                             )}
                                                         </div>
@@ -368,7 +374,7 @@ export function QuestsPage() {
                                                         <span className="text-xs font-medium text-slate-500">{new Date(quest.created_at).toLocaleDateString()}</span>
                                                         <span className="text-xs font-medium text-slate-500 text-right ms-auto">{quest.view_count || 0} views</span>
                                                     </div>
-                                                    {['Draft', 'Changes Requested', 'Approved', 'Published'].includes(quest.status as string) && (
+                                                    {['Draft', 'Changes Requested', 'Approved'].includes(quest.status as string) && (
                                                         <Button
                                                             variant="primary"
                                                             fullWidth
