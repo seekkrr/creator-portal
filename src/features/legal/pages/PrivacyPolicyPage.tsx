@@ -5,7 +5,7 @@ export function PrivacyPolicyPage() {
     <div className="min-h-screen bg-neutral-50 py-12 px-4 sm:px-6 lg:px-8 font-sans">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-extrabold text-[#2D0F35] sm:text-5xl tracking-tight">
+          <h1 className="text-4xl font-extrabold text-brand-purple sm:text-5xl tracking-tight">
             Privacy Policy
           </h1>
           <p className="mt-4 text-lg text-neutral-600">Last updated: February 9, 2026</p>

@@ -58,6 +58,9 @@
   --transition-fast: 150ms;
   --transition-normal: 250ms;
   --transition-slow: 350ms;
+
+  /* Brand Colors */
+  --color-brand-purple: #2D0F35;
 }
 
 /* Base Styles */

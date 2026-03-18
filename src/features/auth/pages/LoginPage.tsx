@@ -32,7 +32,7 @@ export function LoginPage() {
                     </p>
 
                     <div className="bg-white border border-neutral-200 rounded-2xl lg:rounded-[2rem] p-6 lg:p-6 shadow-sm lg:shadow-md shadow-neutral-100/50 w-full">
-                        <h3 className="text-2xl lg:text-[2em] leading-none font-medium text-[#2D0F35] text-center mb-6 lg:mb-6 tracking-wide">Login</h3>
+                        <h3 className="text-2xl lg:text-[2em] leading-none font-medium text-brand-purple text-center mb-6 lg:mb-6 tracking-wide">Login</h3>
 
                         <button
                             onClick={handleGoogleLogin}
