@@ -39,7 +39,9 @@ const PrivacyPolicyPage = lazyRetry(() =>
     import("@features/legal/pages/PrivacyPolicyPage").then((m) => ({ default: m.PrivacyPolicyPage }))
 );
 
-
+const TermsAndConditionsPage = lazyRetry(() =>
+    import("@features/legal/pages/TermsAndConditionsPage").then((m) => ({ default: m.TermsAndConditionsPage }))
+);
 
 const ContactUsPage = lazyRetry(() =>
     import("@features/contact/pages/ContactUsPage").then((m) => ({ default: m.ContactUsPage }))
@@ -69,6 +71,14 @@ export const router = createBrowserRouter([
                         element: (
                             <SuspenseWrapper>
                                 <PrivacyPolicyPage />
+                            </SuspenseWrapper>
+                        ),
+                    },
+                    {
+                        path: "/terms-and-conditions",
+                        element: (
+                            <SuspenseWrapper>
+                                <TermsAndConditionsPage />
                             </SuspenseWrapper>
                         ),
                     },

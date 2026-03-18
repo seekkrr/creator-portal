@@ -32,12 +32,12 @@ export function DashboardLayout() {
                             >
                                 My Quests
                             </Link>
-                            <a
-                                href="#"
+                            <Link
+                                to="/terms-and-conditions"
                                 className="text-base font-normal text-neutral-600 hover:text-neutral-900 transition-colors"
                             >
                                 Terms and Conditions
-                            </a>
+                            </Link>
                             <Link
                                 to="/privacy-policy"
                                 className="text-base font-normal text-neutral-600 hover:text-neutral-900 transition-colors"
@@ -88,12 +88,12 @@ export function DashboardLayout() {
                             >
                                 My Quests
                             </Link>
-                            <a
-                                href="#"
+                            <Link
+                                to="/terms-and-conditions"
                                 className="block text-base font-normal text-neutral-600 hover:text-neutral-900"
                             >
                                 Terms and Conditions
-                            </a>
+                            </Link>
                             <Link
                                 to="/privacy-policy"
                                 className="block text-base font-normal text-neutral-600 hover:text-neutral-900"
