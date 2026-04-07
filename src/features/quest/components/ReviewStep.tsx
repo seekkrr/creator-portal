@@ -1,4 +1,4 @@
-import { ChevronLeft, Check, MapPin, Clock, AlertCircle } from "lucide-react";
+import { ChevronLeft, Check, MapPin, Clock, AlertCircle, BookOpen } from "lucide-react";
 import { Button, Card, Badge } from "@components/ui";
 import { WaypointMapComponent } from "@features/map";
 import { useAuthStore } from "@store/auth.store";
@@ -103,6 +103,38 @@ export function ReviewStep({ formData, onBack, onSubmit, isSubmitting }: ReviewS
                             </ul>
                         )}
                     </Card>
+
+                    {/* Narratives Summary */}
+                    {formData.narratives && formData.narratives.length > 0 && (
+                        <Card padding="md">
+                            <div className="flex items-center justify-between mb-3">
+                                <h4 className="font-medium text-neutral-900 flex items-center gap-2">
+                                    <BookOpen className="w-4 h-4 text-indigo-500" />
+                                    Narratives
+                                </h4>
+                                <Badge variant="primary">
+                                    {formData.narratives.length} stories
+                                </Badge>
+                            </div>
+                            <ul className="space-y-2">
+                                {formData.narratives.map((n, index) => (
+                                    <li key={index} className="flex items-start gap-2 text-sm">
+                                        <div className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-medium shrink-0 mt-0.5">
+                                            <BookOpen className="w-3 h-3" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <span className="font-medium text-neutral-800 block">
+                                                {n.title?.trim() || `Step ${n.fromStepIndex + 1} → ${n.toStepIndex + 1}`}
+                                            </span>
+                                            <span className="text-neutral-500 text-xs line-clamp-2">
+                                                {n.content}
+                                            </span>
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        </Card>
+                    )}
                 </div>
 
                 {/* Right Column - Map */}

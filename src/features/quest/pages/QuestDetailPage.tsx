@@ -14,8 +14,10 @@ import {
   MessageSquare,
   Send,
   Trash2,
+  BookOpen,
 } from "lucide-react";
 import { questService } from "@services/quest.service";
+import { narrativeService } from "@services/narrative.service";
 import { Card, Button, Badge, Input } from "@components/ui";
 import { WaypointMapComponent } from "@features/map/components/WaypointMapComponent";
 import { useState, ChangeEvent } from "react";
@@ -29,6 +31,7 @@ export function QuestDetailPage() {
   const { creator } = useAuthStore();
   const isApproved = creator?.status === "approved";
   const [expandedSteps, setExpandedSteps] = useState<Set<number>>(new Set());
+  const [expandedNarrative, setExpandedNarrative] = useState<string | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [confirmText, setConfirmText] = useState("");
 
@@ -40,6 +43,12 @@ export function QuestDetailPage() {
   } = useQuery({
     queryKey: ["quest", id],
     queryFn: () => questService.getQuestById(id!),
+    enabled: !!id,
+  });
+
+  const { data: narrativesData, isLoading: isLoadingNarratives } = useQuery({
+    queryKey: ["quest-narratives", id],
+    queryFn: () => narrativeService.getNarrativesByQuest(id!),
     enabled: !!id,
   });
 
@@ -87,6 +96,10 @@ export function QuestDetailPage() {
       else next.add(index);
       return next;
     });
+  };
+
+  const toggleNarrative = (id: string) => {
+    setExpandedNarrative((prev) => (prev === id ? null : id));
   };
 
   const formatDate = (dateString: string) => {
@@ -345,9 +358,9 @@ export function QuestDetailPage() {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Description & Media */}
-        <div className="lg:col-span-2 space-y-6 sm:space-y-8">
+      <div className="flex flex-col space-y-6 sm:space-y-8">
+        {/* Main Content Sections */}
+        <div className="space-y-6 sm:space-y-8">
           <Card className="rounded-2xl border-slate-200 shadow-sm overflow-hidden">
             <div className="p-2">
               <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
@@ -360,6 +373,27 @@ export function QuestDetailPage() {
                 ) : (
                   <p>{quest.metadata?.description || "No description provided."}</p>
                 )}
+              </div>
+            </div>
+          </Card>
+
+          <Card className="rounded-2xl border-slate-200 shadow-sm">
+            <div className="p-2">
+              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-6">
+                Quest Info
+              </h3>
+              <div className="space-y-1">
+                <DetailItem label="Region" value={quest.location?.region || "Unknown"} />
+                <DetailItem label="City" value={quest.location?.region || "Unknown"} />
+                <DetailItem label="Currency" value={quest.currency || "INR"} />
+                <DetailItem
+                  label="Price"
+                  value={
+                    (quest.price ?? 0) > 0
+                      ? `₹${(quest.price ?? 0).toLocaleString("en-IN")}`
+                      : "Free"
+                  }
+                />
               </div>
             </div>
           </Card>
@@ -474,6 +508,88 @@ export function QuestDetailPage() {
               </div>
             </div>
           </Card>
+
+          {/* Narratives Section */}
+          <Card className="rounded-2xl border-slate-200 shadow-sm overflow-hidden">
+            <div className="p-2">
+              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-6 flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-emerald-500" />
+                Narratives
+              </h3>
+
+              {isLoadingNarratives ? (
+                <div className="flex justify-center py-6">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-500"></div>
+                </div>
+              ) : !narrativesData?.narratives || narrativesData.narratives.length === 0 ? (
+                <div className="text-center py-6 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                  <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm border border-slate-100">
+                    <BookOpen className="w-4 h-4 text-slate-300" />
+                  </div>
+                  <p className="text-sm font-medium text-slate-500">No narratives available</p>
+                  <p className="text-xs text-slate-400 mt-1">Narratives bridge the journey between steps</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {narrativesData.narratives.map((n) => {
+                    const fromStepIdx = quest?.steps?.findIndex((s) => s._id === n.from_step_id);
+                    const toStepIdx = quest?.steps?.findIndex((s) => s._id === n.to_step_id);
+                    const fromLabel = fromStepIdx !== undefined && fromStepIdx >= 0 ? fromStepIdx + 1 : "?";
+                    const toLabel = toStepIdx !== undefined && toStepIdx >= 0 ? toStepIdx + 1 : "?";
+                    const isExpanded = expandedNarrative === n._id;
+                    
+                    return (
+                      <div
+                        key={n._id}
+                        className="border border-slate-100 rounded-xl bg-white hover:border-emerald-200 transition-colors shadow-sm overflow-hidden"
+                      >
+                        <button
+                          onClick={() => toggleNarrative(n._id)}
+                          className="w-full text-left p-4 sm:p-5 flex items-center justify-between group"
+                        >
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                              <span>Step {fromLabel}</span>
+                              <ArrowLeft className="w-3 h-3 rotate-180" />
+                              <span>Step {toLabel}</span>
+                            </div>
+                            {n.title ? (
+                              <h4 className="font-bold text-slate-800 text-sm sm:text-base leading-snug group-hover:text-emerald-600 transition-colors">
+                                {n.title}
+                              </h4>
+                            ) : (
+                              <h4 className="font-bold text-slate-400 text-sm sm:text-base leading-snug italic">
+                                Untitled Narrative
+                              </h4>
+                            )}
+                          </div>
+                          <div className={`transition-transform duration-200 text-slate-400 shrink-0 ${isExpanded ? "rotate-180" : ""}`}>
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </div>
+                        </button>
+                        
+                        {isExpanded && (
+                          <div className="px-4 sm:px-5 pb-5 pt-0 animate-slide-down">
+                            <div className="w-full h-px bg-slate-100 mb-4" />
+                            <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">
+                              {n.content}
+                            </p>
+                            {n.is_mandatory && (
+                              <div className="mt-4 inline-flex items-center gap-1.5 px-2 py-1 rounded bg-amber-50 text-amber-600 text-xs font-semibold">
+                                Mandatory Stop
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </Card>
         </div>
 
         {/* Right Column: Media Gallery & Additional Info */}
@@ -536,26 +652,7 @@ export function QuestDetailPage() {
             </div>
           </Card>
 
-          <Card className="rounded-2xl border-slate-200 shadow-sm">
-            <div className="p-2">
-              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-6">
-                Quest Info
-              </h3>
-              <div className="space-y-1">
-                <DetailItem label="Region" value={quest.location?.region || "Unknown"} />
-                <DetailItem label="City" value={quest.location?.region || "Unknown"} />
-                <DetailItem label="Currency" value={quest.currency || "INR"} />
-                <DetailItem
-                  label="Price"
-                  value={
-                    (quest.price ?? 0) > 0
-                      ? `₹${(quest.price ?? 0).toLocaleString("en-IN")}`
-                      : "Free"
-                  }
-                />
-              </div>
-            </div>
-          </Card>
+          
         </div>
       </div>
     </div>

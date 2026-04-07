@@ -4,28 +4,32 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Card } from "@components/ui";
 import { questService } from "@services/quest.service";
+import { narrativeService } from "@services/narrative.service";
 import { LocationStep } from "../components/LocationStep";
 import { DetailsStep } from "../components/DetailsStep";
 import { WaypointsStep } from "../components/WaypointsStep";
 import { WaypointDetailsStep } from "../components/WaypointDetailsStep";
+import { NarrativeStep } from "../components/NarrativeStep";
 import { ReviewStep } from "../components/ReviewStep";
 import {
     type LocationStepData,
     type DetailsStepData,
     type WaypointsStepData,
     type WaypointDetailsStepData,
+    type NarrativeStepData,
     defaultFormValues,
 } from "../schemas/quest.schema";
 import type { CreateQuestFormData, CreateQuestPayload, QuestStatus } from "@/types";
 
-type Step = 1 | 2 | 3 | 4 | 5;
+type Step = 1 | 2 | 3 | 4 | 5 | 6;
 
 const stepLabels: Record<Step, string> = {
     1: "Location",
     2: "Details",
     3: "Waypoints",
     4: "Waypoint Details",
-    5: "Review",
+    5: "Narrative",
+    6: "Review",
 };
 
 const SESSION_STORAGE_KEY = "quest_creation_form";
@@ -80,10 +84,39 @@ export function CreateQuestPage() {
                 })) || [],
                 galleryImages: existingQuest.media?.cloudinary_assets || [],
                 sourceUrl: existingQuest.media?.reel_url || "",
+                narratives: [], // Will be populated from separate API call
             };
             setFormData(mappedData);
         }
     }, [existingQuest, navigate]);
+
+    // Fetch existing narratives when editing
+    const { data: existingNarratives } = useQuery({
+        queryKey: ["quest-narratives", id],
+        queryFn: () => narrativeService.getNarrativesByQuest(id!),
+        enabled: isEditing && !!existingQuest,
+    });
+
+    // Map existing narratives to form format when loaded
+    useEffect(() => {
+        if (existingNarratives?.narratives && existingQuest?.steps) {
+            const steps = existingQuest.steps;
+            const mappedNarratives = existingNarratives.narratives.map(n => {
+                // Match by order since QuestDetailsStep doesn't have _id in creator types
+                const fromIdx = Math.max(0, n.from_step_order);
+                const toIdx = Math.max(1, n.to_step_order);
+                return {
+                    fromStepIndex: fromIdx < steps.length ? fromIdx : 0,
+                    toStepIndex: toIdx < steps.length ? toIdx : Math.min(1, steps.length - 1),
+                    title: n.title || "",
+                    content: n.content,
+                    triggerRadiusM: n.trigger_radius_m,
+                    isMandatory: n.is_mandatory,
+                };
+            });
+            setFormData(prev => ({ ...prev, narratives: mappedNarratives }));
+        }
+    }, [existingNarratives, existingQuest]);
 
     // Save/Load session storage only if NOT editing
     useEffect(() => {
@@ -161,7 +194,50 @@ export function CreateQuestPage() {
                 return questService.createQuest(payload);
             }
         },
-        onSuccess: () => {
+        onSuccess: async (result) => {
+            // Create narratives after quest is saved (needs step IDs from response)
+            // Only auto-create narratives for new quests — CreateQuestResponse has step IDs
+            const narrativesToCreate = formData.narratives || [];
+            const isCreateResult = !isEditing && result && "_id" in result && "steps" in result;
+            if (narrativesToCreate.length > 0 && isCreateResult) {
+                try {
+                    const createResult = result as import("@services/quest.service").CreateQuestResponse;
+                    const questId = createResult._id;
+                    const createdSteps = createResult.steps;
+                    const wps = formData.waypoints || [];
+
+                    for (const narrative of narrativesToCreate) {
+                        const fromStep = createdSteps[narrative.fromStepIndex];
+                        const toStep = createdSteps[narrative.toStepIndex];
+                        if (!fromStep?._id || !toStep?._id) continue;
+
+                        // Auto-calculate trigger location as midpoint between waypoints
+                        // TODO: Future enhancement — allow creators to manually set trigger location
+                        const fromWp = wps[narrative.fromStepIndex];
+                        const toWp = wps[narrative.toStepIndex];
+                        const midLat = fromWp && toWp ? (fromWp.latitude + toWp.latitude) / 2 : 0;
+                        const midLng = fromWp && toWp ? (fromWp.longitude + toWp.longitude) / 2 : 0;
+
+                        await narrativeService.createNarrative({
+                            quest_id: questId,
+                            from_step_id: fromStep._id,
+                            to_step_id: toStep._id,
+                            title: narrative.title || undefined,
+                            content: narrative.content,
+                            trigger_location: midLat && midLng
+                                ? { type: "Point", coordinates: [midLng, midLat] }
+                                : undefined,
+                            trigger_radius_m: narrative.triggerRadiusM,
+                            is_mandatory: narrative.isMandatory,
+                        });
+                    }
+                    toast.success(`${narrativesToCreate.length} narrative(s) added to quest`);
+                } catch (err) {
+                    console.error("Error creating narratives:", err);
+                    toast.warning("Quest saved but some narratives could not be created.");
+                }
+            }
+
             clearSession();
             toast.success(isEditing ? "Quest updated successfully!" : "Quest created successfully!");
             navigate("/creator/quest/success");
@@ -175,6 +251,7 @@ export function CreateQuestPage() {
     const handleStep2Next = (data: DetailsStepData) => { setFormData(prev => ({ ...prev, ...data })); setCurrentStep(3); };
     const handleStep3Next = (data: WaypointsStepData) => { setFormData(prev => ({ ...prev, ...data })); setCurrentStep(4); };
     const handleStep4Next = (data: WaypointDetailsStepData) => { setFormData(prev => ({ ...prev, ...data })); setCurrentStep(5); };
+    const handleStep5Next = (data: NarrativeStepData) => { setFormData(prev => ({ ...prev, ...data })); setCurrentStep(6); };
     const handleBack = (data?: any) => { if (data) setFormData(prev => ({ ...prev, ...data })); setCurrentStep(prev => (prev > 1 ? (prev - 1) as Step : prev)); };
     const handleSubmit = (status: QuestStatus) => {
         if (!formData.waypoints || formData.waypoints.length < 2) {
@@ -200,8 +277,8 @@ export function CreateQuestPage() {
             {/* Progress Steps */}
             <div className="mb-8">
                 <div className="flex items-center justify-between">
-                    {([1, 2, 3, 4, 5] as const).map((step) => (
-                        <div key={step} className={`flex items-center ${step < 5 ? "flex-1" : ""}`}>
+                    {([1, 2, 3, 4, 5, 6] as const).map((step) => (
+                        <div key={step} className={`flex items-center ${step < 6 ? "flex-1" : ""}`}>
                             <div className="flex flex-col items-center">
                                 <div className={`w-10 h-10 rounded-full flex items-center justify-center font-medium transition-colors ${step === currentStep ? "bg-indigo-600 text-white" : step < currentStep ? "bg-green-500 text-white" : "bg-neutral-200 text-neutral-500"}`}>
                                     {step < currentStep ? "✓" : step}
@@ -210,7 +287,7 @@ export function CreateQuestPage() {
                                     {stepLabels[step]}
                                 </span>
                             </div>
-                            {step < 5 && <div className={`flex-1 h-1 mx-4 rounded ${step < currentStep ? "bg-green-500" : "bg-neutral-200"}`} />}
+                            {step < 6 && <div className={`flex-1 h-1 mx-4 rounded ${step < currentStep ? "bg-green-500" : "bg-neutral-200"}`} />}
                         </div>
                     ))}
                 </div>
@@ -222,7 +299,8 @@ export function CreateQuestPage() {
                 {currentStep === 2 && <DetailsStep defaultValues={formData} onNext={handleStep2Next} onBack={handleBack} />}
                 {currentStep === 3 && <WaypointsStep defaultValues={formData} initialCenter={formData.latitude && formData.longitude ? { lat: formData.latitude, lng: formData.longitude } : undefined} onNext={handleStep3Next} onBack={handleBack} />}
                 {currentStep === 4 && <WaypointDetailsStep defaultValues={formData} onNext={handleStep4Next} onBack={handleBack as any} />}
-                {currentStep === 5 && <ReviewStep formData={formData} onBack={handleBack} onSubmit={handleSubmit} isSubmitting={questMutation.isPending} />}
+                {currentStep === 5 && <NarrativeStep defaultValues={formData} onNext={handleStep5Next} onBack={handleBack} />}
+                {currentStep === 6 && <ReviewStep formData={formData} onBack={handleBack} onSubmit={handleSubmit} isSubmitting={questMutation.isPending} />}
             </Card>
         </div>
     );

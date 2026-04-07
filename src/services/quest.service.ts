@@ -7,8 +7,7 @@ import type {
     PaginatedResponse,
 } from "@/types";
 
-export interface CreateQuestResponse {
-    quest: Quest;
+export interface CreateQuestResponse extends Quest {
     steps: Array<{ _id: string; order: number }>;
 }
 
