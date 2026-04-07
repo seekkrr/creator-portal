@@ -178,6 +178,7 @@ export interface QuestDetailsMedia {
 }
 
 export interface QuestDetailsStep {
+    _id?: string;
     order: number;
     title: string;
     description: string;
@@ -220,6 +221,39 @@ export interface CreateQuestFormData {
         images?: CloudinaryAsset[];
     }>;
     galleryImages: CloudinaryAsset[];
+
+    // Step 5: Narratives (optional)
+    narratives?: NarrativeFormItem[];
+}
+
+// Narrative form item for quest creation flow
+export interface NarrativeFormItem {
+    fromStepIndex: number;
+    toStepIndex: number;
+    title: string;
+    content: string;
+    triggerRadiusM: number;
+    isMandatory: boolean;
+}
+
+// Backend narrative response
+export interface NarrativeResponse {
+    _id: string;
+    quest_id: string;
+    from_step_id: string;
+    to_step_id: string;
+    from_step_order: number;
+    to_step_order: number;
+    title?: string;
+    content: string;
+    trigger_location?: { type: "Point"; coordinates: [number, number] };
+    trigger_radius_m: number;
+    media?: any[];
+    is_mandatory: boolean;
+    view_count: number;
+    created_by: string;
+    created_at: string;
+    updated_at: string;
 }
 
 // Backend expects this specific structure

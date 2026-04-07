@@ -88,11 +88,28 @@ export const waypointDetailsStepSchema = z.object({
 
 export type WaypointDetailsStepData = z.infer<typeof waypointDetailsStepSchema>;
 
+// Step 5: Narratives (optional)
+export const narrativeItemSchema = z.object({
+    fromStepIndex: z.number().min(0),
+    toStepIndex: z.number().min(1),
+    title: z.string().max(100).optional().default(""),
+    content: z.string().min(5, "Narrative content must be at least 5 characters"),
+    triggerRadiusM: z.number().min(1).max(500).optional().default(50),
+    isMandatory: z.boolean().optional().default(false),
+});
+
+export const narrativeStepSchema = z.object({
+    narratives: z.array(narrativeItemSchema).optional().default([]),
+});
+
+export type NarrativeStepData = z.infer<typeof narrativeStepSchema>;
+
 // Combined form data schema using intersection
 export const createQuestSchema = locationStepBaseSchema
     .merge(detailsStepSchema)
     .merge(waypointsStepSchema)
-    .merge(waypointDetailsStepSchema);
+    .merge(waypointDetailsStepSchema)
+    .merge(narrativeStepSchema);
 
 export type CreateQuestFormData = z.infer<typeof createQuestSchema>;
 
@@ -109,4 +126,5 @@ export const defaultFormValues: Partial<CreateQuestFormData> = {
     waypoints: [],
     waypointDetails: [],
     galleryImages: [],
+    narratives: [],
 };

@@ -20,5 +20,10 @@ export const API_ENDPOINTS = {
     },
     QUERIES: {
         SUBMIT: "/api/queries",
-    }
+    },
+    NARRATIVES: {
+        CREATE: "/api/locations/narrative",
+        BY_ID: (id: string) => `/api/locations/narrative/${id}`,
+        BY_QUEST: (questId: string) => `/api/locations/quest/${questId}/narratives`,
+    },
 } as const;
