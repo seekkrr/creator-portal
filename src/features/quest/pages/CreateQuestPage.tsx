@@ -41,6 +41,7 @@ export function CreateQuestPage() {
 
   const [currentStep, setCurrentStep] = useState<Step>(1);
   const [formData, setFormData] = useState<Partial<CreateQuestFormData>>(defaultFormValues);
+  const [isQuestInitialized, setIsQuestInitialized] = useState(false);
   const [isNarrativesInitialized, setIsNarrativesInitialized] = useState(false);
 
   // Fetch quest data if editing
@@ -50,9 +51,9 @@ export function CreateQuestPage() {
     enabled: isEditing,
   });
 
-  // Populate form data when quest is loaded
+  // Populate form data when quest is loaded (only once to prevent overwriting user changes on refetch)
   useEffect(() => {
-    if (existingQuest) {
+    if (existingQuest && !isQuestInitialized) {
       // Prevent editing of Published quests by creators
       if (existingQuest.status === "Published") {
         toast.error("Published quests cannot be edited. Please contact an administrator.");
@@ -90,8 +91,9 @@ export function CreateQuestPage() {
         narratives: [], // Will be populated from separate API call
       };
       setFormData(mappedData);
+      setIsQuestInitialized(true);
     }
-  }, [existingQuest, navigate]);
+  }, [existingQuest, isQuestInitialized, navigate]);
 
   // Fetch existing narratives when editing
   const { data: existingNarratives } = useQuery({
@@ -214,7 +216,7 @@ export function CreateQuestPage() {
         const isCreateResult = !isEditing && result && "_id" in result && "steps" in result;
 
         if (isCreateResult) {
-          // Handle new quest: create narratives in parallel
+          // Handle new quest: create narratives in parallel with robust error handling
           if (narrativesToCreate.length > 0) {
             const createResult = result as import("@services/quest.service").CreateQuestResponse;
             const questId = createResult._id;
@@ -224,7 +226,11 @@ export function CreateQuestPage() {
             const narrativePromises = narrativesToCreate.map(async (narrative) => {
               const fromStep = createdSteps[narrative.fromStepIndex];
               const toStep = createdSteps[narrative.toStepIndex];
-              if (!fromStep?._id || !toStep?._id) return;
+              if (!fromStep?._id || !toStep?._id) {
+                throw new Error(
+                  `Invalid step references for narrative between steps ${narrative.fromStepIndex} and ${narrative.toStepIndex}`
+                );
+              }
 
               // Auto-calculate trigger location as midpoint between waypoints
               // TODO: Future enhancement — allow creators to manually set trigger location
@@ -247,13 +253,25 @@ export function CreateQuestPage() {
                 is_mandatory: narrative.isMandatory,
               });
             });
-            await Promise.all(narrativePromises);
-            toast.success(`${narrativesToCreate.length} narrative(s) added to quest`);
+
+            const results = await Promise.allSettled(narrativePromises);
+            const successful = results.filter((r) => r.status === "fulfilled").length;
+            const failed = results.filter((r) => r.status === "rejected");
+
+            if (successful > 0) {
+              toast.success(`${successful} of ${narrativesToCreate.length} narrative(s) added to quest`);
+            }
+            if (failed.length > 0) {
+              console.error("Failed narratives:", failed);
+              toast.warning(
+                `${failed.length} narrative(s) could not be created. Check console for details.`
+              );
+            }
           }
         } else if (isEditing) {
-          // Handle quest update: sync narratives (for future enhancement)
-          // TODO: Implement narrative update, create, and delete logic for edit flow
-          // Currently, narratives must be managed separately via narrative service endpoints
+          // Handle quest update: narratives are read-only in edit mode
+          // Narrative updates must be managed separately via narrative service endpoints
+          // This is intentional to prevent accidental narrative overwrites
         }
       } catch (err) {
         console.error("Error managing narratives:", err);
@@ -366,8 +384,25 @@ export function CreateQuestPage() {
             onBack={handleBack as any}
           />
         )}
-        {currentStep === 5 && (
+        {currentStep === 5 && !isEditing && (
           <NarrativeStep defaultValues={formData} onNext={handleStep5Next} onBack={handleBack} />
+        )}
+        {currentStep === 5 && isEditing && (
+          <div className="space-y-4 p-6">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-sm text-blue-900 font-medium">ℹ️ Narrative Management</p>
+              <p className="text-sm text-blue-700 mt-2">
+                Narratives cannot be edited in this view. To manage narratives for this quest, please use the narrative 
+                management interface or delete and recreate the quest with updated narratives.
+              </p>
+            </div>
+            <button
+              onClick={() => handleBack()}
+              className="px-4 py-2 bg-slate-200 text-slate-900 rounded-lg font-medium hover:bg-slate-300 transition-colors"
+            >
+              Back to Waypoint Details
+            </button>
+          </div>
         )}
         {currentStep === 6 && (
           <ReviewStep

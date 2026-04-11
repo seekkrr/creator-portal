@@ -18,6 +18,7 @@ interface NarrativeStepProps {
     defaultValues: Partial<CreateQuestFormData>;
     onNext: (data: NarrativeStepData) => void;
     onBack?: (data: NarrativeStepData) => void;
+    isReadOnly?: boolean;
 }
 
 export function NarrativeStep({ defaultValues, onNext, onBack }: NarrativeStepProps) {
