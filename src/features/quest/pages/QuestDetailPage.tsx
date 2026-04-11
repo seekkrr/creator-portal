@@ -384,7 +384,6 @@ export function QuestDetailPage() {
               </h3>
               <div className="space-y-1">
                 <DetailItem label="Region" value={quest.location?.region || "Unknown"} />
-                <DetailItem label="City" value={quest.location?.region || "Unknown"} />
                 <DetailItem label="Currency" value={quest.currency || "INR"} />
                 <DetailItem
                   label="Price"
@@ -527,17 +526,20 @@ export function QuestDetailPage() {
                     <BookOpen className="w-4 h-4 text-slate-300" />
                   </div>
                   <p className="text-sm font-medium text-slate-500">No narratives available</p>
-                  <p className="text-xs text-slate-400 mt-1">Narratives bridge the journey between steps</p>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Narratives bridge the journey between steps
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {narrativesData.narratives.map((n) => {
                     const fromStepIdx = quest?.steps?.findIndex((s) => s._id === n.from_step_id);
                     const toStepIdx = quest?.steps?.findIndex((s) => s._id === n.to_step_id);
-                    const fromLabel = fromStepIdx !== undefined && fromStepIdx >= 0 ? fromStepIdx + 1 : "?";
+                    const fromLabel =
+                      fromStepIdx !== undefined && fromStepIdx >= 0 ? fromStepIdx + 1 : "?";
                     const toLabel = toStepIdx !== undefined && toStepIdx >= 0 ? toStepIdx + 1 : "?";
                     const isExpanded = expandedNarrative === n._id;
-                    
+
                     return (
                       <div
                         key={n._id}
@@ -563,13 +565,25 @@ export function QuestDetailPage() {
                               </h4>
                             )}
                           </div>
-                          <div className={`transition-transform duration-200 text-slate-400 shrink-0 ${isExpanded ? "rotate-180" : ""}`}>
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          <div
+                            className={`transition-transform duration-200 text-slate-400 shrink-0 ${isExpanded ? "rotate-180" : ""}`}
+                          >
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 9l-7 7-7-7"
+                              />
                             </svg>
                           </div>
                         </button>
-                        
+
                         {isExpanded && (
                           <div className="px-4 sm:px-5 pb-5 pt-0 animate-slide-down">
                             <div className="w-full h-px bg-slate-100 mb-4" />
@@ -651,8 +665,6 @@ export function QuestDetailPage() {
               )}
             </div>
           </Card>
-
-          
         </div>
       </div>
     </div>
