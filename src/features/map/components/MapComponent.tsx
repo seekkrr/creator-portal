@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from "react";
 import mapboxgl from "mapbox-gl";
 import { config } from "@config/env";
 import { escapeHtml } from "@/utils/security";
+import { addPoiOverlayLayers } from "@features/map/utils/poiOverlay";
 import type { QuestLocation } from "@/types";
 
 // Set Mapbox token
@@ -186,6 +187,9 @@ export function MapComponent({
 
             // Set fog based on time of day
             map.setFog(FOG_CONFIGS[lightPreset]);
+
+            // ─── POI Overlay (mapbox-streets-v8) ─────────────────────────
+            addPoiOverlayLayers(map);
         });
 
         // Add navigation controls

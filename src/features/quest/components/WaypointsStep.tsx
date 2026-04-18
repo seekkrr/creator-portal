@@ -1,4 +1,4 @@
-import { useState, useCallback, type DragEvent } from "react";
+import { useState, useCallback, useMemo, type DragEvent } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ChevronLeft, ChevronRight, Trash2, MapPin, GripVertical, Search } from "lucide-react";
@@ -17,8 +17,8 @@ interface WaypointsStepProps {
 }
 
 export function WaypointsStep({ defaultValues, initialCenter, onNext, onBack }: WaypointsStepProps) {
-    // Use initial center from LocationStep or default
-    const defaultCenter = initialCenter ?? { lng: 77.5946, lat: 12.9716 };
+    // Use initial center from LocationStep or default, memoize to avoid recreating object on every render
+    const defaultCenter = useMemo(() => initialCenter ?? { lng: 77.5946, lat: 12.9716 }, [initialCenter?.lng, initialCenter?.lat]);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -139,6 +139,7 @@ export function WaypointsStep({ defaultValues, initialCenter, onNext, onBack }: 
                         <LocationSearch
                             onSelect={handleWaypointAdd}
                             placeholder="Search for a location..."
+                            proximity={defaultCenter}
                         />
                     </div>
 

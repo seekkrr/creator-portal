@@ -2,6 +2,8 @@ import { useEffect, useRef, useCallback, memo } from "react";
 import mapboxgl from "mapbox-gl";
 import { config } from "@config/env";
 import { escapeHtml } from "@/utils/security";
+import { getCachedDirections, getCachedMultiRoute } from "@services/directionsCache";
+import { addPoiOverlayLayers } from "@features/map/utils/poiOverlay";
 import type { QuestLocation } from "@/types";
 
 // Set Mapbox token
@@ -56,6 +58,8 @@ interface WaypointMapComponentProps {
     height?: string;
     className?: string;
     focusedLocation?: { lng: number; lat: number } | null;
+    /** When set, highlights the route segment between waypoints[fromIndex] and waypoints[toIndex] in amber */
+    activeSegment?: { fromIndex: number; toIndex: number } | null;
 }
 
 // Create marker element for 60 FPS performance
@@ -93,6 +97,7 @@ export const WaypointMapComponent = memo(function WaypointMapComponent({
     height = "500px",
     className = "",
     focusedLocation,
+    activeSegment,
 }: WaypointMapComponentProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -167,7 +172,7 @@ export const WaypointMapComponent = memo(function WaypointMapComponent({
         }
     }, []);
 
-    // Fetch walking directions from Mapbox Directions API
+    // Fetch walking directions using cached service
     const fetchWalkingRoute = useCallback(async (coordinates: [number, number][]) => {
         if (coordinates.length < 2) return null;
 
@@ -176,18 +181,7 @@ export const WaypointMapComponent = memo(function WaypointMapComponent({
         }
         abortControllerRef.current = new AbortController();
 
-        try {
-            const coordString = coordinates.map(c => `${c[0]},${c[1]}`).join(';');
-            const response = await fetch(
-                `https://api.mapbox.com/directions/v5/mapbox/walking/${coordString}?geometries=geojson&overview=full&access_token=${config.mapbox.accessToken}`,
-                { signal: abortControllerRef.current.signal }
-            );
-            if (!response.ok) return null;
-            const data = await response.json();
-            return data.routes?.[0]?.geometry?.coordinates ?? null;
-        } catch {
-            return null;
-        }
+        return getCachedMultiRoute(coordinates, abortControllerRef.current.signal);
     }, []);
 
     // Update route line with walking directions
@@ -416,6 +410,57 @@ export const WaypointMapComponent = memo(function WaypointMapComponent({
                 },
             });
 
+            // ─── POI Overlay (mapbox-streets-v8) ─────────────────────────
+            addPoiOverlayLayers(map);
+
+            // ─── Highlight Route Layers ──────────────────────────────────
+            map.addSource('highlight-route', {
+                type: 'geojson',
+                data: {
+                    type: 'Feature',
+                    properties: {},
+                    geometry: { type: 'LineString', coordinates: [] },
+                },
+            });
+
+            map.addLayer({
+                id: 'highlight-route-glow',
+                type: 'line',
+                source: 'highlight-route',
+                layout: { 'line-join': 'round', 'line-cap': 'round' },
+                paint: {
+                    'line-color': '#fbbf24',
+                    'line-width': 16,
+                    'line-blur': 10,
+                    'line-opacity': 0.5,
+                },
+            });
+
+            map.addLayer({
+                id: 'highlight-route-line',
+                type: 'line',
+                source: 'highlight-route',
+                layout: { 'line-join': 'round', 'line-cap': 'round' },
+                paint: {
+                    'line-color': '#f59e0b',
+                    'line-width': 7,
+                    'line-opacity': 1,
+                },
+            });
+
+            map.addLayer({
+                id: 'highlight-route-dash',
+                type: 'line',
+                source: 'highlight-route',
+                layout: { 'line-join': 'round', 'line-cap': 'round' },
+                paint: {
+                    'line-color': '#ffffff',
+                    'line-width': 2,
+                    'line-dasharray': [2, 3],
+                    'line-opacity': 0.9,
+                },
+            });
+
             // Render initial markers and route after style loads
             addMarkers();
             updateRouteLine();
@@ -566,10 +611,12 @@ export const WaypointMapComponent = memo(function WaypointMapComponent({
         }
     }, [waypoints, flyToWaypoints, focusedLocation]);
 
-    // Handle focusedLocation changes
+    // Handle focusedLocation changes (skip if activeSegment handles its own camera)
     useEffect(() => {
         const map = mapRef.current;
         if (!map || !focusedLocation) return;
+        // When an activeSegment is set, the segment highlighting effect manages the camera
+        if (activeSegment) return;
 
         map.flyTo({
             center: [focusedLocation.lng, focusedLocation.lat],
@@ -579,7 +626,89 @@ export const WaypointMapComponent = memo(function WaypointMapComponent({
             duration: 1000,
             essential: true,
         });
-    }, [focusedLocation]);
+    }, [focusedLocation, activeSegment]);
+
+    // ─── Active Segment Highlighting ─────────────────────────────────
+    useEffect(() => {
+        const map = mapRef.current;
+        if (!map) return;
+
+        const abortController = new AbortController();
+
+        const applyHighlight = () => {
+            if (abortController.signal.aborted) return;
+            const highlightSource = map.getSource('highlight-route') as mapboxgl.GeoJSONSource;
+            if (!highlightSource) return;
+
+            if (!activeSegment) {
+                // Clear highlight and restore main route
+                highlightSource.setData({
+                    type: 'Feature',
+                    properties: {},
+                    geometry: { type: 'LineString', coordinates: [] },
+                });
+                // Restore main route opacity
+                if (map.getLayer('route-glow')) map.setPaintProperty('route-glow', 'line-opacity', 0.4);
+                if (map.getLayer('route-line')) map.setPaintProperty('route-line', 'line-opacity', 1);
+                if (map.getLayer('route-dashed')) map.setPaintProperty('route-dashed', 'line-opacity', 0.9);
+                return;
+            }
+
+            const wps = waypointsRef.current;
+            const fromWp = wps[activeSegment.fromIndex];
+            const toWp = wps[activeSegment.toIndex];
+            if (!fromWp || !toWp) return;
+
+            // Dim main route
+            if (map.getLayer('route-glow')) map.setPaintProperty('route-glow', 'line-opacity', 0.1);
+            if (map.getLayer('route-line')) map.setPaintProperty('route-line', 'line-opacity', 0.25);
+            if (map.getLayer('route-dashed')) map.setPaintProperty('route-dashed', 'line-opacity', 0.15);
+
+            // Fly camera to fit the segment bounds
+            const bounds = new mapboxgl.LngLatBounds(
+                [fromWp.longitude, fromWp.latitude],
+                [toWp.longitude, toWp.latitude]
+            );
+            map.fitBounds(bounds, {
+                padding: { top: 80, bottom: 80, left: 60, right: 60 },
+                maxZoom: 17,
+                pitch: 55,
+                duration: 1200,
+                essential: true,
+            });
+
+            const from: [number, number] = [fromWp.longitude, fromWp.latitude];
+            const to: [number, number] = [toWp.longitude, toWp.latitude];
+
+            getCachedDirections(from, to).then((result) => {
+                if (abortController.signal.aborted) return;
+                if (!mapRef.current) return;
+                const src = mapRef.current.getSource('highlight-route') as mapboxgl.GeoJSONSource;
+                if (!src) return;
+
+                src.setData({
+                    type: 'Feature',
+                    properties: {},
+                    geometry: {
+                        type: 'LineString',
+                        coordinates: result?.coordinates ?? [from, to],
+                    },
+                });
+            });
+        };
+
+        // If style is loaded apply immediately, otherwise wait for idle
+        if (map.isStyleLoaded() && map.getSource('highlight-route')) {
+            applyHighlight();
+        } else {
+            map.once('idle', applyHighlight);
+        }
+
+        return () => {
+            abortController.abort();
+            map.off('idle', applyHighlight);
+        };
+    }, [activeSegment?.fromIndex, activeSegment?.toIndex]);
 
     return (
         <div className="relative">
