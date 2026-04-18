@@ -75,6 +75,41 @@ function generateSessionToken(): string {
     return crypto.randomUUID();
 }
 
+/** Format distance in meters to a human-readable string. */
+function formatDistance(meters?: number): string | null {
+    if (!meters) return null;
+    if (meters < 1000) return `${Math.round(meters)}m`;
+    return `${(meters / 1000).toFixed(1)}km`;
+}
+
+/** Map maki icon names to emoji representations. */
+const MAKI_EMOJI_MAP: Record<string, string> = {
+    restaurant: "🍽️",
+    cafe: "☕",
+    fuel: "⛽",
+    "religious-christian": "⛪",
+    "religious-muslim": "🕌",
+    "religious-jewish": "🕍",
+    hospital: "🏥",
+    park: "🌳",
+    hotel: "🏨",
+    school: "🏫",
+    bank: "🏦",
+    shop: "🛍️",
+    museum: "🏛️",
+    monument: "🗿",
+    "swimming-pool": "🏊",
+    cinema: "🎬",
+    library: "📚",
+    pharmacy: "💊",
+    marker: "📍",
+};
+
+function getMakiIcon(maki?: string): string | null {
+    if (!maki) return null;
+    return MAKI_EMOJI_MAP[maki] || "📍";
+}
+
 export function LocationSearch({
     onSelect,
     placeholder = "Search for a location...",
@@ -121,6 +156,7 @@ export function LocationSearch({
             const response = await fetch(
                 `https://api.mapbox.com/search/searchbox/v1/suggest?${params.toString()}`
             );
+            if (!response.ok) throw new Error(`Suggest failed: ${response.status}`);
             const data: SearchBoxSuggestResponse = await response.json();
             setSuggestions(data.suggestions ?? []);
             setIsOpen(true);
@@ -144,6 +180,7 @@ export function LocationSearch({
             const response = await fetch(
                 `https://api.mapbox.com/search/searchbox/v1/retrieve/${suggestion.mapbox_id}?${params.toString()}`
             );
+            if (!response.ok) throw new Error(`Retrieve failed: ${response.status}`);
             const data: SearchBoxRetrieveResponse = await response.json();
             const feature = data.features?.[0];
 
@@ -204,40 +241,7 @@ export function LocationSearch({
         sessionTokenRef.current = generateSessionToken();
     };
 
-    // Format distance for display
-    const formatDistance = (meters?: number) => {
-        if (!meters) return null;
-        if (meters < 1000) return `${Math.round(meters)}m`;
-        return `${(meters / 1000).toFixed(1)}km`;
-    };
 
-    // Get display icon class based on maki icon name
-    const getMakiIcon = (maki?: string) => {
-        if (!maki) return null;
-        // Return a simple category label instead of actual maki icons
-        const categoryMap: Record<string, string> = {
-            restaurant: "🍽️",
-            cafe: "☕",
-            fuel: "⛽",
-            "religious-christian": "⛪",
-            "religious-muslim": "🕌",
-            "religious-jewish": "🕍",
-            hospital: "🏥",
-            park: "🌳",
-            hotel: "🏨",
-            school: "🏫",
-            bank: "🏦",
-            shop: "🛍️",
-            museum: "🏛️",
-            monument: "🗿",
-            "swimming-pool": "🏊",
-            cinema: "🎬",
-            library: "📚",
-            pharmacy: "💊",
-            marker: "📍",
-        };
-        return categoryMap[maki] || "📍";
-    };
 
     // Close dropdown on outside click
     useEffect(() => {
