@@ -419,6 +419,51 @@ export const WaypointMapComponent = memo(function WaypointMapComponent({
             }
 
             map.addLayer({
+                id: 'poi-overlay-dots',
+                type: 'circle',
+                source: 'poi-streets',
+                'source-layer': 'poi_label',
+                slot: 'top',
+                minzoom: 14,
+                filter: [
+                    'match', ['get', 'class'],
+                    [
+                        'restaurant', 'cafe', 'food_and_drink',
+                        'fuel',
+                        'place_of_worship',
+                        'hospital', 'pharmacy',
+                        'hotel', 'lodging',
+                        'shop', 'grocery',
+                        'bank',
+                        'school', 'college',
+                        'park', 'monument', 'museum',
+                    ],
+                    true,
+                    false,
+                ],
+                paint: {
+                    'circle-radius': 4,
+                    'circle-color': [
+                        'match', ['get', 'class'],
+                        ['restaurant', 'cafe', 'food_and_drink'], '#f97316',
+                        ['fuel'], '#eab308',
+                        ['place_of_worship'], '#a855f7',
+                        ['hospital', 'pharmacy'], '#ef4444',
+                        ['hotel', 'lodging'], '#3b82f6',
+                        ['shop', 'grocery'], '#10b981',
+                        ['bank'], '#0ea5e9',
+                        ['school', 'college'], '#6366f1',
+                        ['park'], '#22c55e',
+                        ['monument', 'museum'], '#ec4899',
+                        '#94a3b8',
+                    ],
+                    'circle-stroke-color': '#ffffff',
+                    'circle-stroke-width': 1.5,
+                    'circle-opacity': 0.9,
+                },
+            });
+
+            map.addLayer({
                 id: 'poi-overlay',
                 type: 'symbol',
                 source: 'poi-streets',
@@ -442,22 +487,32 @@ export const WaypointMapComponent = memo(function WaypointMapComponent({
                     false,
                 ],
                 layout: {
-                    'icon-image': ['get', 'maki'],
-                    'icon-size': 0.7,
                     'text-field': ['get', 'name'],
                     'text-font': ['DIN Pro Medium', 'Arial Unicode MS Regular'],
                     'text-size': 11,
-                    'text-offset': [0, 1.2],
+                    'text-offset': [0, 1.0],
                     'text-anchor': 'top',
                     'text-optional': true,
-                    'icon-allow-overlap': false,
                     'text-allow-overlap': false,
                 },
                 paint: {
-                    'text-color': '#555555',
-                    'text-halo-color': '#ffffff',
+                    'text-color': [
+                        'match', ['get', 'class'],
+                        ['restaurant', 'cafe', 'food_and_drink'], '#fb923c',
+                        ['fuel'], '#facc15',
+                        ['place_of_worship'], '#c084fc',
+                        ['hospital', 'pharmacy'], '#f87171',
+                        ['hotel', 'lodging'], '#60a5fa',
+                        ['shop', 'grocery'], '#34d399',
+                        ['bank'], '#38bdf8',
+                        ['school', 'college'], '#818cf8',
+                        ['park'], '#4ade80',
+                        ['monument', 'museum'], '#f472b6',
+                        '#cbd5e1',
+                    ],
+                    'text-halo-color': 'rgba(0, 0, 0, 0.75)',
                     'text-halo-width': 1.5,
-                    'icon-opacity': 0.85,
+                    'text-halo-blur': 0.5,
                 },
             });
 
@@ -659,10 +714,12 @@ export const WaypointMapComponent = memo(function WaypointMapComponent({
         }
     }, [waypoints, flyToWaypoints, focusedLocation]);
 
-    // Handle focusedLocation changes
+    // Handle focusedLocation changes (skip if activeSegment handles its own camera)
     useEffect(() => {
         const map = mapRef.current;
         if (!map || !focusedLocation) return;
+        // When an activeSegment is set, the segment highlighting effect manages the camera
+        if (activeSegment) return;
 
         map.flyTo({
             center: [focusedLocation.lng, focusedLocation.lat],
@@ -672,59 +729,81 @@ export const WaypointMapComponent = memo(function WaypointMapComponent({
             duration: 1000,
             essential: true,
         });
-    }, [focusedLocation]);
+    }, [focusedLocation, activeSegment]);
 
     // ─── Active Segment Highlighting ─────────────────────────────────
     useEffect(() => {
         const map = mapRef.current;
-        if (!map || !map.isStyleLoaded()) return;
+        if (!map) return;
 
-        const highlightSource = map.getSource('highlight-route') as mapboxgl.GeoJSONSource;
-        if (!highlightSource) return;
+        const applyHighlight = () => {
+            const highlightSource = map.getSource('highlight-route') as mapboxgl.GeoJSONSource;
+            if (!highlightSource) return;
 
-        if (!activeSegment) {
-            // Clear highlight and restore main route
-            highlightSource.setData({
-                type: 'Feature',
-                properties: {},
-                geometry: { type: 'LineString', coordinates: [] },
+            if (!activeSegment) {
+                // Clear highlight and restore main route
+                highlightSource.setData({
+                    type: 'Feature',
+                    properties: {},
+                    geometry: { type: 'LineString', coordinates: [] },
+                });
+                // Restore main route opacity
+                if (map.getLayer('route-glow')) map.setPaintProperty('route-glow', 'line-opacity', 0.4);
+                if (map.getLayer('route-line')) map.setPaintProperty('route-line', 'line-opacity', 1);
+                if (map.getLayer('route-dashed')) map.setPaintProperty('route-dashed', 'line-opacity', 0.9);
+                return;
+            }
+
+            const wps = waypointsRef.current;
+            const fromWp = wps[activeSegment.fromIndex];
+            const toWp = wps[activeSegment.toIndex];
+            if (!fromWp || !toWp) return;
+
+            // Dim main route
+            if (map.getLayer('route-glow')) map.setPaintProperty('route-glow', 'line-opacity', 0.1);
+            if (map.getLayer('route-line')) map.setPaintProperty('route-line', 'line-opacity', 0.25);
+            if (map.getLayer('route-dashed')) map.setPaintProperty('route-dashed', 'line-opacity', 0.15);
+
+            // Fly camera to fit the segment bounds
+            const bounds = new mapboxgl.LngLatBounds(
+                [fromWp.longitude, fromWp.latitude],
+                [toWp.longitude, toWp.latitude]
+            );
+            map.fitBounds(bounds, {
+                padding: { top: 80, bottom: 80, left: 60, right: 60 },
+                maxZoom: 17,
+                pitch: 55,
+                duration: 1200,
+                essential: true,
             });
-            // Restore main route opacity
-            if (map.getLayer('route-glow')) map.setPaintProperty('route-glow', 'line-opacity', 0.4);
-            if (map.getLayer('route-line')) map.setPaintProperty('route-line', 'line-opacity', 1);
-            if (map.getLayer('route-dashed')) map.setPaintProperty('route-dashed', 'line-opacity', 0.9);
-            return;
+
+            // Fetch segment route and highlight it
+            const from: [number, number] = [fromWp.longitude, fromWp.latitude];
+            const to: [number, number] = [toWp.longitude, toWp.latitude];
+
+            getCachedDirections(from, to).then((result) => {
+                if (!mapRef.current) return;
+                const src = mapRef.current.getSource('highlight-route') as mapboxgl.GeoJSONSource;
+                if (!src) return;
+
+                src.setData({
+                    type: 'Feature',
+                    properties: {},
+                    geometry: {
+                        type: 'LineString',
+                        coordinates: result?.coordinates ?? [from, to],
+                    },
+                });
+            });
+        };
+
+        // If style is loaded apply immediately, otherwise wait for idle
+        if (map.isStyleLoaded() && map.getSource('highlight-route')) {
+            applyHighlight();
+        } else {
+            map.once('idle', applyHighlight);
         }
-
-        const wps = waypointsRef.current;
-        const fromWp = wps[activeSegment.fromIndex];
-        const toWp = wps[activeSegment.toIndex];
-        if (!fromWp || !toWp) return;
-
-        // Dim main route
-        if (map.getLayer('route-glow')) map.setPaintProperty('route-glow', 'line-opacity', 0.1);
-        if (map.getLayer('route-line')) map.setPaintProperty('route-line', 'line-opacity', 0.25);
-        if (map.getLayer('route-dashed')) map.setPaintProperty('route-dashed', 'line-opacity', 0.15);
-
-        // Fetch segment route and highlight it
-        const from: [number, number] = [fromWp.longitude, fromWp.latitude];
-        const to: [number, number] = [toWp.longitude, toWp.latitude];
-
-        getCachedDirections(from, to).then((result) => {
-            if (!mapRef.current || !mapRef.current.isStyleLoaded()) return;
-            const src = mapRef.current.getSource('highlight-route') as mapboxgl.GeoJSONSource;
-            if (!src) return;
-
-            src.setData({
-                type: 'Feature',
-                properties: {},
-                geometry: {
-                    type: 'LineString',
-                    coordinates: result?.coordinates ?? [from, to],
-                },
-            });
-        });
-    }, [activeSegment]);
+    }, [activeSegment?.fromIndex, activeSegment?.toIndex]);
 
     return (
         <div className="relative">

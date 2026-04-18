@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -112,6 +112,23 @@ export function NarrativeStep({ defaultValues, onNext, onBack }: NarrativeStepPr
         : firstWaypoint
             ? { lng: firstWaypoint.longitude, lat: firstWaypoint.latitude }
             : { lng: 77.5946, lat: 12.9716 };
+
+    // Memoize props passed to WaypointMapComponent to prevent unnecessary re-renders
+    const memoizedFocusedLocation = useMemo(() => {
+        if (!focusedSegment) return null;
+        return {
+            lng: (focusedSegment.from.longitude + focusedSegment.to.longitude) / 2,
+            lat: (focusedSegment.from.latitude + focusedSegment.to.latitude) / 2,
+        };
+    }, [focusedSegment]);
+
+    const memoizedActiveSegment = useMemo(() => {
+        if (openIndex === null || !watchedNarratives?.[openIndex]) return null;
+        return {
+            fromIndex: watchedNarratives[openIndex].fromStepIndex,
+            toIndex: watchedNarratives[openIndex].toStepIndex,
+        };
+    }, [openIndex, watchedNarratives]);
 
     // Get segment label for a narrative by indices
     const getSegmentLabel = (fromIdx: number, toIdx: number) => {
@@ -388,15 +405,8 @@ export function NarrativeStep({ defaultValues, onNext, onBack }: NarrativeStepPr
                         <WaypointMapComponent
                             center={mapCenter}
                             waypoints={waypoints}
-                            focusedLocation={focusedSegment ? {
-                                lng: (focusedSegment.from.longitude + focusedSegment.to.longitude) / 2,
-                                lat: (focusedSegment.from.latitude + focusedSegment.to.latitude) / 2,
-                            } : null}
-                            activeSegment={
-                                openIndex !== null && watchedNarratives?.[openIndex]
-                                    ? { fromIndex: watchedNarratives[openIndex].fromStepIndex, toIndex: watchedNarratives[openIndex].toStepIndex }
-                                    : null
-                            }
+                            focusedLocation={memoizedFocusedLocation}
+                            activeSegment={memoizedActiveSegment}
                             onWaypointAdd={() => { }}
                             onWaypointUpdate={() => { }}
                             onWaypointRemove={() => { }}
