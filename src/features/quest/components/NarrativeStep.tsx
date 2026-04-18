@@ -392,6 +392,11 @@ export function NarrativeStep({ defaultValues, onNext, onBack }: NarrativeStepPr
                                 lng: (focusedSegment.from.longitude + focusedSegment.to.longitude) / 2,
                                 lat: (focusedSegment.from.latitude + focusedSegment.to.latitude) / 2,
                             } : null}
+                            activeSegment={
+                                openIndex !== null && watchedNarratives?.[openIndex]
+                                    ? { fromIndex: watchedNarratives[openIndex].fromStepIndex, toIndex: watchedNarratives[openIndex].toStepIndex }
+                                    : null
+                            }
                             onWaypointAdd={() => { }}
                             onWaypointUpdate={() => { }}
                             onWaypointRemove={() => { }}

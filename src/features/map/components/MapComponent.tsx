@@ -186,6 +186,58 @@ export function MapComponent({
 
             // Set fog based on time of day
             map.setFog(FOG_CONFIGS[lightPreset]);
+
+            // ─── POI Overlay (mapbox-streets-v8) ─────────────────────────
+            // Add dense POI annotations on top of Standard 3D style
+            if (!map.getSource('poi-streets')) {
+                map.addSource('poi-streets', {
+                    type: 'vector',
+                    url: 'mapbox://mapbox.mapbox-streets-v8',
+                });
+            }
+
+            map.addLayer({
+                id: 'poi-overlay',
+                type: 'symbol',
+                source: 'poi-streets',
+                'source-layer': 'poi_label',
+                slot: 'top',
+                minzoom: 14,
+                filter: [
+                    'match', ['get', 'class'],
+                    [
+                        'restaurant', 'cafe', 'food_and_drink',
+                        'fuel',
+                        'place_of_worship',
+                        'hospital', 'pharmacy',
+                        'hotel', 'lodging',
+                        'shop', 'grocery',
+                        'bank',
+                        'school', 'college',
+                        'park', 'monument', 'museum',
+                    ],
+                    true,
+                    false,
+                ],
+                layout: {
+                    'icon-image': ['get', 'maki'],
+                    'icon-size': 0.7,
+                    'text-field': ['get', 'name'],
+                    'text-font': ['DIN Pro Medium', 'Arial Unicode MS Regular'],
+                    'text-size': 11,
+                    'text-offset': [0, 1.2],
+                    'text-anchor': 'top',
+                    'text-optional': true,
+                    'icon-allow-overlap': false,
+                    'text-allow-overlap': false,
+                },
+                paint: {
+                    'text-color': '#555555',
+                    'text-halo-color': '#ffffff',
+                    'text-halo-width': 1.5,
+                    'icon-opacity': 0.85,
+                },
+            });
         });
 
         // Add navigation controls

@@ -139,6 +139,7 @@ export function WaypointsStep({ defaultValues, initialCenter, onNext, onBack }: 
                         <LocationSearch
                             onSelect={handleWaypointAdd}
                             placeholder="Search for a location..."
+                            proximity={defaultCenter}
                         />
                     </div>
 

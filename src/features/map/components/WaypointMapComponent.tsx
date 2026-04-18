@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback, memo } from "react";
 import mapboxgl from "mapbox-gl";
 import { config } from "@config/env";
 import { escapeHtml } from "@/utils/security";
+import { getCachedDirections, getCachedMultiRoute } from "@services/directionsCache";
 import type { QuestLocation } from "@/types";
 
 // Set Mapbox token
@@ -56,6 +57,8 @@ interface WaypointMapComponentProps {
     height?: string;
     className?: string;
     focusedLocation?: { lng: number; lat: number } | null;
+    /** When set, highlights the route segment between waypoints[fromIndex] and waypoints[toIndex] in amber */
+    activeSegment?: { fromIndex: number; toIndex: number } | null;
 }
 
 // Create marker element for 60 FPS performance
@@ -93,6 +96,7 @@ export const WaypointMapComponent = memo(function WaypointMapComponent({
     height = "500px",
     className = "",
     focusedLocation,
+    activeSegment,
 }: WaypointMapComponentProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -167,7 +171,7 @@ export const WaypointMapComponent = memo(function WaypointMapComponent({
         }
     }, []);
 
-    // Fetch walking directions from Mapbox Directions API
+    // Fetch walking directions using cached service
     const fetchWalkingRoute = useCallback(async (coordinates: [number, number][]) => {
         if (coordinates.length < 2) return null;
 
@@ -176,18 +180,7 @@ export const WaypointMapComponent = memo(function WaypointMapComponent({
         }
         abortControllerRef.current = new AbortController();
 
-        try {
-            const coordString = coordinates.map(c => `${c[0]},${c[1]}`).join(';');
-            const response = await fetch(
-                `https://api.mapbox.com/directions/v5/mapbox/walking/${coordString}?geometries=geojson&overview=full&access_token=${config.mapbox.accessToken}`,
-                { signal: abortControllerRef.current.signal }
-            );
-            if (!response.ok) return null;
-            const data = await response.json();
-            return data.routes?.[0]?.geometry?.coordinates ?? null;
-        } catch {
-            return null;
-        }
+        return getCachedMultiRoute(coordinates, abortControllerRef.current.signal);
     }, []);
 
     // Update route line with walking directions
@@ -416,6 +409,106 @@ export const WaypointMapComponent = memo(function WaypointMapComponent({
                 },
             });
 
+            // ─── POI Overlay (mapbox-streets-v8) ─────────────────────────
+            // Add dense POI annotations on top of Standard 3D style
+            if (!map.getSource('poi-streets')) {
+                map.addSource('poi-streets', {
+                    type: 'vector',
+                    url: 'mapbox://mapbox.mapbox-streets-v8',
+                });
+            }
+
+            map.addLayer({
+                id: 'poi-overlay',
+                type: 'symbol',
+                source: 'poi-streets',
+                'source-layer': 'poi_label',
+                slot: 'top',
+                minzoom: 14,
+                filter: [
+                    'match', ['get', 'class'],
+                    [
+                        'restaurant', 'cafe', 'food_and_drink',
+                        'fuel',
+                        'place_of_worship',
+                        'hospital', 'pharmacy',
+                        'hotel', 'lodging',
+                        'shop', 'grocery',
+                        'bank',
+                        'school', 'college',
+                        'park', 'monument', 'museum',
+                    ],
+                    true,
+                    false,
+                ],
+                layout: {
+                    'icon-image': ['get', 'maki'],
+                    'icon-size': 0.7,
+                    'text-field': ['get', 'name'],
+                    'text-font': ['DIN Pro Medium', 'Arial Unicode MS Regular'],
+                    'text-size': 11,
+                    'text-offset': [0, 1.2],
+                    'text-anchor': 'top',
+                    'text-optional': true,
+                    'icon-allow-overlap': false,
+                    'text-allow-overlap': false,
+                },
+                paint: {
+                    'text-color': '#555555',
+                    'text-halo-color': '#ffffff',
+                    'text-halo-width': 1.5,
+                    'icon-opacity': 0.85,
+                },
+            });
+
+            // ─── Highlight Route Layers ──────────────────────────────────
+            map.addSource('highlight-route', {
+                type: 'geojson',
+                data: {
+                    type: 'Feature',
+                    properties: {},
+                    geometry: { type: 'LineString', coordinates: [] },
+                },
+            });
+
+            map.addLayer({
+                id: 'highlight-route-glow',
+                type: 'line',
+                source: 'highlight-route',
+                layout: { 'line-join': 'round', 'line-cap': 'round' },
+                paint: {
+                    'line-color': '#fbbf24',
+                    'line-width': 16,
+                    'line-blur': 10,
+                    'line-opacity': 0.5,
+                },
+            });
+
+            map.addLayer({
+                id: 'highlight-route-line',
+                type: 'line',
+                source: 'highlight-route',
+                layout: { 'line-join': 'round', 'line-cap': 'round' },
+                paint: {
+                    'line-color': '#f59e0b',
+                    'line-width': 7,
+                    'line-opacity': 1,
+                },
+            });
+
+            map.addLayer({
+                id: 'highlight-route-dash',
+                type: 'line',
+                source: 'highlight-route',
+                layout: { 'line-join': 'round', 'line-cap': 'round' },
+                paint: {
+                    'line-color': '#ffffff',
+                    'line-width': 2,
+                    'line-dasharray': [2, 3],
+                    'line-opacity': 0.9,
+                },
+            });
+
             // Render initial markers and route after style loads
             addMarkers();
             updateRouteLine();
@@ -580,6 +673,58 @@ export const WaypointMapComponent = memo(function WaypointMapComponent({
             essential: true,
         });
     }, [focusedLocation]);
+
+    // ─── Active Segment Highlighting ─────────────────────────────────
+    useEffect(() => {
+        const map = mapRef.current;
+        if (!map || !map.isStyleLoaded()) return;
+
+        const highlightSource = map.getSource('highlight-route') as mapboxgl.GeoJSONSource;
+        if (!highlightSource) return;
+
+        if (!activeSegment) {
+            // Clear highlight and restore main route
+            highlightSource.setData({
+                type: 'Feature',
+                properties: {},
+                geometry: { type: 'LineString', coordinates: [] },
+            });
+            // Restore main route opacity
+            if (map.getLayer('route-glow')) map.setPaintProperty('route-glow', 'line-opacity', 0.4);
+            if (map.getLayer('route-line')) map.setPaintProperty('route-line', 'line-opacity', 1);
+            if (map.getLayer('route-dashed')) map.setPaintProperty('route-dashed', 'line-opacity', 0.9);
+            return;
+        }
+
+        const wps = waypointsRef.current;
+        const fromWp = wps[activeSegment.fromIndex];
+        const toWp = wps[activeSegment.toIndex];
+        if (!fromWp || !toWp) return;
+
+        // Dim main route
+        if (map.getLayer('route-glow')) map.setPaintProperty('route-glow', 'line-opacity', 0.1);
+        if (map.getLayer('route-line')) map.setPaintProperty('route-line', 'line-opacity', 0.25);
+        if (map.getLayer('route-dashed')) map.setPaintProperty('route-dashed', 'line-opacity', 0.15);
+
+        // Fetch segment route and highlight it
+        const from: [number, number] = [fromWp.longitude, fromWp.latitude];
+        const to: [number, number] = [toWp.longitude, toWp.latitude];
+
+        getCachedDirections(from, to).then((result) => {
+            if (!mapRef.current || !mapRef.current.isStyleLoaded()) return;
+            const src = mapRef.current.getSource('highlight-route') as mapboxgl.GeoJSONSource;
+            if (!src) return;
+
+            src.setData({
+                type: 'Feature',
+                properties: {},
+                geometry: {
+                    type: 'LineString',
+                    coordinates: result?.coordinates ?? [from, to],
+                },
+            });
+        });
+    }, [activeSegment]);
 
     return (
         <div className="relative">
