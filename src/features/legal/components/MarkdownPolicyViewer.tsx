@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Link } from "react-router-dom";
 
 interface MarkdownPolicyViewerProps {
     cdnUrl: string;
@@ -67,14 +67,29 @@ export function MarkdownPolicyViewer({ cdnUrl }: MarkdownPolicyViewerProps) {
                     ul: ({ node, ...props }) => <ul className="list-disc pl-6 mb-6 space-y-2 text-neutral-600" {...props} />,
                     li: ({ node, ...props }) => <li className="pl-2" {...props} />,
                     a: ({ node, href, ...props }) => {
-                        let mappedHref = href;
-                        if (href?.endsWith(".md")) {
-                            if (href.includes("privacy-policy")) mappedHref = "/privacy-policy";
-                            else if (href.includes("terms-and-conditions")) mappedHref = "https://seekkrr.com/terms";
-                            else if (href.includes("creator-terms")) mappedHref = "/terms-and-conditions";
-                            else if (href.includes("refund-policy")) mappedHref = "https://seekkrr.com/refund";
+                        let mappedHref = href || "";
+                        if (mappedHref.endsWith(".md")) {
+                            if (mappedHref.includes("privacy-policy")) mappedHref = "/privacy-policy";
+                            else if (mappedHref.includes("terms-and-conditions")) mappedHref = "https://seekkrr.com/terms";
+                            else if (mappedHref.includes("creator-terms")) mappedHref = "/terms-and-conditions";
+                            else if (mappedHref.includes("refund-policy")) mappedHref = "https://seekkrr.com/refund";
                         }
-                        return <a href={mappedHref} className="text-indigo-600 hover:text-indigo-800 hover:underline font-medium" {...props} />;
+
+                        const isInternal = mappedHref.startsWith("/");
+                        const className = "text-indigo-600 hover:text-indigo-800 hover:underline font-medium";
+
+                        if (isInternal) {
+                            return <Link to={mappedHref} className={className} {...props} />;
+                        }
+                        return (
+                            <a
+                                href={mappedHref}
+                                className={className}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                {...props}
+                            />
+                        );
                     },
                     strong: ({ node, ...props }) => <strong className="font-semibold text-neutral-900" {...props} />,
                     table: ({ node, ...props }) => (
