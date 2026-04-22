@@ -17,7 +17,7 @@ export function MarkdownPolicyViewer({ cdnUrl }: MarkdownPolicyViewerProps) {
             try {
                 setIsLoading(true);
                 // Cache buster for immediate updates during transition
-                const response = await fetch(cdnUrl);
+                const response = await fetch(cdnUrl, { cache: 'no-store' });
                 if (!response.ok) {
                     throw new Error("Failed to load policy");
                 }
