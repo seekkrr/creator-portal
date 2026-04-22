@@ -17,7 +17,7 @@ export function MarkdownPolicyViewer({ cdnUrl }: MarkdownPolicyViewerProps) {
             try {
                 setIsLoading(true);
                 // Cache buster for immediate updates during transition
-                const response = await fetch(`${cdnUrl}?t=${Date.now()}`);
+                const response = await fetch(cdnUrl);
                 if (!response.ok) {
                     throw new Error("Failed to load policy");
                 }
