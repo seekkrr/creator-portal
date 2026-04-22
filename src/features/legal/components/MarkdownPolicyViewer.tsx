@@ -35,7 +35,7 @@ export function MarkdownPolicyViewer({ cdnUrl }: MarkdownPolicyViewerProps) {
 
     const stripFrontmatter = (md: string) => {
         if (md.startsWith("---")) {
-            const match = md.match(/^---[\s\S]*?---\n([\s\S]*)$/);
+            const match = md.match(/^---[\s\S]*?---\s*([\s\S]*)$/);
             if (match) return match[1];
         }
         return md;
