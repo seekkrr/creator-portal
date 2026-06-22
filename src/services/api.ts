@@ -6,8 +6,8 @@ import axios, {
 import { config } from "@config/env";
 import type { ApiError } from "@/types";
 
-const AUTH_TOKEN_KEY = "seekkrr_access_token";
-const REFRESH_TOKEN_KEY = "seekkrr_refresh_token";
+const AUTH_TOKEN_KEY = "seekkrr_creator_access_token"; // Distinct key for creator portal
+const REFRESH_TOKEN_KEY = "seekkrr_creator_refresh_token";
 
 function getStoredToken(): string | null {
     return localStorage.getItem(AUTH_TOKEN_KEY);
@@ -59,15 +59,20 @@ function createApiClient(): AxiosInstance {
                 clearStoredTokens();
                 // Redirect to login if not already there
                 if (!window.location.pathname.includes("/login") &&
-                    !window.location.pathname.includes("/auth/callback")) {
+                    !window.location.pathname.includes("/access-denied")) {
                     window.location.href = "/creator/login";
                 }
             }
 
-            // Extract error message
+            // Extract error message — check all known backend shapes:
+            // V2 FastAPI: { detail: "..." } or { message: "..." }
+            // V1 Flask: { error: "..." } or { details: "..." }
+            const responseData = error.response?.data as Record<string, unknown> | undefined;
             const errorMessage =
-                error.response?.data?.error ||
-                error.response?.data?.details ||
+                (typeof responseData?.message === "string" && responseData.message) ||
+                (typeof responseData?.detail === "string" && responseData.detail) ||
+                (typeof responseData?.error === "string" && responseData.error) ||
+                (typeof responseData?.details === "string" && responseData.details) ||
                 error.message ||
                 "An unexpected error occurred";
 

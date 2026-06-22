@@ -29,7 +29,7 @@ export function QuestDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { creator } = useAuthStore();
-  const isApproved = creator?.status === "approved";
+  const isApproved = !!creator?.is_verified;
   const [expandedSteps, setExpandedSteps] = useState<Set<number>>(new Set());
   const [expandedNarrative, setExpandedNarrative] = useState<string | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);

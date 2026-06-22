@@ -21,7 +21,7 @@ const difficultyColors: Record<QuestDifficulty, "success" | "info" | "warning" |
 export function ReviewStep({ formData, onBack, onSubmit, isSubmitting }: ReviewStepProps) {
     const { creator } = useAuthStore();
     const { title, description, difficulty, duration, waypoints = [], latitude, longitude } = formData;
-    const isApproved = creator?.status === "approved";
+    const isApproved = !!creator?.is_verified;
 
     // Calculate map center from first waypoint or location step
     const mapCenter = waypoints.length > 0 && waypoints[0]

@@ -1,16 +1,82 @@
 // User & Auth Types
+
+/**
+ * Staff roles that may access the creator portal regardless of is_creator.
+ * Backend has no "creator" role value — creator access is the `is_creator`
+ * boolean (set at provisioning); these roles are the staff override.
+ */
+export const ALLOWED_CREATOR_ROLES = ["admin", "super_admin"] as const;
+
 export interface User {
     _id: string;
     first_name: string;
     last_name: string;
-    contact_id: string;
-    security_id: string;
-    profile_id: string;
-    role: "user" | "admin" | "super_admin" | "creator";
+    contact_id?: string;
+    security_id?: string;
+    profile_id?: string;
+    role: Array<"user" | "admin" | "super_admin" | "creator" | "moderator" | "finance">;
     status: "active" | "suspended" | "deleted";
     is_creator: boolean;
+    email?: string; // returned by /auth/verify (to_self_dict)
+    profile_image?: { url?: string; public_id?: string } | null;
+    points_earned?: number; // returned by /auth/verify (to_self_dict)
     created_at: string;
     updated_at: string;
+}
+
+/**
+ * Backend role shape is inconsistent: V2 `/auth/verify` may return `role` as a
+ * single string (e.g. "admin") OR an array. The portal assumes an array
+ * (`user.role.some(...)`). Coerce here at the boundary so every consumer is safe.
+ */
+export function normalizeUser<T extends { role?: unknown } | null | undefined>(user: T): T {
+    if (!user || typeof user !== "object") return user;
+    const raw = (user as { role?: unknown }).role;
+    const role = Array.isArray(raw) ? raw : raw === null || raw === undefined ? [] : [raw];
+    return { ...(user as object), role } as T;
+}
+
+export type CreatorAccessDenialReason = "not_creator" | "no_profile" | "suspended" | "rejected";
+
+export interface CreatorAccessResult {
+    allowed: boolean;
+    reason?: CreatorAccessDenialReason;
+}
+
+/**
+ * Decide whether a user may enter the creator portal.
+ *
+ * Per V2 backend contract:
+ *  - Staff (admin/super_admin) always pass.
+ *  - A creator must have `is_creator === true` AND a provisioned `creators`
+ *    record (GET /creators/me 200) with `status === "active"`.
+ *  - `is_verified` is a trust BADGE only — it never gates login (unverified
+ *    active creators are allowed in to build drafts).
+ *  - suspended/rejected creators, and is_creator-without-record, are blocked.
+ */
+export function evaluateCreatorAccess(
+    user: { role?: unknown; is_creator?: boolean } | null | undefined,
+    creator: { status?: string } | null | undefined
+): CreatorAccessResult {
+    if (!user) return { allowed: false, reason: "not_creator" };
+
+    const roles = Array.isArray(user.role) ? user.role : user.role ? [user.role] : [];
+    const isStaff = roles.some((r) => (ALLOWED_CREATOR_ROLES as readonly unknown[]).includes(r));
+    if (isStaff) return { allowed: true };
+
+    if (!user.is_creator) return { allowed: false, reason: "not_creator" };
+    if (!creator) return { allowed: false, reason: "no_profile" };
+    if (creator.status === "suspended") return { allowed: false, reason: "suspended" };
+    if (creator.status === "rejected") return { allowed: false, reason: "rejected" };
+    return { allowed: true };
+}
+
+/** Boolean convenience wrapper around {@link evaluateCreatorAccess}. */
+export function canAccessCreatorPortal(
+    user: { role?: unknown; is_creator?: boolean } | null | undefined,
+    creator: { status?: string } | null | undefined
+): boolean {
+    return evaluateCreatorAccess(user, creator).allowed;
 }
 
 export interface UserProfile {
@@ -21,16 +87,67 @@ export interface UserProfile {
     referral_code?: string;
 }
 
+/** Self-chosen display badge on a creator profile (free-form dict in V2). */
+export interface CreatorBadge {
+    label?: string;
+    color?: string;
+    icon?: string;
+    [key: string]: unknown;
+}
+
+/**
+ * V2 creator profile. `GET /creators/me` returns the *enriched* dict (creator
+ * fields + merged user identity); `PUT /creators/me` returns the public dict.
+ * Most fields are optional so both shapes type-check.
+ *
+ * Note: `status` is the operational lifecycle (active|suspended|rejected) — NOT
+ * "approved"/"pending" (that lives on creator_applications). `is_verified` is the
+ * trust BADGE and is what gates "can submit quests" in the UI.
+ */
 export interface Creator {
-    _id: string;
+    id: string;
+    _id?: string;
     user_id: string;
-    status: "pending" | "approved" | "rejected" | "suspended";
+    status: "active" | "suspended" | "rejected";
     is_verified: boolean;
+    tagline?: string | null;
+    creator_bio?: string | null;
+    creator_badge?: CreatorBadge | null;
+    total_quests?: number;
+    total_earnings?: number;
+    pending_payouts?: number;
+    travelers_served?: number;
+    rating?: number;
+    review_count?: number;
+    quest_ids?: string[];
+    payout_account_id?: string | null;
+    source_application_id?: string | null;
     verification_documents?: string[];
-    stats_id?: string;
-    payout_account_id?: string;
-    created_at: string;
-    updated_at: string;
+    // Identity fields merged in by the enriched dict (to_enriched_dict)
+    name?: string | null;
+    avatar_url?: string | null;
+    hobbies?: string[];
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    profile_image?: CloudinaryAsset | { url?: string } | null;
+    created_at?: string;
+    updated_at?: string;
+}
+
+/** Onboarding checklist from `GET /creators/me/onboarding-status`. */
+export interface CreatorOnboarding {
+    profile_complete: boolean;
+    payout_account_set: boolean;
+    first_quest_created: boolean;
+    is_verified: boolean;
+}
+
+/** Payload for `PUT /creators/me`. */
+export interface UpdateCreatorProfilePayload {
+    tagline?: string;
+    creator_bio?: string;
+    creator_badge?: CreatorBadge | null;
 }
 
 export interface AuthTokens {

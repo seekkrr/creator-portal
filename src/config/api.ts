@@ -1,8 +1,9 @@
 export const API_ENDPOINTS = {
     AUTH: {
-        GOOGLE: "/api/auth/google",
-        LOGOUT: "/api/auth/logout",
-        REFRESH: "/api/auth/token/refresh",
+        OAUTH_LOGIN: "/api/v2/auth/oauth/login",
+        LOGOUT: "/api/v2/auth/logout",
+        REFRESH: "/api/v2/auth/refresh",
+        VERIFY: "/api/v2/auth/verify",
     },
     QUESTS: {
         BASE: "/api/quests",
@@ -11,8 +12,17 @@ export const API_ENDPOINTS = {
         STEPS: (questId: string) => `/api/quests/${questId}/steps`,
     },
     CREATORS: {
-        BY_USER_ID: (userId: string) => `/api/core/creators/${userId}`,
-        STATS: (userId: string) => `/api/core/creators/${userId}/stats`,
+        // V2: current authenticated creator's own profile + analytics
+        ME: "/api/v2/creators/me",
+        ME_ONBOARDING: "/api/v2/creators/me/onboarding-status",
+        ME_ANALYTICS_SUMMARY: "/api/v2/creators/me/analytics/summary",
+        ME_ANALYTICS_QUESTS: "/api/v2/creators/me/analytics/quests",
+        ME_ANALYTICS_EARNINGS: "/api/v2/creators/me/analytics/earnings",
+    },
+    // Current user's own account (V2). Name + avatar are common identity fields
+    // editable from the creator portal; the rest of the user profile is app-managed.
+    USERS: {
+        ME: "/api/v2/users/me",
     },
     CORE: {
         USERS: "/api/core/users",

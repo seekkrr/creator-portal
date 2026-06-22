@@ -24,7 +24,8 @@ export function DashboardLayout() {
                             <img src="/seekkrr-logo.svg" alt="SeekKrr" className="h-8" />
                         </Link>
 
-                        {/* Desktop Navigation */}
+                        {/* Desktop Navigation — creator workflow tabs only.
+                            Terms / Privacy / Contact live in the footer. */}
                         <nav className="hidden md:flex items-center gap-8 ml-auto">
                             <Link
                                 to="/creator/quests"
@@ -33,22 +34,10 @@ export function DashboardLayout() {
                                 My Quests
                             </Link>
                             <Link
-                                to="/terms-and-conditions"
+                                to="/creator/profile"
                                 className="text-base font-normal text-neutral-600 hover:text-neutral-900 transition-colors"
                             >
-                                Terms and Conditions
-                            </Link>
-                            <Link
-                                to="/privacy-policy"
-                                className="text-base font-normal text-neutral-600 hover:text-neutral-900 transition-colors"
-                            >
-                                Privacy Policy
-                            </Link>
-                            <Link
-                                to="/contact"
-                                className="text-base font-normal text-neutral-600 hover:text-neutral-900 transition-colors"
-                            >
-                                Contact Us
+                                Profile
                             </Link>
                         </nav>
 
@@ -85,26 +74,16 @@ export function DashboardLayout() {
                             <Link
                                 to="/creator/quests"
                                 className="block text-base font-normal text-neutral-600 hover:text-neutral-900"
+                                onClick={() => setIsMobileMenuOpen(false)}
                             >
                                 My Quests
                             </Link>
                             <Link
-                                to="/terms-and-conditions"
+                                to="/creator/profile"
                                 className="block text-base font-normal text-neutral-600 hover:text-neutral-900"
+                                onClick={() => setIsMobileMenuOpen(false)}
                             >
-                                Terms and Conditions
-                            </Link>
-                            <Link
-                                to="/privacy-policy"
-                                className="block text-base font-normal text-neutral-600 hover:text-neutral-900"
-                            >
-                                Privacy Policy
-                            </Link>
-                            <Link
-                                to="/contact"
-                                className="block text-base font-normal text-neutral-600 hover:text-neutral-900"
-                            >
-                                Contact Us
+                                Profile
                             </Link>
                             <div className="pt-4 border-t border-neutral-100">
                                 <button
@@ -121,11 +100,10 @@ export function DashboardLayout() {
             </header>
 
             {/* Main Content */}
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
                 <Outlet />
             </main>
 
-            {/* Footer */}
             {/* Footer */}
             <Footer />
         </div>

@@ -1,8 +1,7 @@
 import { Link } from "react-router-dom";
 import { useAuthStore } from "@store/auth.store";
-import { MapPin, Compass, Trophy, AlertCircle, Clock, Play } from "lucide-react";
+import { MapPin, Compass, Trophy, Clock, Play } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import { creatorService, CreatorStats } from "@services/creator.service";
 import { WALKTHROUGH_VIDEOS } from "@config/walkthroughVideos";
 
 // ... (StackedHeroCards remains same)
@@ -149,39 +148,21 @@ function HowToVideoPlayer() {
 
 export function DashboardPage() {
     const { user, creator } = useAuthStore();
-    const [stats, setStats] = useState<CreatorStats | null>(null);
 
-    useEffect(() => {
-        async function fetchStats() {
-            if (user?._id) {
-                try {
-                    const data = await creatorService.getStats(user._id);
-                    setStats(data.stats);
-                } catch (error) {
-                    console.error("Failed to fetch dashboard stats:", error);
-                }
-            }
-        }
-        fetchStats();
-    }, [user?._id]);
-
-    const isRejected = creator?.status === "rejected";
-    const isApproved = creator?.status === "approved";
+    // Stats come from the creator profile loaded at login (GET /creators/me).
+    const isVerified = !!creator?.is_verified;
 
     return (
         <div className="animate-fade-in font-sans space-y-12 lg:space-y-24">
-            {/* Approval Status Banner */}
-            {!isApproved && (
-                <div className={`p-4 rounded-2xl flex items-center gap-4 ${isRejected ? 'bg-red-50 text-red-700 border border-red-100' : 'bg-amber-50 text-amber-700 border border-amber-100'}`}>
-                    {isRejected ? <AlertCircle className="w-5 h-5" /> : <Clock className="w-5 h-5 animate-pulse" />}
+            {/* Verification status banner */}
+            {!isVerified && (
+                <div className="p-4 rounded-2xl flex items-center gap-4 bg-amber-50 text-amber-700 border border-amber-100">
+                    <Clock className="w-5 h-5 animate-pulse" />
                     <div>
-                        <p className="font-semibold">
-                            {isRejected ? "Application Rejected" : "Verification in Progress"}
-                        </p>
+                        <p className="font-semibold">Verification in progress</p>
                         <p className="text-sm opacity-90">
-                            {isRejected
-                                ? "Your creator application was not approved. You can still create draft quests, but cannot submit them for review."
-                                : "We're currently reviewing your creator application. You can start building your quests as drafts while you wait!"}
+                            Your creator account isn't verified yet. You can build quests as drafts now —
+                            once you're verified you'll be able to submit them for review.
                         </p>
                     </div>
                 </div>
@@ -231,7 +212,7 @@ export function DashboardPage() {
                         </div>
                         <div>
                             <p className="text-sm font-medium text-neutral-500 uppercase tracking-wider">Quests Published</p>
-                            <p className="text-3xl font-bold text-neutral-900">{stats?.total_quests ?? 0}</p>
+                            <p className="text-3xl font-bold text-neutral-900">{creator?.total_quests ?? 0}</p>
                         </div>
                     </div>
                 </div>
@@ -242,8 +223,8 @@ export function DashboardPage() {
                             <Compass className="w-6 h-6" />
                         </div>
                         <div>
-                            <p className="text-sm font-medium text-neutral-500 uppercase tracking-wider">Impressions</p>
-                            <p className="text-3xl font-bold text-neutral-900">{stats?.impressions ?? 0}</p>
+                            <p className="text-sm font-medium text-neutral-500 uppercase tracking-wider">Travelers Served</p>
+                            <p className="text-3xl font-bold text-neutral-900">{creator?.travelers_served ?? 0}</p>
                         </div>
                     </div>
                 </div>
@@ -255,7 +236,7 @@ export function DashboardPage() {
                         </div>
                         <div>
                             <p className="text-sm font-medium text-neutral-500 uppercase tracking-wider">Total Earnings</p>
-                            <p className="text-3xl font-bold text-neutral-900">₹{stats?.total_earnings?.toLocaleString() ?? 0}</p>
+                            <p className="text-3xl font-bold text-neutral-900">₹{creator?.total_earnings?.toLocaleString() ?? 0}</p>
                         </div>
                     </div>
                 </div>

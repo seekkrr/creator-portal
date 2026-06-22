@@ -1,6 +1,13 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { User, Creator, AuthTokens } from "@/types";
+import { evaluateCreatorAccess, normalizeUser, type CreatorAccessDenialReason, type User, type Creator, type AuthTokens } from "@/types";
+
+const ACCESS_DENIAL_MESSAGE: Record<CreatorAccessDenialReason, string> = {
+    not_creator: "Access Denied: This account is not a creator.",
+    no_profile: "Access Denied: Your creator account is still being set up. Please sign in again shortly.",
+    suspended: "Access Denied: Your creator account is suspended.",
+    rejected: "Access Denied: Your creator application was rejected.",
+};
 import { authService } from "@services/auth.service";
 import { authStorage } from "@services/api";
 
@@ -87,6 +94,21 @@ export const useAuthStore = create<AuthStore>()(
                 set({ isLoading: true });
                 try {
                     const { user, creator } = await authService.getCurrentUser();
+
+                    // RBAC: only ACTIVE creators (is_creator + creators.status==='active')
+                    // or staff may enter the portal. is_verified is a badge, not a gate.
+                    const access = evaluateCreatorAccess(user, creator);
+                    if (!access.allowed) {
+                        set({
+                            user, // keep so the UI knows who was rejected
+                            creator: creator ?? null,
+                            isAuthenticated: true, // they ARE authenticated, just not authorized
+                            isLoading: false,
+                            error: access.reason ? ACCESS_DENIAL_MESSAGE[access.reason] : "Access Denied",
+                        });
+                        return false;
+                    }
+
                     set({
                         user,
                         creator: creator ?? null,
@@ -109,12 +131,19 @@ export const useAuthStore = create<AuthStore>()(
             },
         }),
         {
-            name: "seekkrr-auth",
+            name: "seekkrr-creator-auth",
             partialize: (state) => ({
                 user: state.user,
                 creator: state.creator,
                 isAuthenticated: state.isAuthenticated,
             }),
+            // A user persisted by an older build may have `role` as a string;
+            // normalize on rehydration so consumers' `role.some(...)` never throws
+            // before checkAuth() re-fetches.
+            merge: (persisted, current) => {
+                const p = (persisted ?? {}) as Partial<AuthState>;
+                return { ...current, ...p, user: p.user ? normalizeUser(p.user) : current.user };
+            },
         }
     )
 );

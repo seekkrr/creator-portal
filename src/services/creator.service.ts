@@ -1,33 +1,34 @@
 import { api } from "./api";
 import { API_ENDPOINTS } from "@config/api";
-
-export interface CreatorStats {
-    total_quests: number;
-    total_earnings: number;
-    impressions: number;
-    last_updated: string;
-}
-
-export interface CreatorDetails {
-    creator_profile: {
-        _id: string;
-        user_id: string;
-        status: string;
-        is_verified: boolean;
-        stats_id: string;
-    };
-    stats: CreatorStats;
-}
+import type { Creator, CreatorOnboarding, UpdateCreatorProfilePayload } from "@/types";
 
 export const creatorService = {
     /**
-     * Get creator details including stats
+     * Current creator's own profile (enriched: creator fields + user identity).
+     * GET /api/v2/creators/me → { success, creator }
      */
-    async getStats(userId: string): Promise<CreatorDetails> {
-        const response = await api.get<CreatorDetails>(
-            API_ENDPOINTS.CREATORS.BY_USER_ID(userId),
-            { params: { include_stats: true } }
+    async getMe(): Promise<Creator> {
+        const res = await api.get<{ creator: Creator }>(API_ENDPOINTS.CREATORS.ME);
+        return res.data.creator;
+    },
+
+    /**
+     * Update own creator profile (tagline, bio, badge).
+     * PUT /api/v2/creators/me → { success, creator }
+     */
+    async updateProfile(payload: UpdateCreatorProfilePayload): Promise<Creator> {
+        const res = await api.put<{ creator: Creator }>(API_ENDPOINTS.CREATORS.ME, payload);
+        return res.data.creator;
+    },
+
+    /**
+     * Onboarding checklist.
+     * GET /api/v2/creators/me/onboarding-status → { success, onboarding }
+     */
+    async getOnboarding(): Promise<CreatorOnboarding> {
+        const res = await api.get<{ onboarding: CreatorOnboarding }>(
+            API_ENDPOINTS.CREATORS.ME_ONBOARDING
         );
-        return response.data;
+        return res.data.onboarding;
     },
 };

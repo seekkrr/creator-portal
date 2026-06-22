@@ -15,9 +15,10 @@ export function QuestsPage() {
     const { user, creator } = useAuthStore();
     const navigate = useNavigate();
 
-    // Filter tabs based on creator status
-    const isApproved = creator?.status === "approved";
-    const availableTabs = isApproved
+    // Verified creators can manage all quest states; unverified are draft-only
+    // (verification is the V2 gate for submitting quests for review).
+    const isVerified = !!creator?.is_verified;
+    const availableTabs = isVerified
         ? TABS
         : TABS.filter(tab => tab === "Draft");
 
@@ -308,7 +309,7 @@ export function QuestsPage() {
                                                                         >
                                                                             View Details
                                                                         </button>
-                                                                        {isApproved && ['Draft', 'Changes Requested'].includes(quest.status as string) && (
+                                                                        {isVerified && ['Draft', 'Changes Requested'].includes(quest.status as string) && (
                                                                             <button
                                                                                 onClick={() => { handleUpdateStatus(quest._id, 'Under Review'); setOpenDropdownId(null); }}
                                                                                 className="w-full text-left px-4 py-2 text-sm text-indigo-600 hover:bg-indigo-50 flex items-center gap-2 font-medium"
@@ -354,7 +355,7 @@ export function QuestsPage() {
                                                                     onClick={(e) => e.stopPropagation()}
                                                                 >
                                                                     <button onClick={() => { navigate(`/creator/quest/view/${quest._id}`); setOpenDropdownId(null); }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-neutral-700 hover:bg-slate-50">View Details</button>
-                                                                    {isApproved && ['Draft', 'Changes Requested'].includes(quest.status as string) && (
+                                                                    {isVerified && ['Draft', 'Changes Requested'].includes(quest.status as string) && (
                                                                         <button onClick={() => { handleUpdateStatus(quest._id, 'Under Review'); setOpenDropdownId(null); }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-indigo-600 hover:bg-indigo-50">Submit Review</button>
                                                                     )}
 {quest.status !== 'Published' && (

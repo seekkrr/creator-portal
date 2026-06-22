@@ -1,82 +1,60 @@
 import { api, authStorage } from "./api";
 import { API_ENDPOINTS } from "@config/api";
-import { config } from "@config/env";
-import type { AuthTokens, User, Creator } from "@/types";
+import { normalizeUser, type AuthTokens, type User, type Creator } from "@/types";
 
 export interface AuthMeResponse {
     user: User;
     creator?: Creator;
 }
 
-// Session storage key removed
-
 export const authService = {
     /**
-     * Initiate Google OAuth login for creators
-     * Uses state parameter for CSRF protection
+     * Login with Google Credential from the GIS SDK (in-page, no redirect).
+     * Mirrors admin-portal: POST /api/v2/auth/oauth/login { provider, token }.
      */
-    initiateGoogleLogin(): void {
-        const redirectUri = `${window.location.origin}/creator/auth/callback`;
-
-        // Use full backend URL for OAuth
-        const authUrl = `${config.api.baseUrl}${API_ENDPOINTS.AUTH.GOOGLE}?is_creator=true&platform=web&redirect_uri=${encodeURIComponent(redirectUri)}`;
-        window.location.href = authUrl;
-    },
-
-
-
-    /**
-     * Exchange auth code for tokens
-     */
-    async exchangeAuthCode(code: string): Promise<AuthTokens> {
-        const response = await api.post<AuthTokens>("/api/auth/mobile/exchange", { code });
+    async loginWithGoogleCredential(credential: string): Promise<AuthTokens> {
+        const response = await api.post<AuthTokens>(API_ENDPOINTS.AUTH.OAUTH_LOGIN, {
+            provider: "google",
+            token: credential,
+        });
         return response.data;
     },
 
     /**
-     * Get current authenticated user
+     * Get current authenticated user (+ creator profile when applicable).
+     *
+     * The /auth/verify endpoint uses to_self_dict() which includes `role` and
+     * other private fields stripped from the public/login (to_public_dict) shape.
+     * The creator profile is fetched best-effort via /creators/me (only meaningful
+     * when is_creator === true; non-creators get 403 which we swallow).
      */
     async getCurrentUser(): Promise<AuthMeResponse> {
-        // Get user_id from token or storage
-        const tokens = authStorage.getToken();
-        if (!tokens) throw new Error("No token found");
+        const token = authStorage.getToken();
+        if (!token) throw new Error("No token found");
 
-        // Parse JWT to get user_id (simplistic parsing)
-        const parts = tokens.split('.');
-        if (parts.length < 2) throw new Error("Invalid token format");
-        const base64Url = parts[1];
-        if (!base64Url) throw new Error("Invalid token format");
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function (c) {
-            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-        }).join(''));
-
-        const payload = JSON.parse(jsonPayload);
-        const userId = payload.sub || payload.user_id;
-
-        const response = await api.get<{ user: User }>(`/api/core/users/${userId}`);
-        const user = response.data.user;
+        const response = await api.get<{ user: User }>(API_ENDPOINTS.AUTH.VERIFY);
+        const user = normalizeUser(response.data.user);
 
         let creator: Creator | undefined = undefined;
         if (user.is_creator) {
             try {
-                const creatorResponse = await api.get<{ creator_profile: Creator }>(
-                    API_ENDPOINTS.CREATORS.BY_USER_ID(userId)
+                // V2 GET /api/v2/creators/me → { success, creator: <enriched profile> }.
+                // 403/404 here means the is_creator flag is set but the creator record
+                // isn't provisioned yet — leave creator undefined so the gate can react.
+                const creatorResponse = await api.get<{ creator?: Creator }>(
+                    API_ENDPOINTS.CREATORS.ME
                 );
-                creator = creatorResponse.data.creator_profile;
+                creator = creatorResponse.data.creator ?? undefined;
             } catch (error) {
-                console.error("Failed to fetch creator details:", error);
+                console.error("Failed to fetch creator profile:", error);
             }
         }
 
-        return {
-            user,
-            creator
-        };
+        return { user, creator };
     },
 
     /**
-     * Refresh access token
+     * Refresh access token (DB-backed rotating refresh token).
      */
     async refreshToken(): Promise<AuthTokens> {
         const refreshToken = authStorage.getRefreshToken();
@@ -94,7 +72,7 @@ export const authService = {
     },
 
     /**
-     * Logout user
+     * Logout user — revoke refresh token server-side, then clear storage.
      */
     async logout(): Promise<void> {
         const refreshToken = authStorage.getRefreshToken();
@@ -110,7 +88,7 @@ export const authService = {
     },
 
     /**
-     * Store tokens after OAuth callback
+     * Store tokens after a successful login.
      */
     storeTokens(tokens: AuthTokens): void {
         authStorage.setTokens(tokens.access_token, tokens.refresh_token);
