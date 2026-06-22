@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { Edit2, MoreVertical, AlertTriangle } from "lucide-react";
+import { Edit2, MoreVertical, AlertTriangle, BadgeCheck } from "lucide-react";
 import { Card, Button, Input } from "@components/ui";
 import { questService } from "@services/quest.service";
 import { useAuthStore } from "@store/auth.store";
@@ -15,12 +15,10 @@ export function QuestsPage() {
     const { user, creator } = useAuthStore();
     const navigate = useNavigate();
 
-    // Verified creators can manage all quest states; unverified are draft-only
-    // (verification is the V2 gate for submitting quests for review).
+    // Active creators may manage every quest state and submit for review — the portal
+    // login gate already guarantees active status. is_verified is a badge, not a gate.
     const isVerified = !!creator?.is_verified;
-    const availableTabs = isVerified
-        ? TABS
-        : TABS.filter(tab => tab === "Draft");
+    const availableTabs = TABS;
 
     const [activeTab, setActiveTab] = useState<Tab>("Draft");
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -121,7 +119,14 @@ export function QuestsPage() {
         <div className="animate-fade-in space-y-4 w-full max-w-6xl mx-auto pb-6 px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-900">My Quests</h1>
+                    <div className="flex items-center gap-3">
+                        <h1 className="text-3xl font-bold text-slate-900">My Quests</h1>
+                        {isVerified && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100 text-xs font-semibold">
+                                <BadgeCheck className="w-3.5 h-3.5" /> Verified
+                            </span>
+                        )}
+                    </div>
                     <p className="text-slate-500 mt-1">Manage your quest creations and drafts</p>
                 </div>
                 <Button
@@ -309,7 +314,7 @@ export function QuestsPage() {
                                                                         >
                                                                             View Details
                                                                         </button>
-                                                                        {isVerified && ['Draft', 'Changes Requested'].includes(quest.status as string) && (
+                                                                        {['Draft', 'Changes Requested'].includes(quest.status as string) && (
                                                                             <button
                                                                                 onClick={() => { handleUpdateStatus(quest._id, 'Under Review'); setOpenDropdownId(null); }}
                                                                                 className="w-full text-left px-4 py-2 text-sm text-indigo-600 hover:bg-indigo-50 flex items-center gap-2 font-medium"
@@ -355,7 +360,7 @@ export function QuestsPage() {
                                                                     onClick={(e) => e.stopPropagation()}
                                                                 >
                                                                     <button onClick={() => { navigate(`/creator/quest/view/${quest._id}`); setOpenDropdownId(null); }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-neutral-700 hover:bg-slate-50">View Details</button>
-                                                                    {isVerified && ['Draft', 'Changes Requested'].includes(quest.status as string) && (
+                                                                    {['Draft', 'Changes Requested'].includes(quest.status as string) && (
                                                                         <button onClick={() => { handleUpdateStatus(quest._id, 'Under Review'); setOpenDropdownId(null); }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-indigo-600 hover:bg-indigo-50">Submit Review</button>
                                                                     )}
 {quest.status !== 'Published' && (

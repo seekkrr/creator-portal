@@ -101,8 +101,10 @@ export interface CreatorBadge {
  * Most fields are optional so both shapes type-check.
  *
  * Note: `status` is the operational lifecycle (active|suspended|rejected) — NOT
- * "approved"/"pending" (that lives on creator_applications). `is_verified` is the
- * trust BADGE and is what gates "can submit quests" in the UI.
+ * "approved"/"pending" (that lives on creator_applications). `is_verified` is a
+ * trust BADGE only: per the V2 backend (`submit_quest` checks ownership +
+ * `quests:edit`, never verification), any ACTIVE creator may submit quests for
+ * review regardless of verification, so the UI must never gate submission on it.
  */
 export interface Creator {
     id: string;

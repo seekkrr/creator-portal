@@ -21,7 +21,10 @@ const difficultyColors: Record<QuestDifficulty, "success" | "info" | "warning" |
 export function ReviewStep({ formData, onBack, onSubmit, isSubmitting }: ReviewStepProps) {
     const { creator } = useAuthStore();
     const { title, description, difficulty, duration, waypoints = [], latitude, longitude } = formData;
-    const isApproved = !!creator?.is_verified;
+    // Submission is allowed for any active creator (the portal login gate guarantees
+    // active status). is_verified is a trust badge, never a submission gate.
+    const isActive = !creator || creator.status === "active";
+    const enoughWaypoints = (waypoints?.length ?? 0) >= 2;
 
     // Calculate map center from first waypoint or location step
     const mapCenter = waypoints.length > 0 && waypoints[0]
@@ -187,14 +190,14 @@ export function ReviewStep({ formData, onBack, onSubmit, isSubmitting }: ReviewS
                         <Button
                             onClick={() => onSubmit("Under Review")}
                             isLoading={isSubmitting}
-                            disabled={isSubmitting || (waypoints?.length ?? 0) < 2 || !isApproved}
+                            disabled={isSubmitting || !enoughWaypoints || !isActive}
                             leftIcon={<Check className="w-4 h-4" />}
                         >
                             Submit for Review
                         </Button>
-                        {!isApproved && (
+                        {!enoughWaypoints && (
                             <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 p-2 bg-neutral-900 text-white text-[10px] rounded shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 text-center">
-                                Your account must be approved by an admin before you can submit quests for review.
+                                Add at least 2 waypoints before submitting for review.
                             </div>
                         )}
                     </div>

@@ -29,7 +29,8 @@ export function QuestDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { creator } = useAuthStore();
-  const isApproved = !!creator?.is_verified;
+  // Any active creator may submit for review; is_verified is a badge, not a gate.
+  const isActive = !creator || creator.status === "active";
   const [expandedSteps, setExpandedSteps] = useState<Set<number>>(new Set());
   const [expandedNarrative, setExpandedNarrative] = useState<string | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -205,22 +206,15 @@ export function QuestDetailPage() {
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto mt-2 md:mt-0 pt-4 md:pt-0 border-t border-slate-100 md:border-0">
           {["Draft", "Changes Requested"].includes(quest.status) && (
-            <div className="relative group w-full sm:w-auto">
-              <Button
-                variant="primary"
-                onClick={() => handleUpdateStatus("Under Review")}
-                leftIcon={<Send className="w-4 h-4" />}
-                className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 w-full justify-center"
-                disabled={!isApproved}
-              >
-                Submit Review
-              </Button>
-              {!isApproved && (
-                <div className="absolute bottom-full mb-2 right-1/2 translate-x-1/2 sm:-translate-x-1/2 w-48 p-2 bg-neutral-900 text-white text-[10px] rounded shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 text-center">
-                  Your account must be approved by an admin before you can submit quests for review.
-                </div>
-              )}
-            </div>
+            <Button
+              variant="primary"
+              onClick={() => handleUpdateStatus("Under Review")}
+              leftIcon={<Send className="w-4 h-4" />}
+              className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 w-full sm:w-auto justify-center"
+              disabled={!isActive}
+            >
+              Submit Review
+            </Button>
           )}
 
           {["Draft", "Changes Requested", "Approved"].includes(quest.status) && (
