@@ -7,9 +7,10 @@ import {
     Landmark,
     Smartphone,
     Star,
+    Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Card, Button } from "@components/ui";
+import { Card, Button, EmptyState, ErrorState, SkeletonCard } from "@components/ui";
 import { payoutAccountService } from "@services/payoutAccount.service";
 import { useAuthStore } from "@store/auth.store";
 import type { PayoutAccount } from "@/types";
@@ -42,7 +43,7 @@ export function PayoutAccountsPage() {
         return () => document.removeEventListener("click", handleClickOutside);
     }, []);
 
-    const { data: accounts = [], isLoading } = useQuery({
+    const { data: accounts = [], isLoading, isError, refetch } = useQuery({
         queryKey: ["payout-accounts"],
         queryFn: payoutAccountService.listMine,
         enabled: !!user,
@@ -157,18 +158,34 @@ export function PayoutAccountsPage() {
 
             {/* List */}
             {isLoading ? (
-                <div className="py-12 text-center text-neutral-500">Loading payout accounts…</div>
+                <div className="space-y-3">
+                    {Array.from({ length: 2 }).map((_, i) => (
+                        <SkeletonCard key={i} />
+                    ))}
+                </div>
+            ) : isError ? (
+                <Card>
+                    <ErrorState
+                        message="We couldn't load your payout accounts."
+                        onRetry={() => refetch()}
+                    />
+                </Card>
             ) : accounts.length === 0 ? (
-                <Card className="py-12 text-center">
-                    <div className="text-neutral-400 mb-4">No payout accounts yet</div>
-                    <Button
-                        variant="outline"
-                        className="border-dashed border-2"
-                        onClick={openCreate}
-                        leftIcon={<Plus className="w-4 h-4" />}
-                    >
-                        Add your first payout account
-                    </Button>
+                <Card>
+                    <EmptyState
+                        icon={<Wallet className="w-7 h-7" />}
+                        title="No payout accounts yet"
+                        description="Add a bank or UPI account so we know where to send your earnings."
+                        action={
+                            <Button
+                                variant="accent"
+                                onClick={openCreate}
+                                leftIcon={<Plus className="w-4 h-4" />}
+                            >
+                                Add payout account
+                            </Button>
+                        }
+                    />
                 </Card>
             ) : (
                 <div className="space-y-3">

@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { MoreVertical, AlertTriangle, Search, Plus } from "lucide-react";
-import { Card, Button, Input, Badge } from "@components/ui";
+import { MoreVertical, AlertTriangle, Search, Plus, MapPin } from "lucide-react";
+import { Card, Button, Input, Badge, EmptyState, ErrorState, SkeletonTableRows } from "@components/ui";
 import { markerService } from "@services/marker.service";
 import { useAuthStore } from "@store/auth.store";
 import { ALLOWED_CREATOR_ROLES } from "@/types";
@@ -59,7 +59,7 @@ export function MarkersPage() {
         return () => document.removeEventListener("click", handleClickOutside);
     }, []);
 
-    const { data, isLoading } = useQuery({
+    const { data, isLoading, isError, refetch } = useQuery({
         queryKey: ["creator-markers", { status: statusFilter, search }],
         queryFn: () =>
             markerService.listMarkers({
@@ -258,22 +258,37 @@ export function MarkersPage() {
                         </thead>
                         <tbody className="divide-y divide-neutral-100">
                             {isLoading ? (
+                                <SkeletonTableRows columns={5} />
+                            ) : isError ? (
                                 <tr>
-                                    <td colSpan={5} className="py-8 text-center text-neutral-500">
-                                        Loading markers…
+                                    <td colSpan={5} className="p-0">
+                                        <ErrorState
+                                            message="We couldn't load your markers."
+                                            onRetry={() => refetch()}
+                                        />
                                     </td>
                                 </tr>
                             ) : markers.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="py-12 text-center">
-                                        <div className="text-neutral-400 mb-2">No markers found</div>
-                                        <Button
-                                            variant="outline"
-                                            className="mt-4 border-dashed border-2"
-                                            onClick={openCreateModal}
-                                        >
-                                            Create Your First Marker
-                                        </Button>
+                                    <td colSpan={5} className="p-0">
+                                        <EmptyState
+                                            icon={<MapPin className="w-7 h-7" />}
+                                            title="No markers found"
+                                            description={
+                                                search || statusFilter !== "all"
+                                                    ? "No markers match your current filters. Try adjusting your search or status."
+                                                    : "Add your first place marker to start mapping points of interest for your quests."
+                                            }
+                                            action={
+                                                <Button
+                                                    variant="accent"
+                                                    onClick={openCreateModal}
+                                                    leftIcon={<Plus className="w-4 h-4" />}
+                                                >
+                                                    Create New Marker
+                                                </Button>
+                                            }
+                                        />
                                     </td>
                                 </tr>
                             ) : (

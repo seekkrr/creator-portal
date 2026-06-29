@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { AlertTriangle, MoreVertical, Plus, Eye, Edit2, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
-import { Card, Button, Input } from "@components/ui";
+import { AlertTriangle, MoreVertical, Plus, Eye, Edit2, Trash2, ToggleLeft, ToggleRight, ListChecks } from "lucide-react";
+import { Card, Button, Input, EmptyState, ErrorState, SkeletonTableRows } from "@components/ui";
 import { taskService } from "@services/task.service";
 import type { TaskType } from "@/types";
 import { toast } from "sonner";
@@ -38,7 +38,7 @@ export function TasksPage() {
         return () => document.removeEventListener("click", handleClickOutside);
     }, []);
 
-    const { data, isLoading } = useQuery({
+    const { data, isLoading, isError, refetch } = useQuery({
         queryKey: ["creator-tasks", { task_type: typeFilter }],
         queryFn: () =>
             taskService.listTaskConfigs({ mine: true, task_type: typeFilter || undefined }),
@@ -210,22 +210,37 @@ export function TasksPage() {
                             </thead>
                             <tbody className="divide-y divide-neutral-100">
                                 {isLoading ? (
+                                    <SkeletonTableRows columns={7} />
+                                ) : isError ? (
                                     <tr>
-                                        <td colSpan={7} className="py-8 text-center text-neutral-500">
-                                            Loading tasks...
+                                        <td colSpan={7} className="p-0">
+                                            <ErrorState
+                                                message="We couldn't load your tasks."
+                                                onRetry={() => refetch()}
+                                            />
                                         </td>
                                     </tr>
                                 ) : tasks.length === 0 ? (
                                     <tr>
-                                        <td colSpan={7} className="py-12 text-center">
-                                            <div className="text-neutral-400 mb-2">No tasks found</div>
-                                            <Button
-                                                variant="outline"
-                                                className="mt-4 border-dashed border-2"
-                                                onClick={() => setIsCreateModalOpen(true)}
-                                            >
-                                                Create Your First Task
-                                            </Button>
+                                        <td colSpan={7} className="p-0">
+                                            <EmptyState
+                                                icon={<ListChecks className="w-7 h-7" />}
+                                                title="No tasks found"
+                                                description={
+                                                    typeFilter
+                                                        ? "No tasks match this type filter. Try a different type or create a new task."
+                                                        : "Create your first task to give explorers something to do at your markers."
+                                                }
+                                                action={
+                                                    <Button
+                                                        variant="accent"
+                                                        onClick={() => setIsCreateModalOpen(true)}
+                                                        leftIcon={<Plus className="w-4 h-4" />}
+                                                    >
+                                                        Create New Task
+                                                    </Button>
+                                                }
+                                            />
                                         </td>
                                     </tr>
                                 ) : (

@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { MoreVertical, AlertTriangle, Volume2, Link2 } from "lucide-react";
-import { Card, Button, Input, Badge } from "@components/ui";
+import { MoreVertical, AlertTriangle, Volume2, Link2, BookOpen } from "lucide-react";
+import { Card, Button, Input, Badge, EmptyState, ErrorState, SkeletonTableRows } from "@components/ui";
 import type { BadgeStatus } from "@components/ui";
 import { narrativeService } from "@services/narrative.service";
 import { useAuthStore } from "@store/auth.store";
@@ -138,7 +138,7 @@ export function NarrativesPage() {
         return () => document.removeEventListener("click", handleClickOutside);
     }, []);
 
-    const { data, isLoading } = useQuery({
+    const { data, isLoading, isError, refetch } = useQuery({
         queryKey: ["creator-narratives", { status: activeTab, search: debouncedSearch }],
         queryFn: () =>
             narrativeService.listNarratives({
@@ -332,24 +332,38 @@ export function NarrativesPage() {
                             </thead>
                             <tbody className="divide-y divide-neutral-100">
                                 {isLoading ? (
+                                    <SkeletonTableRows columns={6} />
+                                ) : isError ? (
                                     <tr>
-                                        <td colSpan={6} className="py-8 text-center text-neutral-500">
-                                            Loading narratives…
+                                        <td colSpan={6} className="p-0">
+                                            <ErrorState
+                                                message="We couldn't load your narratives."
+                                                onRetry={() => refetch()}
+                                            />
                                         </td>
                                     </tr>
                                 ) : narratives.length === 0 ? (
                                     <tr>
-                                        <td colSpan={6} className="py-12 text-center">
-                                            <div className="text-neutral-400 mb-2">No narratives found</div>
-                                            {activeTab === "all" && (
-                                                <Button
-                                                    variant="outline"
-                                                    className="mt-4 border-dashed border-2"
-                                                    onClick={() => setIsModalOpen(true)}
-                                                >
-                                                    Create Your First Narrative
-                                                </Button>
-                                            )}
+                                        <td colSpan={6} className="p-0">
+                                            <EmptyState
+                                                icon={<BookOpen className="w-7 h-7" />}
+                                                title="No narratives found"
+                                                description={
+                                                    activeTab === "all" && !debouncedSearch
+                                                        ? "Write your first narrative to add story and audio to your markers and quests."
+                                                        : "No narratives match your current filter or search."
+                                                }
+                                                action={
+                                                    activeTab === "all" && !debouncedSearch ? (
+                                                        <Button
+                                                            variant="accent"
+                                                            onClick={() => { setEditTarget(null); setIsModalOpen(true); }}
+                                                        >
+                                                            Create New Narrative
+                                                        </Button>
+                                                    ) : undefined
+                                                }
+                                            />
                                         </td>
                                     </tr>
                                 ) : (() => {

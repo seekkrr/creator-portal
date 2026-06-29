@@ -59,3 +59,23 @@ export function SkeletonCard() {
         </div>
     );
 }
+
+/**
+ * Placeholder rows for table-based list pages so the layout doesn't jump
+ * while data loads. Renders `rows` × `columns` skeleton cells.
+ */
+export function SkeletonTableRows({ rows = 5, columns }: { rows?: number; columns: number }) {
+    return (
+        <>
+            {Array.from({ length: rows }).map((_, r) => (
+                <tr key={r} className="border-b border-neutral-100">
+                    {Array.from({ length: columns }).map((_, c) => (
+                        <td key={c} className="py-4 px-6">
+                            <Skeleton variant="text" height={16} className={c === 0 ? "w-3/4" : "w-1/2 mx-auto"} />
+                        </td>
+                    ))}
+                </tr>
+            ))}
+        </>
+    );
+}

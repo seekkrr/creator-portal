@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { Edit2, MoreVertical, AlertTriangle, BadgeCheck } from "lucide-react";
-import { Card, Button, Input, Badge } from "@components/ui";
+import { Edit2, MoreVertical, AlertTriangle, BadgeCheck, Compass } from "lucide-react";
+import { Card, Button, Input, Badge, EmptyState, ErrorState, SkeletonTableRows } from "@components/ui";
 import type { BadgeStatus } from "@components/ui";
 import { questService } from "@services/quest.service";
 import { useAuthStore } from "@store/auth.store";
@@ -43,7 +43,7 @@ export function QuestsPage() {
         }
     }, [availableTabs, activeTab]);
 
-    const { data, isLoading, refetch } = useQuery({
+    const { data, isLoading, isError, refetch } = useQuery({
         queryKey: ["creator-quests", activeTab],
         queryFn: () => questService.getMyQuests({ status: activeTab }),
         enabled: !!user,
@@ -222,24 +222,38 @@ export function QuestsPage() {
                             </thead>
                             <tbody className="divide-y divide-neutral-100">
                                 {isLoading ? (
+                                    <SkeletonTableRows columns={5} />
+                                ) : isError ? (
                                     <tr>
-                                        <td colSpan={5} className="py-8 text-center text-neutral-500">
-                                            Loading quests...
+                                        <td colSpan={5} className="p-0">
+                                            <ErrorState
+                                                message="We couldn't load your quests."
+                                                onRetry={() => refetch()}
+                                            />
                                         </td>
                                     </tr>
                                 ) : quests.length === 0 ? (
                                     <tr>
-                                        <td colSpan={5} className="py-12 text-center">
-                                            <div className="text-neutral-400 mb-2">No quests found in this category</div>
-                                            {activeTab === "Draft" && (
-                                                <Button
-                                                    variant="outline"
-                                                    className="mt-4 border-dashed border-2"
-                                                    onClick={() => navigate("/creator/quest/create")}
-                                                >
-                                                    Start a New Quest
-                                                </Button>
-                                            )}
+                                        <td colSpan={5} className="p-0">
+                                            <EmptyState
+                                                icon={<Compass className="w-7 h-7" />}
+                                                title="No quests here yet"
+                                                description={
+                                                    activeTab === "Draft"
+                                                        ? "Start building your first quest — add markers, narratives and tasks to bring it to life."
+                                                        : `You don't have any quests in the "${activeTab}" stage right now.`
+                                                }
+                                                action={
+                                                    activeTab === "Draft" ? (
+                                                        <Button
+                                                            variant="accent"
+                                                            onClick={() => navigate("/creator/quest/create")}
+                                                        >
+                                                            Create New Quest
+                                                        </Button>
+                                                    ) : undefined
+                                                }
+                                            />
                                         </td>
                                     </tr>
                                 ) : (
