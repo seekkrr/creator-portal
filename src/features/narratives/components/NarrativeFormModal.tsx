@@ -1,12 +1,14 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { X, Upload, Trash2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Textarea, Card } from "@components/ui";
 import { narrativeService } from "@services/narrative.service";
 import { cloudinaryService } from "@services/cloudinary.service";
+import { markerService } from "@services/marker.service";
+import { questService } from "@services/quest.service";
 import { AttachTargetSelect } from "./AttachTargetSelect";
 import type { AttachSelection } from "./AttachTargetSelect";
 import {
@@ -101,6 +103,27 @@ export function NarrativeFormModal({
     }, [mode, initial, reset, open]);
 
     const mediaUrls = watch("media");
+    const attachId = watch("attach_id");
+    const attachType = watch("attach_type");
+
+    // In edit mode, resolve the human-readable name of the attached target so
+    // AttachTargetSelect can display "Marker: Colosseum" instead of "marker: 64f3a2b…"
+    const editAttachType = mode === "edit" && initial ? initial.attach_type : null;
+    const editAttachId = mode === "edit" && initial ? initial.attach_id : null;
+
+    const { data: resolvedMarker } = useQuery({
+        queryKey: ["attach-label-marker", editAttachId],
+        queryFn: () => markerService.getMarker(editAttachId as string),
+        enabled: editAttachType === "marker" && editAttachId !== null && editAttachId !== undefined,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const { data: resolvedQuest } = useQuery({
+        queryKey: ["attach-label-quest", editAttachId],
+        queryFn: () => questService.getQuestById(editAttachId as string),
+        enabled: editAttachType === "quest" && editAttachId !== null && editAttachId !== undefined,
+        staleTime: 5 * 60 * 1000,
+    });
 
     const createMutation = useMutation({
         mutationFn: (data: NarrativeFormData) =>
@@ -167,16 +190,23 @@ export function NarrativeFormModal({
 
     if (!open) return null;
 
-    const attachValue: AttachSelection | null =
-        watch("attach_id")
-            ? {
-                  attach_type: watch("attach_type"),
-                  attach_id: watch("attach_id"),
-                  label: initial
-                      ? `${initial.attach_type}: ${initial.attach_id}`
-                      : watch("attach_id"),
-              }
-            : null;
+    // Resolve the label for the attach target display.
+    // In edit mode: prefer the fetched title; fall back to the raw id while loading.
+    // In create mode: use the currently-selected item's id (label is set by the picker).
+    let editLabel: string = editAttachId ?? "";
+    if (editAttachType === "marker" && resolvedMarker) {
+        editLabel = resolvedMarker.title;
+    } else if (editAttachType === "quest" && resolvedQuest) {
+        editLabel = resolvedQuest.title ?? (editAttachId ?? "");
+    }
+
+    const attachValue: AttachSelection | null = attachId
+        ? {
+              attach_type: attachType,
+              attach_id: attachId,
+              label: mode === "edit" ? editLabel : attachId,
+          }
+        : null;
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">

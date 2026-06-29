@@ -20,11 +20,15 @@ export function NarrativeAudioPanel({ narrative, onChanged }: NarrativeAudioPane
 
     const canGenerate = !!(narrative.voice_persona && narrative.content);
 
-    // Poll audio status when in a pending/generating state
+    // Poll audio status whenever generation is possible or in-flight.
+    // `enabled: true` ensures the query starts immediately after "Generate Audio"
+    // is clicked (the stale `narrative.audio_status` prop would have kept it
+    // disabled until the parent re-renders). The `refetchInterval` function
+    // already stops polling on terminal statuses (ready/failed/quota_exceeded).
     const { data: audioStatus } = useQuery({
         queryKey: ["narrative-audio-status", narrative.id],
         queryFn: () => narrativeService.getAudioStatus(narrative.id),
-        enabled: POLLING_STATUSES.has(narrative.audio_status),
+        enabled: canGenerate || isGenerating,
         refetchInterval: (query) => {
             const status = query.state.data?.audio_status;
             return status !== undefined && status !== null && POLLING_STATUSES.has(status) ? 3000 : false;
