@@ -19,6 +19,7 @@ import { Badge, Button, Card, Input, Textarea } from "@components/ui";
 import { creatorService } from "@services/creator.service";
 import { userService } from "@services/user.service";
 import { cloudinaryService } from "@services/cloudinary.service";
+import { payoutAccountService } from "@services/payoutAccount.service";
 import { useAuthStore } from "@store/auth.store";
 import { useCreatorStats } from "@hooks/useCreatorStats";
 import type { CreatorOnboarding } from "@/types";
@@ -176,6 +177,7 @@ export function ProfilePage() {
   );
 
   const [onboarding, setOnboarding] = useState<CreatorOnboarding | undefined>(undefined);
+  const [hasPayout, setHasPayout] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -186,13 +188,15 @@ export function ProfilePage() {
     let cancelled = false;
     (async () => {
       try {
-        const [fresh, ob] = await Promise.all([
+        const [fresh, ob, payouts] = await Promise.all([
           creatorService.getMe(),
           creatorService.getOnboarding().catch(() => undefined),
+          payoutAccountService.listMine().catch(() => []),
         ]);
         if (cancelled) return;
         useAuthStore.setState({ creator: fresh });
         if (ob) setOnboarding(ob);
+        setHasPayout(payouts.length > 0);
       } catch {
         /* keep whatever is already in the store */
       }
@@ -215,6 +219,13 @@ export function ProfilePage() {
 
   const verified = !!creator?.is_verified;
   const status = creator?.status ?? "active";
+
+  // Supplement the onboarding payout flag: the backend only sets payout_account_id
+  // (and thus payout_account_set=true) when a primary account is chosen. If any
+  // payout account exists (even pending), treat the step as done.
+  const effectiveOnboarding = onboarding
+    ? { ...onboarding, payout_account_set: onboarding.payout_account_set || hasPayout }
+    : undefined;
 
   const dirty =
     firstName !== (user?.first_name ?? "") ||
@@ -446,7 +457,7 @@ export function ProfilePage() {
         {/* Side column */}
         <div className="space-y-6">
           <OnboardingChecklist
-            onboarding={onboarding}
+            onboarding={effectiveOnboarding}
             actions={{
               profile_complete: { onClick: scrollToEditForm },
               first_quest_created: { onClick: () => navigate("/creator/quest/create") },
