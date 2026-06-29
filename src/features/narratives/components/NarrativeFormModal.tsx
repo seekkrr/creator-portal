@@ -107,30 +107,38 @@ export function NarrativeFormModal({
     const attachType = watch("attach_type");
 
     // In edit mode, resolve the human-readable name of the attached target so
-    // AttachTargetSelect can display "Marker: Colosseum" instead of "marker: 64f3a2b…"
-    const editAttachType = mode === "edit" && initial ? initial.attach_type : null;
-    const editAttachId = mode === "edit" && initial ? initial.attach_id : null;
+    // AttachTargetSelect can display "Marker: Colosseum" instead of "marker: 64f3a2b…".
+    // IMPORTANT: gate lookups on initial.attach_type (the persisted value), NOT the
+    // coerced form field value. This prevents calling markerService.getMarker with a
+    // region id when initial.attach_type === "region". For region (or any unknown type),
+    // skip the network lookup entirely and fall back to showing the raw attach_id.
+    const editAttachId = mode === "edit" && initial !== undefined ? initial.attach_id : null;
 
     const { data: resolvedMarker } = useQuery({
         queryKey: ["attach-label-marker", editAttachId],
         queryFn: () => markerService.getMarker(editAttachId as string),
-        enabled: editAttachType === "marker" && editAttachId !== null && editAttachId !== undefined,
+        enabled:
+            initial?.attach_type === "marker" &&
+            editAttachId !== null &&
+            editAttachId !== undefined,
         staleTime: 5 * 60 * 1000,
     });
 
     const { data: resolvedQuest } = useQuery({
         queryKey: ["attach-label-quest", editAttachId],
         queryFn: () => questService.getQuestById(editAttachId as string),
-        enabled: editAttachType === "quest" && editAttachId !== null && editAttachId !== undefined,
+        enabled:
+            initial?.attach_type === "quest" &&
+            editAttachId !== null &&
+            editAttachId !== undefined,
         staleTime: 5 * 60 * 1000,
     });
 
     const createMutation = useMutation({
         mutationFn: (data: NarrativeFormData) =>
             narrativeService.createNarrative(toCreatePayload(data)),
-        onSuccess: async (narrative) => {
+        onSuccess: async () => {
             await queryClient.invalidateQueries({ queryKey: ["creator-narratives"] });
-            onSaved(narrative);
         },
     });
 
@@ -139,16 +147,15 @@ export function NarrativeFormModal({
             if (!initial) throw new Error("No narrative to update");
             return narrativeService.updateNarrative(initial.id, toUpdatePayload(data));
         },
-        onSuccess: async (narrative) => {
+        onSuccess: async () => {
             await queryClient.invalidateQueries({ queryKey: ["creator-narratives"] });
             await queryClient.invalidateQueries({
                 queryKey: ["creator-narrative", initial?.id],
             });
-            onSaved(narrative);
         },
     });
 
-    const onSubmit = (data: NarrativeFormData) => {
+    const onSubmit = async (data: NarrativeFormData) => {
         const mutation = mode === "create" ? createMutation : updateMutation;
         const promise = mutation.mutateAsync(data);
 
@@ -160,6 +167,14 @@ export function NarrativeFormModal({
                 return `Failed: ${message}`;
             },
         });
+
+        try {
+            const narrative = await promise;
+            onSaved(narrative);
+            onClose();
+        } catch {
+            // error handled by toast; keep modal open
+        }
     };
 
     const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -191,12 +206,13 @@ export function NarrativeFormModal({
     if (!open) return null;
 
     // Resolve the label for the attach target display.
-    // In edit mode: prefer the fetched title; fall back to the raw id while loading.
+    // In edit mode: prefer the fetched title; fall back to the raw id while loading/on error.
+    // For region attach_type (or any type without a lookup), show the raw attach_id.
     // In create mode: use the currently-selected item's id (label is set by the picker).
     let editLabel: string = editAttachId ?? "";
-    if (editAttachType === "marker" && resolvedMarker) {
+    if (initial?.attach_type === "marker" && resolvedMarker) {
         editLabel = resolvedMarker.title;
-    } else if (editAttachType === "quest" && resolvedQuest) {
+    } else if (initial?.attach_type === "quest" && resolvedQuest) {
         editLabel = resolvedQuest.title ?? (editAttachId ?? "");
     }
 
