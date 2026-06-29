@@ -15,7 +15,7 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
-import { Button, Card, Input, Textarea } from "@components/ui";
+import { Badge, Button, Card, Input, Textarea } from "@components/ui";
 import { creatorService } from "@services/creator.service";
 import { userService } from "@services/user.service";
 import { cloudinaryService } from "@services/cloudinary.service";
@@ -26,7 +26,7 @@ import type { CreatorOnboarding } from "@/types";
 /** The signature element: a seal that makes verification status legible at a glance. */
 function VerificationSeal({ verified }: { verified: boolean }) {
   return verified ? (
-    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 text-white text-sm font-semibold shadow-sm">
+    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-primary-600 to-primary-400 text-white text-sm font-semibold shadow-sm">
       <BadgeCheck className="w-4 h-4" />
       Verified Creator
     </span>
@@ -84,7 +84,7 @@ function OnboardingChecklist({
         aria-hidden="true"
       >
         <div
-          className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all duration-500"
+          className="h-full rounded-full bg-gradient-to-r from-primary-600 to-primary-400 transition-all duration-500"
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -310,7 +310,7 @@ export function ProfilePage() {
   return (
     <div className="font-sans max-w-5xl mx-auto space-y-8 animate-fade-in">
       <header>
-        <h1 className="text-3xl lg:text-4xl font-light text-neutral-900 tracking-tight">
+        <h1 className="text-3xl lg:text-4xl font-display font-bold text-primary-900 tracking-tight">
           Creator Profile
         </h1>
         <p className="text-neutral-500 mt-1">This is how explorers see you across SeekKrr.</p>
@@ -332,7 +332,7 @@ export function ProfilePage() {
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
               aria-label="Change profile photo"
-              className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-white border border-neutral-200 shadow-md flex items-center justify-center text-neutral-700 hover:text-indigo-600 hover:border-indigo-200 transition-colors disabled:opacity-60"
+              className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-white border border-neutral-200 shadow-md flex items-center justify-center text-neutral-700 hover:text-primary-600 hover:border-primary-200 transition-colors disabled:opacity-60"
             >
               {uploading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -354,9 +354,12 @@ export function ProfilePage() {
               <h2 className="text-2xl font-semibold text-neutral-900 truncate">{displayName}</h2>
               <VerificationSeal verified={verified} />
               {status !== "active" && (
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 capitalize">
+                <Badge
+                  status={status === "rejected" ? "rejected" : undefined}
+                  variant={status !== "rejected" ? "danger" : undefined}
+                >
                   {status}
-                </span>
+                </Badge>
               )}
             </div>
             {user?.email && <p className="text-sm text-neutral-500 mt-1">{user.email}</p>}
