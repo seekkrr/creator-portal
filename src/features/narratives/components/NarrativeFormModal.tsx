@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { X, Upload, Trash2, AlertTriangle } from "lucide-react";
+import { X, Upload, Trash2, AlertTriangle, Info } from "lucide-react";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { Button, Input, Textarea, Card } from "@components/ui";
 import { narrativeService } from "@services/narrative.service";
@@ -18,7 +19,9 @@ import {
     VOICE_PERSONAS,
 } from "../schemas/narrative.schema";
 import type { NarrativeFormData } from "../schemas/narrative.schema";
-import type { Narrative } from "@/types";
+import { chainFieldsFromSummary } from "../utils/chainFields";
+import { estimateSeconds, exceedsSegment, MAX_SEGMENT_SECONDS } from "../utils/duration";
+import type { Narrative, CreateNarrativePayload } from "@/types";
 
 interface NarrativeFormModalProps {
     open: boolean;
@@ -105,6 +108,7 @@ export function NarrativeFormModal({
     const mediaUrls = watch("media");
     const attachId = watch("attach_id");
     const attachType = watch("attach_type");
+    const content = watch("content") ?? "";
 
     // In edit mode, resolve the human-readable name of the attached target so
     // AttachTargetSelect can display "Marker: Colosseum" instead of "marker: 64f3a2b…".
@@ -134,9 +138,36 @@ export function NarrativeFormModal({
         staleTime: 5 * 60 * 1000,
     });
 
+    // Fetch attach summary for create mode (conflict pre-check + chain fields).
+    const {
+        data: attachSummary,
+        refetch: refetchSummary,
+    } = useQuery({
+        queryKey: ["attach-summary", attachType, attachId],
+        queryFn: () =>
+            narrativeService.getAttachSummary(
+                attachType as "marker" | "quest",
+                attachId
+            ),
+        enabled: mode === "create" && !!attachId && !!attachType,
+        staleTime: 30_000,
+    });
+
+    // When over the segment limit and there's a chain, fetch the chain narratives for context.
+    const chainId = attachSummary?.chains?.[0]?.chain_id;
+    const isOverLimit = exceedsSegment(content);
+
+    const { data: chainNarratives } = useQuery({
+        queryKey: ["chain-narratives", chainId],
+        queryFn: () => narrativeService.getByChain(chainId ?? ""),
+        enabled: mode === "create" && !!chainId && isOverLimit,
+        staleTime: 60_000,
+    });
+
+    // Accept CreateNarrativePayload directly so we can merge chain fields in onSubmit.
     const createMutation = useMutation({
-        mutationFn: (data: NarrativeFormData) =>
-            narrativeService.createNarrative(toCreatePayload(data)),
+        mutationFn: (payload: CreateNarrativePayload) =>
+            narrativeService.createNarrative(payload),
         onSuccess: async () => {
             await queryClient.invalidateQueries({ queryKey: ["creator-narratives"] });
         },
@@ -156,24 +187,53 @@ export function NarrativeFormModal({
     });
 
     const onSubmit = async (data: NarrativeFormData) => {
-        const mutation = mode === "create" ? createMutation : updateMutation;
-        const promise = mutation.mutateAsync(data);
+        if (mode === "create") {
+            const chainFields = attachSummary ? chainFieldsFromSummary(attachSummary) : {};
+            const payload: CreateNarrativePayload = { ...toCreatePayload(data), ...chainFields };
+            const promise = createMutation.mutateAsync(payload);
 
-        toast.promise(promise, {
-            loading: mode === "create" ? "Creating narrative…" : "Saving changes…",
-            success: mode === "create" ? "Narrative created!" : "Narrative updated!",
-            error: (err: unknown) => {
-                const message = err instanceof Error ? err.message : "Something went wrong";
-                return `Failed: ${message}`;
-            },
-        });
+            toast.promise(promise, {
+                loading: "Creating narrative…",
+                success: "Narrative created!",
+                error: (err: unknown) => {
+                    const message = err instanceof Error ? err.message : "Something went wrong";
+                    return `Failed: ${message}`;
+                },
+            });
 
-        try {
-            const narrative = await promise;
-            onSaved(narrative);
-            onClose();
-        } catch {
-            // error handled by toast; keep modal open
+            try {
+                const narrative = await promise;
+                onSaved(narrative);
+                onClose();
+            } catch (err: unknown) {
+                // On 409, re-fetch the summary so the conflict notice updates.
+                if (err && typeof err === "object" && "response" in err) {
+                    const axiosErr = err as { response?: { status?: number } };
+                    if (axiosErr.response?.status === 409) {
+                        void refetchSummary();
+                    }
+                }
+                // error handled by toast; keep modal open
+            }
+        } else {
+            const promise = updateMutation.mutateAsync(data);
+
+            toast.promise(promise, {
+                loading: "Saving changes…",
+                success: "Narrative updated!",
+                error: (err: unknown) => {
+                    const message = err instanceof Error ? err.message : "Something went wrong";
+                    return `Failed: ${message}`;
+                },
+            });
+
+            try {
+                const narrative = await promise;
+                onSaved(narrative);
+                onClose();
+            } catch {
+                // error handled by toast; keep modal open
+            }
         }
     };
 
@@ -224,6 +284,20 @@ export function NarrativeFormModal({
           }
         : null;
 
+    // Duration meter state
+    const secs = estimateSeconds(content);
+    const roundedSecs = Math.round(secs);
+    const isAmber = secs >= 11 && secs <= MAX_SEGMENT_SECONDS;
+    const meterColor = isOverLimit
+        ? "text-orange-600"
+        : isAmber
+        ? "text-amber-600"
+        : "text-neutral-500";
+
+    // Safe first-element accessors for noUncheckedIndexedAccess compliance.
+    const firstChain = attachSummary?.chains[0];
+    const firstStandalone = attachSummary?.standalone[0];
+
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-sm animate-fade-in">
             <Card className="w-full max-w-2xl shadow-2xl border-neutral-200 overflow-hidden animate-scale-up max-h-[90vh] flex flex-col">
@@ -272,6 +346,36 @@ export function NarrativeFormModal({
                         )}
                     />
 
+                    {/* Conflict notice (create mode only) — shows when there are existing narratives */}
+                    {mode === "create" && attachSummary?.has_conflict && (
+                        <div className="flex items-start gap-2 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                            <Info className="w-4 h-4 mt-0.5 shrink-0 text-amber-600" />
+                            <div className="flex-1 min-w-0">
+                                {firstChain !== undefined ? (
+                                    <p>
+                                        Will be added as part #{firstChain.next_sequence_order} of &lsquo;
+                                        {firstChain.label}&rsquo;.
+                                    </p>
+                                ) : firstStandalone !== undefined ? (
+                                    <p>
+                                        Will be chained after &lsquo;{firstStandalone.title}&rsquo;.
+                                    </p>
+                                ) : null}
+                                <Link
+                                    to={`/creator/narratives/view/${
+                                        firstChain !== undefined
+                                            ? firstChain.first_narrative_id
+                                            : (firstStandalone?.id ?? "")
+                                    }`}
+                                    className="text-amber-700 underline text-xs mt-0.5 inline-block hover:text-amber-900"
+                                    onClick={onClose}
+                                >
+                                    Edit existing instead
+                                </Link>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Subtitle */}
                     <Input
                         label="Subtitle"
@@ -281,13 +385,58 @@ export function NarrativeFormModal({
                     />
 
                     {/* Content */}
-                    <Textarea
-                        label="Content"
-                        placeholder="Write the narrative content (Markdown supported)…"
-                        rows={6}
-                        error={errors.content?.message}
-                        {...register("content")}
-                    />
+                    <div className="w-full">
+                        <Textarea
+                            label="Content"
+                            placeholder="Write the narrative content (Markdown supported)…"
+                            rows={6}
+                            error={errors.content?.message}
+                            {...register("content")}
+                        />
+
+                        {/* Duration meter — always shown when content is non-empty */}
+                        {content.trim().length > 0 && (
+                            <div className="mt-1 space-y-1">
+                                <p className={`text-xs font-medium ${meterColor}`}>
+                                    ~{roundedSecs}s / {MAX_SEGMENT_SECONDS}s
+                                </p>
+                                {isOverLimit && (
+                                    <div className="px-3 py-2 bg-orange-50 border border-orange-200 rounded-lg text-xs text-orange-700">
+                                        This segment exceeds {MAX_SEGMENT_SECONDS} seconds. Consider splitting into a
+                                        chain — each segment is linked via{" "}
+                                        <span className="font-semibold">chain_id</span> and plays in sequence.
+                                        {firstChain !== undefined && (
+                                            <span className="block mt-1 text-orange-600">
+                                                This will be added as part #{firstChain.next_sequence_order} of &lsquo;
+                                                {firstChain.label}&rsquo;.
+                                            </span>
+                                        )}
+                                        {/* Show existing chain segments when over limit */}
+                                        {chainNarratives && chainNarratives.items.length > 0 && (
+                                            <div className="mt-2 space-y-1">
+                                                <p className="font-medium text-orange-700">
+                                                    Existing segments in this chain:
+                                                </p>
+                                                <ol className="list-decimal list-inside space-y-0.5 text-orange-600">
+                                                    {chainNarratives.items.map((n, idx) => (
+                                                        <li key={n.id}>
+                                                            <span className="font-medium">#{idx + 1}</span>{" "}
+                                                            {n.title}
+                                                            {n.audio_duration_s !== null && n.audio_duration_s !== undefined && (
+                                                                <span className="ml-1 opacity-75">
+                                                                    ({Math.round(n.audio_duration_s)}s)
+                                                                </span>
+                                                            )}
+                                                        </li>
+                                                    ))}
+                                                </ol>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
 
                     {/* Voice Persona */}
                     <div className="w-full">

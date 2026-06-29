@@ -87,7 +87,14 @@ export const narrativeService = {
             API_ENDPOINTS.NARRATIVES.ATTACH_SUMMARY,
             { params: { attach_type: attachType, attach_id: attachId } }
         );
-        return res.data;
+        const data = res.data;
+        // Backend sends standalone items with `_id`; normalize to `id` for consistency.
+        if (Array.isArray(data.standalone)) {
+            data.standalone = data.standalone.map((s) =>
+                normalizeId<typeof s>(s as unknown as Record<string, unknown>)
+            );
+        }
+        return data;
     },
 
     async getNarrativeById(narrativeId: string): Promise<Narrative> {
