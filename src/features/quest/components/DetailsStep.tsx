@@ -121,6 +121,7 @@ export function DetailsStep({ defaultValues, onNext, onBack }: DetailsStepProps)
     const regionId = defaultValues.regionId;
     const { data: region } = useQuery({
         queryKey: ["region", regionId],
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         queryFn: () => regionService.getRegion(regionId!),
         enabled: !!regionId,
         staleTime: 5 * 60 * 1000,
@@ -130,7 +131,7 @@ export function DetailsStep({ defaultValues, onNext, onBack }: DetailsStepProps)
     const regionCenter = region?.center_point?.coordinates;
     const mapCenter = regionCenter
         ? { lng: regionCenter[0], lat: regionCenter[1] }
-        : defaultValues.latitude != null && defaultValues.longitude != null
+        : defaultValues.latitude !== null && defaultValues.latitude !== undefined && defaultValues.longitude !== null && defaultValues.longitude !== undefined
           ? { lng: defaultValues.longitude, lat: defaultValues.latitude }
           : undefined;
 

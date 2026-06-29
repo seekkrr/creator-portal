@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, type ChangeEvent } from "react";
 import { MapPin, X, Loader2 } from "lucide-react";
 import { config } from "@config/env";
 
@@ -91,7 +91,7 @@ export function MapboxLocationSearch({
         }
     }, []);
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
         const newQuery = e.target.value;
         setQuery(newQuery);
         if (value) onChange(null);

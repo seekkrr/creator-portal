@@ -22,7 +22,7 @@ export function toPaginated<T>(body: Record<string, unknown>, key: string): Pagi
  * `id` at the service boundary so the rest of the portal only ever sees `id`.
  */
 export function normalizeId<T extends { id: string }>(doc: Record<string, unknown>): T {
-    if (doc && doc.id == null && doc._id != null) {
+    if (doc && (doc.id === null || doc.id === undefined) && (doc._id !== null && doc._id !== undefined)) {
         const { _id, ...rest } = doc;
         return { id: String(_id), ...rest } as unknown as T;
     }

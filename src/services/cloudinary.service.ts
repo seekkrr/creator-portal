@@ -62,7 +62,7 @@ export const cloudinaryService = {
                         if (errorResponse.error && errorResponse.error.message) {
                             errorMessage = errorResponse.error.message;
                         }
-                    } catch (e) {
+                    } catch {
                         // ignore parse error
                     }
                     console.error("Cloudinary error:", xhr.responseText);

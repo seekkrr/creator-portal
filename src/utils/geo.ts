@@ -47,7 +47,7 @@ export function pointInBboxRing(
     for (const c of ring) {
         const lng = c[0];
         const lat = c[1];
-        if (lng == null || lat == null) continue;
+        if (lng === null || lng === undefined || lat === null || lat === undefined) continue;
         if (lng < minLng) minLng = lng;
         if (lat < minLat) minLat = lat;
         if (lng > maxLng) maxLng = lng;
@@ -72,7 +72,7 @@ export function bboxBounds(ring: number[][] | undefined | null): {
     for (const c of ring) {
         const lng = c[0];
         const lat = c[1];
-        if (lng == null || lat == null) continue;
+        if (lng === null || lng === undefined || lat === null || lat === undefined) continue;
         if (lng < min_lon) min_lon = lng;
         if (lat < min_lat) min_lat = lat;
         if (lng > max_lon) max_lon = lng;
