@@ -735,11 +735,19 @@ export interface MapboxRegionCandidate {
 
 /** The region a creator settled on in the quest builder. */
 export interface ResolvedRegion {
+    /** Empty string while `pending_payload` is set (region not yet created). */
     region_id: string;
     name: string;
     type: RegionType;
     /** [lng, lat] — region center, used to seed the markers map. */
     center: [number, number];
+    /**
+     * Present when the creator picked a NEW region that doesn't exist on SeekKrr
+     * yet. We DON'T create it on selection (that would spawn orphan regions from
+     * mere dropdown clicks); instead we POST this to `resolve-or-create` only when
+     * the creator clicks "Next" to proceed. Absent for already-existing regions.
+     */
+    pending_payload?: ResolveOrCreateRegionPayload;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

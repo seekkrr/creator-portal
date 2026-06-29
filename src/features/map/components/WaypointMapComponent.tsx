@@ -2,73 +2,80 @@ import { useEffect, useRef, useCallback, memo } from "react";
 import mapboxgl from "mapbox-gl";
 import { config } from "@config/env";
 import { escapeHtml } from "@/utils/security";
-import { getCachedDirections, getCachedMultiRoute } from "@services/directionsCache";
-import { addPoiOverlayLayers } from "@features/map/utils/poiOverlay";
-import type { QuestLocation } from "@/types";
+import { getCachedMultiRoute } from "@services/directionsCache";
+import type { GeoPolygon, Marker } from "@/types";
 
 // Set Mapbox token
 mapboxgl.accessToken = config.mapbox.accessToken;
 
-// Light presets for Mapbox Standard
-type LightPreset = 'dawn' | 'day' | 'dusk' | 'night';
+/** One ordered, numbered pin on the route (a chosen playlist marker). */
+export interface PlaylistPoint {
+    lng: number;
+    lat: number;
+    title?: string;
+}
+
+// Light presets for Mapbox Standard (day/dawn/dusk/night).
+type LightPreset = "dawn" | "day" | "dusk" | "night";
 
 const FOG_CONFIGS: Record<LightPreset, mapboxgl.FogSpecification> = {
-    dawn: {
-        color: 'rgb(255, 200, 150)',
-        'high-color': 'rgb(255, 160, 100)',
-        'horizon-blend': 0.08,
-        'space-color': 'rgb(40, 30, 50)',
-        'star-intensity': 0.2,
-    },
-    day: {
-        color: 'rgb(220, 235, 255)',
-        'high-color': 'rgb(135, 206, 235)',
-        'horizon-blend': 0.05,
-    },
-    dusk: {
-        color: 'rgb(255, 150, 120)',
-        'high-color': 'rgb(180, 100, 150)',
-        'horizon-blend': 0.1,
-        'space-color': 'rgb(30, 20, 50)',
-        'star-intensity': 0.4,
-    },
-    night: {
-        color: 'rgb(10, 20, 40)',
-        'high-color': 'rgb(5, 10, 30)',
-        'horizon-blend': 0.12,
-        'space-color': 'rgb(0, 5, 15)',
-        'star-intensity': 1.0,
-    },
+    dawn: { color: "rgb(255, 200, 150)", "high-color": "rgb(255, 160, 100)", "horizon-blend": 0.08, "space-color": "rgb(40, 30, 50)", "star-intensity": 0.2 },
+    day: { color: "rgb(220, 235, 255)", "high-color": "rgb(135, 206, 235)", "horizon-blend": 0.05 },
+    dusk: { color: "rgb(255, 150, 120)", "high-color": "rgb(180, 100, 150)", "horizon-blend": 0.1, "space-color": "rgb(30, 20, 50)", "star-intensity": 0.4 },
+    night: { color: "rgb(10, 20, 40)", "high-color": "rgb(5, 10, 30)", "horizon-blend": 0.12, "space-color": "rgb(0, 5, 15)", "star-intensity": 1.0 },
 };
 
 function getTimeBasedPreset(): LightPreset {
     const hour = new Date().getHours();
-    if (hour >= 5 && hour < 7) return 'dawn';
-    if (hour >= 7 && hour < 18) return 'day';
-    if (hour >= 18 && hour < 20) return 'dusk';
-    return 'night';
+    if (hour >= 5 && hour < 7) return "dawn";
+    if (hour >= 7 && hour < 18) return "day";
+    if (hour >= 18 && hour < 20) return "dusk";
+    return "night";
 }
+
+const EXISTING_SRC = "existing-markers";
+const EXISTING_LAYER = "existing-markers-pin";
+const REGION_SRC = "region-bbox";
+const ROUTE_SRC = "route-line";
+const PIN_IMAGE = "seekkrr-marker-pin";
+
+/**
+ * SeekKrr marker icon: a compact teal disc with a white star, styled to sit next
+ * to Mapbox's own POI pins (small, round, flat) rather than a big teardrop.
+ */
+const PIN_SVG =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">' +
+    '<circle cx="20" cy="20" r="16" fill="#0d9488" stroke="#ffffff" stroke-width="2.5"/>' +
+    '<path transform="translate(8 8.5)" d="M12 2 14.6 8.8 21.8 9.3 16.2 13.9 18 20.9 12 17 6 20.9 7.8 13.9 2.2 9.3 9.4 8.8Z" fill="#ffffff"/>' +
+    '</svg>';
 
 interface WaypointMapComponentProps {
     center: { lng: number; lat: number };
-    waypoints: QuestLocation[];
-    onWaypointAdd: (location: QuestLocation) => void;
-    onWaypointUpdate: (index: number, location: QuestLocation) => void;
-    onWaypointRemove: (index: number) => void;
+    /** Chosen playlist markers, drawn as ordered numbered pins + a connecting route. */
+    playlistPoints: PlaylistPoint[];
+    /** Approved SeekKrr markers in the region, drawn as clickable pins with labels. */
+    existingMarkers?: Marker[];
+    /** Ids already in the playlist — hidden from the existing-markers layer. */
+    selectedMarkerIds?: string[];
+    /** Click an existing marker → add it to the playlist (reuse). */
+    onExistingMarkerClick?: (marker: Marker) => void;
+    /** Click empty map → propose a NEW marker at [lng, lat] (title from geocode). */
+    onMapDropNew?: (lng: number, lat: number, title?: string, address?: string) => void;
+    /** Remove the playlist pin at this index (right-click). */
+    onPlaylistPointRemove?: (index: number) => void;
+    /** Region boundary, drawn dashed (slot-based for Mapbox Standard). */
+    regionBbox?: GeoPolygon | null;
     height?: string;
     className?: string;
     focusedLocation?: { lng: number; lat: number } | null;
-    /** When set, highlights the route segment between waypoints[fromIndex] and waypoints[toIndex] in amber */
-    activeSegment?: { fromIndex: number; toIndex: number } | null;
 }
 
-// Create marker element for 60 FPS performance
 function createMarkerElement(index: number): HTMLDivElement {
     const el = document.createElement("div");
     el.className = "custom-marker";
     el.innerHTML = `
         <div class="relative group">
-            <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold shadow-xl border-3 border-white cursor-grab transform hover:scale-110 transition-all duration-200 hover:shadow-2xl">
+            <div class="w-9 h-9 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold shadow-xl border-2 border-white cursor-pointer transform hover:scale-110 transition-all duration-200 hover:shadow-2xl">
                 ${index + 1}
             </div>
             <div class="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-8 border-l-transparent border-r-transparent border-t-purple-600"></div>
@@ -77,638 +84,435 @@ function createMarkerElement(index: number): HTMLDivElement {
     return el;
 }
 
-// Calculate center of waypoints
-function getWaypointsCenter(waypoints: QuestLocation[]): { lng: number; lat: number } {
-    if (waypoints.length === 0) return { lng: 0, lat: 0 };
-    const sum = waypoints.reduce(
-        (acc, wp) => ({ lng: acc.lng + wp.longitude, lat: acc.lat + wp.latitude }),
-        { lng: 0, lat: 0 }
-    );
-    return { lng: sum.lng / waypoints.length, lat: sum.lat / waypoints.length };
+function getPointsCenter(points: PlaylistPoint[]): { lng: number; lat: number } {
+    if (points.length === 0) return { lng: 0, lat: 0 };
+    const sum = points.reduce((acc, p) => ({ lng: acc.lng + p.lng, lat: acc.lat + p.lat }), { lng: 0, lat: 0 });
+    return { lng: sum.lng / points.length, lat: sum.lat / points.length };
 }
 
-// Memoized component for 60 FPS performance
+function emptyFeatureCollection(): GeoJSON.FeatureCollection {
+    return { type: "FeatureCollection", features: [] };
+}
+
+/** Load the pin image once, then run cb (also runs cb if it fails → text-only fallback). */
+function ensurePinImage(map: mapboxgl.Map, cb: () => void) {
+    if (map.hasImage(PIN_IMAGE)) {
+        cb();
+        return;
+    }
+    const img = new Image(40, 40);
+    img.onload = () => {
+        if (!map.hasImage(PIN_IMAGE)) map.addImage(PIN_IMAGE, img, { pixelRatio: 2 });
+        cb();
+    };
+    img.onerror = () => cb();
+    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(PIN_SVG);
+}
+
 export const WaypointMapComponent = memo(function WaypointMapComponent({
     center,
-    waypoints,
-    onWaypointAdd,
-    onWaypointUpdate,
-    onWaypointRemove,
+    playlistPoints,
+    existingMarkers = [],
+    selectedMarkerIds = [],
+    onExistingMarkerClick,
+    onMapDropNew,
+    onPlaylistPointRemove,
+    regionBbox = null,
     height = "500px",
     className = "",
     focusedLocation,
-    activeSegment,
 }: WaypointMapComponentProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<mapboxgl.Map | null>(null);
     const markersRef = useRef<mapboxgl.Marker[]>([]);
     const popupsRef = useRef<mapboxgl.Popup[]>([]);
-    const isInitializedRef = useRef(false);
     const abortControllerRef = useRef<AbortController | null>(null);
-    const prevWaypointCountRef = useRef(0);
+    const prevPointCountRef = useRef(0);
+    const prevRegionBboxRef = useRef<GeoPolygon | null>(null);
 
-    // Store callbacks in refs to avoid stale closures
-    const onWaypointAddRef = useRef(onWaypointAdd);
-    const onWaypointUpdateRef = useRef(onWaypointUpdate);
-    const onWaypointRemoveRef = useRef(onWaypointRemove);
-    const waypointsRef = useRef(waypoints);
+    const onExistingMarkerClickRef = useRef(onExistingMarkerClick);
+    const onMapDropNewRef = useRef(onMapDropNew);
+    const onPlaylistPointRemoveRef = useRef(onPlaylistPointRemove);
+    const playlistPointsRef = useRef(playlistPoints);
+    const existingMarkersRef = useRef(existingMarkers);
+    const selectedMarkerIdsRef = useRef(selectedMarkerIds);
+    const regionBboxRef = useRef(regionBbox);
 
     useEffect(() => {
-        onWaypointAddRef.current = onWaypointAdd;
-        onWaypointUpdateRef.current = onWaypointUpdate;
-        onWaypointRemoveRef.current = onWaypointRemove;
-        waypointsRef.current = waypoints;
-    }, [onWaypointAdd, onWaypointUpdate, onWaypointRemove, waypoints]);
+        onExistingMarkerClickRef.current = onExistingMarkerClick;
+        onMapDropNewRef.current = onMapDropNew;
+        onPlaylistPointRemoveRef.current = onPlaylistPointRemove;
+        playlistPointsRef.current = playlistPoints;
+        existingMarkersRef.current = existingMarkers;
+        selectedMarkerIdsRef.current = selectedMarkerIds;
+        regionBboxRef.current = regionBbox;
+    });
 
-    // Cleanup markers and popups
     const clearMarkers = useCallback(() => {
-        markersRef.current.forEach(marker => marker.remove());
+        markersRef.current.forEach((m) => m.remove());
         markersRef.current = [];
-        popupsRef.current.forEach(popup => popup.remove());
+        popupsRef.current.forEach((p) => p.remove());
         popupsRef.current = [];
     }, []);
 
-    // Fly to show all waypoints while preserving pitch (3D)
-    const flyToWaypoints = useCallback(() => {
+    const flyToPoints = useCallback(() => {
         const map = mapRef.current;
-        const wps = waypointsRef.current;
-        if (!map || wps.length === 0) return;
-
-        if (wps.length === 1) {
-            const wp = wps[0];
-            if (wp) {
-                map.flyTo({
-                    center: [wp.longitude, wp.latitude],
-                    zoom: 17,
-                    pitch: 65,
-                    bearing: -17.6,
-                    duration: 1000,
-                    essential: true,
-                });
-            }
-        } else {
-            const waypointCenter = getWaypointsCenter(wps);
-            const bounds = new mapboxgl.LngLatBounds();
-            wps.forEach(wp => bounds.extend([wp.longitude, wp.latitude]));
-
-            const ne = bounds.getNorthEast();
-            const sw = bounds.getSouthWest();
-            const latDiff = Math.abs(ne.lat - sw.lat);
-            const lngDiff = Math.abs(ne.lng - sw.lng);
-            const maxDiff = Math.max(latDiff, lngDiff);
-
-            let zoom = 17;
-            if (maxDiff > 0.01) zoom = 16;
-            if (maxDiff > 0.02) zoom = 15;
-
-            map.flyTo({
-                center: [waypointCenter.lng, waypointCenter.lat],
-                zoom: zoom,
-                pitch: 65,
-                bearing: -17.6,
-                duration: 1200,
-                essential: true,
-            });
-        }
-    }, []);
-
-    // Fetch walking directions using cached service
-    const fetchWalkingRoute = useCallback(async (coordinates: [number, number][]) => {
-        if (coordinates.length < 2) return null;
-
-        if (abortControllerRef.current) {
-            abortControllerRef.current.abort();
-        }
-        abortControllerRef.current = new AbortController();
-
-        return getCachedMultiRoute(coordinates, abortControllerRef.current.signal);
-    }, []);
-
-    // Update route line with walking directions
-    const updateRouteLine = useCallback(async () => {
-        const map = mapRef.current;
-        if (!map || !map.isStyleLoaded()) return;
-
-        const wps = waypointsRef.current;
-        const coordinates = wps.map(wp => [wp.longitude, wp.latitude] as [number, number]);
-        const source = map.getSource('route') as mapboxgl.GeoJSONSource;
-
-        if (!source) return;
-
-        if (coordinates.length < 2) {
-            source.setData({
-                type: 'Feature',
-                properties: {},
-                geometry: { type: 'LineString', coordinates: [] },
-            });
+        const pts = playlistPointsRef.current;
+        if (!map || pts.length === 0) return;
+        if (pts.length === 1) {
+            const p = pts[0]!;
+            map.flyTo({ center: [p.lng, p.lat], zoom: 16, pitch: 55, bearing: -17.6, duration: 1000, essential: true });
             return;
         }
+        const c = getPointsCenter(pts);
+        const bounds = new mapboxgl.LngLatBounds();
+        pts.forEach((p) => bounds.extend([p.lng, p.lat]));
+        const ne = bounds.getNorthEast(), sw = bounds.getSouthWest();
+        const maxDiff = Math.max(Math.abs(ne.lat - sw.lat), Math.abs(ne.lng - sw.lng));
+        let zoom = 16;
+        if (maxDiff > 0.01) zoom = 15;
+        if (maxDiff > 0.05) zoom = 13;
+        map.flyTo({ center: [c.lng, c.lat], zoom, pitch: 55, bearing: -17.6, duration: 1200, essential: true });
+    }, []);
 
-        const routeCoordinates = await fetchWalkingRoute(coordinates);
-        source.setData({
-            type: 'Feature',
-            properties: {},
-            geometry: {
-                type: 'LineString',
-                coordinates: routeCoordinates ?? coordinates,
-            },
-        });
-    }, [fetchWalkingRoute]);
+    // Fit the camera to a region's bbox (used when the region CHANGES, e.g.
+    // expand-to-city) so its full new boundary is visible, framing markers too.
+    const fitRegionBounds = useCallback((polygon: GeoPolygon) => {
+        const map = mapRef.current;
+        const ring = polygon?.coordinates?.[0];
+        if (!map || !ring || ring.length === 0) return;
+        const bounds = new mapboxgl.LngLatBounds();
+        ring.forEach((c) => bounds.extend(c as [number, number]));
+        playlistPointsRef.current.forEach((p) => bounds.extend([p.lng, p.lat]));
+        map.fitBounds(bounds, { padding: 64, pitch: 45, duration: 1000, essential: true });
+    }, []);
 
-    // Add markers to map with HOVER popups
-    const addMarkers = useCallback(() => {
+    // ─── Existing markers (pin + label) ──────────────────────────────────────
+    const buildExistingFeatures = useCallback((): GeoJSON.FeatureCollection => {
+        const selected = new Set(selectedMarkerIdsRef.current);
+        const features: GeoJSON.Feature[] = existingMarkersRef.current
+            .filter((m) => m.location?.coordinates && !selected.has(m.id))
+            .map((m) => ({
+                type: "Feature",
+                geometry: { type: "Point", coordinates: m.location.coordinates },
+                properties: { id: m.id, title: m.title ?? "Marker" },
+            }));
+        return { type: "FeatureCollection", features };
+    }, []);
+
+    const refreshExistingMarkers = useCallback(() => {
+        const src = mapRef.current?.getSource(EXISTING_SRC) as mapboxgl.GeoJSONSource | undefined;
+        if (src) src.setData(buildExistingFeatures());
+    }, [buildExistingFeatures]);
+
+    // ─── Region bbox (dashed, slot-based) ────────────────────────────────────
+    const drawRegionBbox = useCallback((polygon: GeoPolygon | null) => {
         const map = mapRef.current;
         if (!map) return;
+        const data: GeoJSON.GeoJSON = polygon
+            ? ({ type: "Feature", geometry: polygon as GeoJSON.Polygon, properties: {} } as GeoJSON.Feature)
+            : emptyFeatureCollection();
+        const src = map.getSource(REGION_SRC) as mapboxgl.GeoJSONSource | undefined;
+        if (src) {
+            src.setData(data);
+        } else {
+            map.addSource(REGION_SRC, { type: "geojson", data });
+            map.addLayer({ id: "region-bbox-fill", type: "fill", slot: "middle", source: REGION_SRC, paint: { "fill-color": "#6366f1", "fill-opacity": 0.05 } });
+            map.addLayer({ id: "region-bbox-line", type: "line", slot: "top", source: REGION_SRC, paint: { "line-color": "#4f46e5", "line-width": 2, "line-opacity": 0.7, "line-dasharray": [2, 1.5] } });
+        }
+    }, []);
 
+    // ─── Route line connecting the ordered playlist points (cached, road-following) ──
+    const updateRouteLine = useCallback(async () => {
+        const map = mapRef.current;
+        const src = map?.getSource(ROUTE_SRC) as mapboxgl.GeoJSONSource | undefined;
+        if (!map || !src) return;
+        const pts = playlistPointsRef.current;
+        if (pts.length < 2) {
+            src.setData(emptyFeatureCollection());
+            return;
+        }
+        const coords: [number, number][] = pts.map((p) => [p.lng, p.lat]);
+        abortControllerRef.current?.abort();
+        const ctrl = new AbortController();
+        abortControllerRef.current = ctrl;
+        let line: [number, number][] = coords; // straight fallback (instant)
+        try {
+            const routed = await getCachedMultiRoute(coords, ctrl.signal);
+            if (routed && routed.length > 1) line = routed;
+        } catch {
+            /* keep straight fallback */
+        }
+        // Guard against a stale async result after the points changed again.
+        if (abortControllerRef.current !== ctrl) return;
+        const stillThere = map.getSource(ROUTE_SRC) as mapboxgl.GeoJSONSource | undefined;
+        stillThere?.setData({ type: "Feature", geometry: { type: "LineString", coordinates: line }, properties: {} } as GeoJSON.Feature);
+    }, []);
+
+    const renderPlaylistPins = useCallback(() => {
+        const map = mapRef.current;
+        if (!map) return;
         clearMarkers();
-        const wps = waypointsRef.current;
-
-        wps.forEach((wp, index) => {
+        playlistPointsRef.current.forEach((p, index) => {
             const el = createMarkerElement(index);
-
-            const marker = new mapboxgl.Marker({
-                element: el,
-                anchor: 'bottom',
-                draggable: true,
-            })
-                .setLngLat([wp.longitude, wp.latitude])
-                .addTo(map);
-
-            // Create popup for hover (not attached to marker for manual control)
-            const popup = new mapboxgl.Popup({
-                offset: 25,
-                closeButton: false,
-                closeOnClick: false,
-            }).setHTML(`
+            const marker = new mapboxgl.Marker({ element: el, anchor: "bottom" }).setLngLat([p.lng, p.lat]).addTo(map);
+            const popup = new mapboxgl.Popup({ offset: 25, closeButton: false, closeOnClick: false }).setHTML(`
                 <div class="p-2">
-                    <p class="font-semibold text-sm">${escapeHtml(wp.place_name) || 'Waypoint ' + (index + 1)}</p>
-                    <p class="text-xs text-gray-500">${wp.latitude.toFixed(5)}, ${wp.longitude.toFixed(5)}</p>
-                    <p class="text-xs text-indigo-600 mt-1">Drag to move • Right-click to remove</p>
-                </div>
-            `);
-
-            // Show popup on hover (manual control)
-            el.addEventListener('mouseenter', () => {
-                popup.setLngLat([wp.longitude, wp.latitude]).addTo(map);
-            });
-            el.addEventListener('mouseleave', () => {
-                popup.remove();
-            });
-
-            // Drag events
-            marker.on('dragstart', () => {
-                el.style.cursor = 'grabbing';
-                popup.remove();
-            });
-
-            marker.on('dragend', async () => {
-                el.style.cursor = 'grab';
-                const lngLat = marker.getLngLat();
-
-                try {
-                    const response = await fetch(
-                        `https://api.mapbox.com/geocoding/v5/mapbox.places/${lngLat.lng},${lngLat.lat}.json?access_token=${config.mapbox.accessToken}`
-                    );
-                    const data = await response.json();
-                    const place = data.features?.[0];
-
-                    onWaypointUpdateRef.current(index, {
-                        longitude: lngLat.lng,
-                        latitude: lngLat.lat,
-                        place_name: place?.place_name ?? `${lngLat.lat.toFixed(4)}, ${lngLat.lng.toFixed(4)}`,
-                        city: place?.context?.find((c: { id: string }) => c.id.startsWith("place"))?.text,
-                    });
-                } catch {
-                    onWaypointUpdateRef.current(index, {
-                        ...wp,
-                        longitude: lngLat.lng,
-                        latitude: lngLat.lat,
-                    });
-                }
-            });
-
-            // Right-click to remove
-            el.addEventListener('contextmenu', (e) => {
+                    <p class="font-semibold text-sm">${escapeHtml(p.title ?? "") || "Marker " + (index + 1)}</p>
+                    <p class="text-xs text-indigo-600 mt-1">Right-click to remove</p>
+                </div>`);
+            el.addEventListener("mouseenter", () => popup.setLngLat([p.lng, p.lat]).addTo(map));
+            el.addEventListener("mouseleave", () => popup.remove());
+            el.addEventListener("contextmenu", (e) => {
                 e.preventDefault();
-                onWaypointRemoveRef.current(index);
+                onPlaylistPointRemoveRef.current?.(index);
             });
-
             markersRef.current.push(marker);
             popupsRef.current.push(popup);
         });
     }, [clearMarkers]);
 
-    // Initialize map - RUNS ONCE
+    // ─── Init (lazy: only when scrolled into view) ───────────────────────────
     useEffect(() => {
-        if (!mapContainerRef.current || isInitializedRef.current) return;
-        isInitializedRef.current = true;
+        const container = mapContainerRef.current;
+        if (!container || mapRef.current) return;
 
-        const lightPreset = getTimeBasedPreset();
+        const initMap = () => {
+            if (mapRef.current) return;
+            const lightPreset = getTimeBasedPreset();
 
-        const map = new mapboxgl.Map({
-            container: mapContainerRef.current,
-            style: config.mapbox.style,
-            center: [center.lng, center.lat],
-            zoom: 17,
-            pitch: 65,
-            bearing: -17.6,
-            antialias: true,
-            maxPitch: 85,
-            trackResize: true,
-            fadeDuration: 0,
-            config: {
-                basemap: {
-                    lightPreset: lightPreset,
-                    showPointOfInterestLabels: true,
-                    showPlaceLabels: true,
-                    showRoadLabels: true,
-                    showTransitLabels: true,
+            const map = new mapboxgl.Map({
+                container,
+                style: config.mapbox.style,
+                center: [center.lng, center.lat],
+                zoom: 13,
+                pitch: 55,
+                bearing: -17.6,
+                antialias: true,
+                maxPitch: 85,
+                fadeDuration: 0,
+                config: {
+                    basemap: {
+                        lightPreset,
+                        // Mapbox Standard's native POI icons + labels (Google-Maps-
+                        // like): every POI is named, icon-based and collision-managed,
+                        // so nothing overlaps or shows a blank tooltip. We rely on
+                        // these alone — no custom dot overlay, which only duplicated
+                        // these labels and rendered unnamed dots.
+                        showPointOfInterestLabels: true,
+                        showTransitLabels: true,
+                        showPlaceLabels: true,
+                        showRoadLabels: true,
+                    },
+                },
+            });
+
+            map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true, showCompass: true, showZoom: true }), "top-right");
+            map.addControl(new mapboxgl.FullscreenControl(), "top-right");
+            map.addControl(new mapboxgl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: true, showUserHeading: true }), "top-right");
+            map.addControl(new mapboxgl.ScaleControl({ maxWidth: 100, unit: "metric" }), "bottom-left");
+
+            map.on("style.load", () => {
+                // Light-preset sky/atmosphere (no heavy terrain DEM — flat city zoom).
+                map.setFog(FOG_CONFIGS[lightPreset]);
+
+                // Quest route: a DOTTED line + direction arrows so it reads as a
+                // walking path (not a road) and its direction (stop 1 → 2 → …) is
+                // obvious. A faint solid underlay keeps it visible over busy areas.
+                map.addSource(ROUTE_SRC, { type: "geojson", data: emptyFeatureCollection() });
+                map.addLayer({
+                    id: "route-line-underlay",
+                    type: "line",
+                    slot: "middle",
+                    source: ROUTE_SRC,
+                    layout: { "line-cap": "round", "line-join": "round" },
+                    paint: { "line-color": "#c7d2fe", "line-width": 6, "line-opacity": 0.4 },
+                });
+                map.addLayer({
+                    id: "route-line-core",
+                    type: "line",
+                    slot: "middle",
+                    source: ROUTE_SRC,
+                    layout: { "line-cap": "round", "line-join": "round" },
+                    paint: { "line-color": "#4338ca", "line-width": 4, "line-dasharray": [0, 2] },
+                });
+                map.addLayer({
+                    id: "route-arrows",
+                    type: "symbol",
+                    slot: "top",
+                    source: ROUTE_SRC,
+                    layout: {
+                        "symbol-placement": "line",
+                        "symbol-spacing": 60,
+                        "text-field": "▶",
+                        "text-size": 13,
+                        "text-keep-upright": false,
+                        "text-rotation-alignment": "map",
+                        "text-allow-overlap": true,
+                        "text-ignore-placement": true,
+                    },
+                    paint: { "text-color": "#4338ca", "text-halo-color": "#ffffff", "text-halo-width": 1.5 },
+                });
+
+                // Existing SeekKrr markers as proper pins + labels.
+                map.addSource(EXISTING_SRC, { type: "geojson", data: buildExistingFeatures() });
+                ensurePinImage(map, () => {
+                    if (map.getLayer(EXISTING_LAYER)) return;
+                    map.addLayer({
+                        id: EXISTING_LAYER,
+                        type: "symbol",
+                        slot: "top",
+                        source: EXISTING_SRC,
+                        layout: {
+                            "icon-image": PIN_IMAGE,
+                            // Round disc sits centered on the point (like Mapbox POIs),
+                            // with the label tucked just beneath it.
+                            "icon-anchor": "center",
+                            "icon-size": 0.5,
+                            "icon-allow-overlap": true,
+                            "text-field": ["get", "title"],
+                            "text-size": 11,
+                            "text-offset": [0, 1.2],
+                            "text-anchor": "top",
+                            // Always show the SeekKrr marker name with its pin (these
+                            // are the important ones — they sit above basemap labels).
+                            "text-allow-overlap": true,
+                            "text-ignore-placement": true,
+                            "symbol-z-order": "source",
+                        },
+                        paint: {
+                            // Bright teal reads cleanly on the (often dark) basemap, so
+                            // the label needs only a faint dark shadow — like Mapbox's
+                            // own POI labels — instead of a white halo box.
+                            "text-color": "#5eead4",
+                            "text-halo-color": "rgba(15, 23, 42, 0.65)",
+                            "text-halo-width": 1,
+                            "text-halo-blur": 0.5,
+                        },
+                    });
+                    map.on("click", EXISTING_LAYER, (e) => {
+                        const id = e.features?.[0]?.properties?.id as string | undefined;
+                        if (!id) return;
+                        const marker = existingMarkersRef.current.find((m) => m.id === id);
+                        if (marker) {
+                            e.preventDefault();
+                            onExistingMarkerClickRef.current?.(marker);
+                        }
+                    });
+                    map.on("mouseenter", EXISTING_LAYER, () => { map.getCanvas().style.cursor = "pointer"; });
+                    map.on("mouseleave", EXISTING_LAYER, () => { map.getCanvas().style.cursor = ""; });
+                });
+
+                drawRegionBbox(regionBboxRef.current);
+                renderPlaylistPins();
+                updateRouteLine();
+                if (playlistPointsRef.current.length > 0) setTimeout(() => flyToPoints(), 400);
+            });
+
+            // Click empty map → propose a NEW marker (reverse-geocode a title).
+            map.on("click", async (e) => {
+                if (e.defaultPrevented) return;
+                const hits = map.getLayer(EXISTING_LAYER)
+                    ? map.queryRenderedFeatures(e.point, { layers: [EXISTING_LAYER] })
+                    : [];
+                if (hits.length > 0) return;
+                const { lng, lat } = e.lngLat;
+                const ripple = document.createElement("div");
+                ripple.innerHTML = `<div style="width:36px;height:36px;border-radius:50%;background:rgba(99,102,241,0.4);animation:ping 0.6s ease-out forwards"></div>`;
+                new mapboxgl.Marker({ element: ripple }).setLngLat([lng, lat]).addTo(map);
+                setTimeout(() => ripple.remove(), 600);
+                try {
+                    const r = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${config.mapbox.accessToken}`);
+                    const data = await r.json();
+                    const place = data.features?.[0];
+                    onMapDropNewRef.current?.(lng, lat, place?.text ?? `${lat.toFixed(4)}, ${lng.toFixed(4)}`, place?.place_name);
+                } catch {
+                    onMapDropNewRef.current?.(lng, lat, `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
                 }
-            }
-        });
+            });
 
-        // Add controls
-        map.addControl(new mapboxgl.NavigationControl({
-            visualizePitch: true,
-            showCompass: true,
-            showZoom: true,
-        }), "top-right");
+            map.on("dblclick", (e) => {
+                e.preventDefault();
+                map.flyTo({ center: e.lngLat, zoom: map.getZoom() + 1.5, bearing: map.getBearing() + 15, pitch: 55, duration: 800 });
+            });
 
-        map.addControl(new mapboxgl.FullscreenControl(), 'top-right');
+            mapRef.current = map;
+        };
 
-        map.addControl(new mapboxgl.GeolocateControl({
-            positionOptions: { enableHighAccuracy: true },
-            trackUserLocation: true,
-            showUserHeading: true,
-            showAccuracyCircle: true,
-        }), 'top-right');
-
-        map.addControl(new mapboxgl.ScaleControl({
-            maxWidth: 100,
-            unit: 'metric',
-        }), 'bottom-left');
-
-        map.on('style.load', () => {
-            if (!map.getSource('mapbox-dem')) {
-                map.addSource('mapbox-dem', {
-                    type: 'raster-dem',
-                    url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
-                    tileSize: 512,
-                    maxzoom: 14,
-                });
-            }
-            map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.8 });
-            map.setFog(FOG_CONFIGS[lightPreset]);
-
-            map.addSource('route', {
-                type: 'geojson',
-                data: {
-                    type: 'Feature',
-                    properties: {},
-                    geometry: { type: 'LineString', coordinates: [] },
+        let observer: IntersectionObserver | null = null;
+        if (typeof IntersectionObserver !== "undefined") {
+            observer = new IntersectionObserver(
+                (entries) => {
+                    if (entries.some((en) => en.isIntersecting)) {
+                        observer?.disconnect();
+                        initMap();
+                    }
                 },
-            });
-
-            // Route line glow effect
-            map.addLayer({
-                id: 'route-glow',
-                type: 'line',
-                source: 'route',
-                layout: { 'line-join': 'round', 'line-cap': 'round' },
-                paint: {
-                    'line-color': '#818cf8',
-                    'line-width': 14,
-                    'line-blur': 10,
-                    'line-opacity': 0.4,
-                },
-            });
-
-            // Main route line
-            map.addLayer({
-                id: 'route-line',
-                type: 'line',
-                source: 'route',
-                layout: { 'line-join': 'round', 'line-cap': 'round' },
-                paint: {
-                    'line-color': '#6366f1',
-                    'line-width': 5,
-                    'line-opacity': 1,
-                },
-            });
-
-            // Dashed line on top
-            map.addLayer({
-                id: 'route-dashed',
-                type: 'line',
-                source: 'route',
-                layout: { 'line-join': 'round', 'line-cap': 'round' },
-                paint: {
-                    'line-color': '#ffffff',
-                    'line-width': 2,
-                    'line-dasharray': [2, 3],
-                    'line-opacity': 0.9,
-                },
-            });
-
-            // ─── POI Overlay (mapbox-streets-v8) ─────────────────────────
-            addPoiOverlayLayers(map);
-
-            // ─── Highlight Route Layers ──────────────────────────────────
-            map.addSource('highlight-route', {
-                type: 'geojson',
-                data: {
-                    type: 'Feature',
-                    properties: {},
-                    geometry: { type: 'LineString', coordinates: [] },
-                },
-            });
-
-            map.addLayer({
-                id: 'highlight-route-glow',
-                type: 'line',
-                source: 'highlight-route',
-                layout: { 'line-join': 'round', 'line-cap': 'round' },
-                paint: {
-                    'line-color': '#fbbf24',
-                    'line-width': 16,
-                    'line-blur': 10,
-                    'line-opacity': 0.5,
-                },
-            });
-
-            map.addLayer({
-                id: 'highlight-route-line',
-                type: 'line',
-                source: 'highlight-route',
-                layout: { 'line-join': 'round', 'line-cap': 'round' },
-                paint: {
-                    'line-color': '#f59e0b',
-                    'line-width': 7,
-                    'line-opacity': 1,
-                },
-            });
-
-            map.addLayer({
-                id: 'highlight-route-dash',
-                type: 'line',
-                source: 'highlight-route',
-                layout: { 'line-join': 'round', 'line-cap': 'round' },
-                paint: {
-                    'line-color': '#ffffff',
-                    'line-width': 2,
-                    'line-dasharray': [2, 3],
-                    'line-opacity': 0.9,
-                },
-            });
-
-            // Render initial markers and route after style loads
-            addMarkers();
-            updateRouteLine();
-
-            // If there are existing waypoints, fly to them
-            if (waypointsRef.current.length > 0) {
-                setTimeout(() => flyToWaypoints(), 500);
-            }
-        });
-
-        // Click to add waypoint
-        map.on('click', async (e) => {
-            const { lng, lat } = e.lngLat;
-
-            // Ripple effect
-            const rippleEl = document.createElement("div");
-            rippleEl.innerHTML = `<div style="width: 40px; height: 40px; border-radius: 50%; background: rgba(99, 102, 241, 0.4); animation: ping 0.6s ease-out forwards;"></div>`;
-            new mapboxgl.Marker({ element: rippleEl }).setLngLat([lng, lat]).addTo(map);
-            setTimeout(() => rippleEl.remove(), 600);
-
-            try {
-                const response = await fetch(
-                    `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${config.mapbox.accessToken}`
-                );
-                const data = await response.json();
-                const place = data.features?.[0];
-
-                onWaypointAddRef.current({
-                    longitude: lng,
-                    latitude: lat,
-                    place_name: place?.place_name ?? `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
-                    city: place?.context?.find((c: { id: string }) => c.id.startsWith("place"))?.text,
-                });
-            } catch {
-                onWaypointAddRef.current({
-                    longitude: lng,
-                    latitude: lat,
-                    place_name: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
-                });
-            }
-        });
-
-        // Double-click zoom
-        map.on('dblclick', (e) => {
-            e.preventDefault();
-            map.flyTo({
-                center: e.lngLat,
-                zoom: map.getZoom() + 1.5,
-                bearing: map.getBearing() + 15,
-                pitch: 65,
-                duration: 800,
-            });
-        });
-
-        mapRef.current = map;
+                { rootMargin: "200px" }
+            );
+            observer.observe(container);
+        } else {
+            initMap();
+        }
 
         return () => {
+            observer?.disconnect();
             abortControllerRef.current?.abort();
             clearMarkers();
-            map.remove();
-            mapRef.current = null;
-            isInitializedRef.current = false;
+            if (mapRef.current) {
+                mapRef.current.remove();
+                mapRef.current = null;
+            }
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Update markers and route when waypoints change
+    // Rebuild numbered pins + route when the playlist changes.
     useEffect(() => {
         const map = mapRef.current;
         if (!map || !map.isStyleLoaded()) return;
-
-        // Immediately update markers and route
-        clearMarkers();
-
-        const wps = waypointsRef.current;
-        wps.forEach((wp, index) => {
-            const el = createMarkerElement(index);
-
-            const marker = new mapboxgl.Marker({
-                element: el,
-                anchor: 'bottom',
-                draggable: true,
-            })
-                .setLngLat([wp.longitude, wp.latitude])
-                .addTo(map);
-
-            // Create popup for hover
-            const popup = new mapboxgl.Popup({
-                offset: 25,
-                closeButton: false,
-                closeOnClick: false,
-            }).setHTML(`
-                <div class="p-2">
-                    <p class="font-semibold text-sm">${escapeHtml(wp.place_name) || 'Waypoint ' + (index + 1)}</p>
-                    <p class="text-xs text-gray-500">${wp.latitude.toFixed(5)}, ${wp.longitude.toFixed(5)}</p>
-                    <p class="text-xs text-indigo-600 mt-1">Drag to move • Right-click to remove</p>
-                </div>
-            `);
-
-            el.addEventListener('mouseenter', () => {
-                popup.setLngLat([wp.longitude, wp.latitude]).addTo(map);
-            });
-            el.addEventListener('mouseleave', () => {
-                popup.remove();
-            });
-
-            marker.on('dragend', () => {
-                const lngLat = marker.getLngLat();
-                onWaypointUpdateRef.current?.(index, {
-                    latitude: lngLat.lat,
-                    longitude: lngLat.lng,
-                    place_name: wp.place_name,
-                });
-            });
-
-            el.addEventListener('contextmenu', (e) => {
-                e.preventDefault();
-                onWaypointRemoveRef.current?.(index);
-            });
-
-            markersRef.current.push(marker);
-            popupsRef.current.push(popup);
-        });
-
-        // Update route immediately after markers
+        renderPlaylistPins();
         updateRouteLine();
-    }, [waypoints]); // Depend on full array for immediate updates
+    }, [playlistPoints, renderPlaylistPins, updateRouteLine]);
 
-    // Animate to show all waypoints when waypoints added/removed OR when single waypoint changes
+    // Refresh existing-markers when data / selection changes.
     useEffect(() => {
-        const waypointAdded = waypoints.length > prevWaypointCountRef.current;
-        const waypointRemoved = waypoints.length < prevWaypointCountRef.current;
+        const map = mapRef.current;
+        if (!map || !map.isStyleLoaded()) return;
+        refreshExistingMarkers();
+    }, [existingMarkers, selectedMarkerIds, refreshExistingMarkers]);
 
-        // Check if single waypoint changed (for WaypointDetailsStep)
-        const previousWaypoint = waypointsRef.current[0];
-        const currentWaypoint = waypoints[0];
-
-        const singleWaypointChanged = waypoints.length === 1 && prevWaypointCountRef.current === 1 &&
-            previousWaypoint && currentWaypoint &&
-            (currentWaypoint.latitude !== previousWaypoint.latitude ||
-                currentWaypoint.longitude !== previousWaypoint.longitude);
-
-        prevWaypointCountRef.current = waypoints.length;
-
-        // Only auto-fly if NO focusedLocation is provided. If focusedLocation is provided, we rely on the specific effect below.
-        if ((waypointAdded || waypointRemoved || singleWaypointChanged) && waypoints.length > 0 && !focusedLocation) {
-            setTimeout(() => flyToWaypoints(), 150);
+    // Redraw the region boundary when it changes, and on a REAL change (e.g.
+    // expand-to-city) fit the camera to the new bounds so the boundary is visible
+    // — otherwise the bigger boundary stays off-screen past the framed markers.
+    useEffect(() => {
+        const prev = prevRegionBboxRef.current;
+        prevRegionBboxRef.current = regionBbox;
+        const map = mapRef.current;
+        if (!map || !map.isStyleLoaded()) return;
+        drawRegionBbox(regionBbox);
+        // Skip the initial set (load already frames the markers); reframe only
+        // when the region actually switched to a different bbox.
+        if (prev !== null && prev !== regionBbox && regionBbox) {
+            fitRegionBounds(regionBbox);
         }
-    }, [waypoints, flyToWaypoints, focusedLocation]);
+    }, [regionBbox, drawRegionBbox, fitRegionBounds]);
 
-    // Handle focusedLocation changes (skip if activeSegment handles its own camera)
+    // Frame the playlist when points are added/removed.
+    useEffect(() => {
+        const added = playlistPoints.length > prevPointCountRef.current;
+        const removed = playlistPoints.length < prevPointCountRef.current;
+        prevPointCountRef.current = playlistPoints.length;
+        if ((added || removed) && playlistPoints.length > 0 && !focusedLocation) {
+            setTimeout(() => flyToPoints(), 150);
+        }
+    }, [playlistPoints, flyToPoints, focusedLocation]);
+
     useEffect(() => {
         const map = mapRef.current;
         if (!map || !focusedLocation) return;
-        // When an activeSegment is set, the segment highlighting effect manages the camera
-        if (activeSegment) return;
-
-        map.flyTo({
-            center: [focusedLocation.lng, focusedLocation.lat],
-            zoom: 17,
-            pitch: 65,
-            bearing: -17.6,
-            duration: 1000,
-            essential: true,
-        });
-    }, [focusedLocation, activeSegment]);
-
-    // ─── Active Segment Highlighting ─────────────────────────────────
-    useEffect(() => {
-        const map = mapRef.current;
-        if (!map) return;
-
-        const abortController = new AbortController();
-
-        const applyHighlight = () => {
-            if (abortController.signal.aborted) return;
-            const highlightSource = map.getSource('highlight-route') as mapboxgl.GeoJSONSource;
-            if (!highlightSource) return;
-
-            if (!activeSegment) {
-                // Clear highlight and restore main route
-                highlightSource.setData({
-                    type: 'Feature',
-                    properties: {},
-                    geometry: { type: 'LineString', coordinates: [] },
-                });
-                // Restore main route opacity
-                if (map.getLayer('route-glow')) map.setPaintProperty('route-glow', 'line-opacity', 0.4);
-                if (map.getLayer('route-line')) map.setPaintProperty('route-line', 'line-opacity', 1);
-                if (map.getLayer('route-dashed')) map.setPaintProperty('route-dashed', 'line-opacity', 0.9);
-                return;
-            }
-
-            const wps = waypointsRef.current;
-            const fromWp = wps[activeSegment.fromIndex];
-            const toWp = wps[activeSegment.toIndex];
-            if (!fromWp || !toWp) return;
-
-            // Dim main route
-            if (map.getLayer('route-glow')) map.setPaintProperty('route-glow', 'line-opacity', 0.1);
-            if (map.getLayer('route-line')) map.setPaintProperty('route-line', 'line-opacity', 0.25);
-            if (map.getLayer('route-dashed')) map.setPaintProperty('route-dashed', 'line-opacity', 0.15);
-
-            // Fly camera to fit the segment bounds
-            const bounds = new mapboxgl.LngLatBounds(
-                [fromWp.longitude, fromWp.latitude],
-                [toWp.longitude, toWp.latitude]
-            );
-            map.fitBounds(bounds, {
-                padding: { top: 80, bottom: 80, left: 60, right: 60 },
-                maxZoom: 17,
-                pitch: 55,
-                duration: 1200,
-                essential: true,
-            });
-
-            const from: [number, number] = [fromWp.longitude, fromWp.latitude];
-            const to: [number, number] = [toWp.longitude, toWp.latitude];
-
-            getCachedDirections(from, to).then((result) => {
-                if (abortController.signal.aborted) return;
-                if (!mapRef.current) return;
-                const src = mapRef.current.getSource('highlight-route') as mapboxgl.GeoJSONSource;
-                if (!src) return;
-
-                src.setData({
-                    type: 'Feature',
-                    properties: {},
-                    geometry: {
-                        type: 'LineString',
-                        coordinates: result?.coordinates ?? [from, to],
-                    },
-                });
-            });
-        };
-
-        // If style is loaded apply immediately, otherwise wait for idle
-        if (map.isStyleLoaded() && map.getSource('highlight-route')) {
-            applyHighlight();
-        } else {
-            map.once('idle', applyHighlight);
-        }
-
-        return () => {
-            abortController.abort();
-            map.off('idle', applyHighlight);
-        };
-    }, [activeSegment?.fromIndex, activeSegment?.toIndex]);
+        map.flyTo({ center: [focusedLocation.lng, focusedLocation.lat], zoom: 16, pitch: 55, bearing: -17.6, duration: 1000, essential: true });
+    }, [focusedLocation]);
 
     return (
         <div className="relative">
@@ -716,34 +520,18 @@ export const WaypointMapComponent = memo(function WaypointMapComponent({
                 ref={mapContainerRef}
                 className={`rounded-xl overflow-hidden shadow-2xl ${className}`}
                 style={{ height }}
-                aria-label="Interactive waypoint map"
+                aria-label="Interactive marker map"
             />
-
-            {/* Click hint only - shown when no waypoints */}
-            {waypoints.length === 0 && (
+            {playlistPoints.length === 0 && (
                 <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 bg-black/70 backdrop-blur text-white text-xs px-4 py-2 rounded-full pointer-events-none">
-                    🖱️ Click on map to add waypoints
+                    🖱️ Click a teal pin to reuse it, or click the map to add a new one
                 </div>
             )}
-
             <style>{`
-                @keyframes ping {
-                    0% { transform: scale(0.5); opacity: 1; }
-                    100% { transform: scale(2); opacity: 0; }
-                }
-                
-                .mapboxgl-popup-content {
-                    border-radius: 10px;
-                    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-                    padding: 0;
-                }
-                
-                .mapboxgl-ctrl-group {
-                    border-radius: 12px !important;
-                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
-                }
+                @keyframes ping { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(2); opacity: 0; } }
+                .mapboxgl-popup-content { border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,0.15); padding: 0; }
+                .mapboxgl-ctrl-group { border-radius: 12px !important; box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important; }
             `}</style>
         </div>
     );
 });
-

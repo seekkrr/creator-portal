@@ -1,28 +1,52 @@
+// NOTE: This step is no longer part of the CREATE-quest flow (narratives are a
+// deferred follow-up). It is kept compiling as a self-contained component so it
+// can be wired back in later. It is decoupled from the wizard's
+// CreateQuestFormData and uses its own local types/schema.
 import { useState, useMemo } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import {
     ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
     BookOpen, Plus, Trash2, SkipForward, Radius, ShieldCheck,
 } from "lucide-react";
-import {
-    type NarrativeStepData,
-    narrativeStepSchema,
-    type CreateQuestFormData,
-} from "../schemas/quest.schema";
 import { Button, Textarea } from "@/components/ui";
-import { WaypointMapComponent } from "@features/map";
-import type { QuestLocation } from "@/types";
+import { WaypointMapComponent, type PlaylistPoint } from "@features/map";
+
+/** Local view-model for a waypoint (formerly the deleted QuestLocation). */
+interface LegacyWaypoint {
+    latitude: number;
+    longitude: number;
+    place_name?: string;
+}
+
+const narrativeItemSchema = z.object({
+    fromStepIndex: z.number().min(0),
+    toStepIndex: z.number().min(1),
+    title: z.string().max(100).optional().default(""),
+    content: z.string().min(5, "Narrative content must be at least 5 characters"),
+    triggerRadiusM: z.number().min(1).max(500).optional().default(50),
+    isMandatory: z.boolean().optional().default(false),
+});
+
+const narrativeStepSchema = z.object({
+    narratives: z.array(narrativeItemSchema).optional().default([]),
+});
+
+type NarrativeStepData = z.infer<typeof narrativeStepSchema>;
 
 interface NarrativeStepProps {
-    defaultValues: Partial<CreateQuestFormData>;
+    defaultValues: {
+        waypoints?: LegacyWaypoint[];
+        narratives?: NarrativeStepData["narratives"];
+    };
     onNext: (data: NarrativeStepData) => void;
     onBack?: (data: NarrativeStepData) => void;
     isReadOnly?: boolean;
 }
 
 export function NarrativeStep({ defaultValues, onNext, onBack }: NarrativeStepProps) {
-    const waypoints = defaultValues.waypoints || [];
+    const waypoints: LegacyWaypoint[] = defaultValues.waypoints || [];
 
     // Build available segments (Step 0→1, 1→2, etc.)
     const segments = waypoints.length > 1
@@ -54,7 +78,7 @@ export function NarrativeStep({ defaultValues, onNext, onBack }: NarrativeStepPr
 
     const watchedNarratives = watch("narratives");
     const [openIndex, setOpenIndex] = useState<number | null>(null);
-    const [focusedSegment, setFocusedSegment] = useState<{ from: QuestLocation; to: QuestLocation } | null>(null);
+    const [focusedSegment, setFocusedSegment] = useState<{ from: LegacyWaypoint; to: LegacyWaypoint } | null>(null);
 
     const toggleAccordion = (index: number) => {
         const newIndex = openIndex === index ? null : index;
@@ -122,13 +146,11 @@ export function NarrativeStep({ defaultValues, onNext, onBack }: NarrativeStepPr
         };
     }, [focusedSegment]);
 
-    const memoizedActiveSegment = useMemo(() => {
-        if (openIndex === null || !watchedNarratives?.[openIndex]) return null;
-        return {
-            fromIndex: watchedNarratives[openIndex].fromStepIndex,
-            toIndex: watchedNarratives[openIndex].toStepIndex,
-        };
-    }, [openIndex, watchedNarratives]);
+    const playlistPoints: PlaylistPoint[] = waypoints.map((wp) => ({
+        lng: wp.longitude,
+        lat: wp.latitude,
+        title: wp.place_name,
+    }));
 
     // Get segment label for a narrative by indices
     const getSegmentLabel = (fromIdx: number, toIdx: number) => {
@@ -281,7 +303,7 @@ export function NarrativeStep({ defaultValues, onNext, onBack }: NarrativeStepPr
                                                         className="w-full bg-white text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
                                                     />
                                                     {errors.narratives?.[index]?.title && (
-                                                        <p className="text-xs text-red-500">{errors.narratives[index].title?.message}</p>
+                                                        <p className="text-xs text-red-500">{errors.narratives[index]?.title?.message}</p>
                                                     )}
                                                 </div>
 
@@ -325,7 +347,7 @@ export function NarrativeStep({ defaultValues, onNext, onBack }: NarrativeStepPr
                                                             <span className="text-xs text-slate-400 whitespace-nowrap">meters</span>
                                                         </div>
                                                         {errors.narratives?.[index]?.triggerRadiusM && (
-                                                            <p className="text-xs text-red-500">{errors.narratives[index].triggerRadiusM?.message}</p>
+                                                            <p className="text-xs text-red-500">{errors.narratives[index]?.triggerRadiusM?.message}</p>
                                                         )}
                                                     </div>
 
@@ -346,13 +368,6 @@ export function NarrativeStep({ defaultValues, onNext, onBack }: NarrativeStepPr
                                                     </div>
                                                 </div>
 
-                                                {/* Trigger Location Info */}
-                                                {/* 
-                                                 * TODO: Future enhancement — Allow creators to manually set trigger location 
-                                                 * via map pin or lat/lng inputs. Currently auto-calculated as the midpoint 
-                                                 * between from_step and to_step waypoints during quest submission.
-                                                 * See: implementation_plan.md, "Trigger location in creator flow"
-                                                 */}
                                                 <div className="bg-indigo-50/50 border border-indigo-100 rounded-xl px-4 py-3">
                                                     <p className="text-xs text-indigo-600">
                                                         <strong>Trigger location:</strong> Automatically set to the midpoint between the two waypoints.
@@ -404,12 +419,8 @@ export function NarrativeStep({ defaultValues, onNext, onBack }: NarrativeStepPr
                     <div className="rounded-2xl overflow-hidden shadow-lg border border-slate-200 bg-white">
                         <WaypointMapComponent
                             center={mapCenter}
-                            waypoints={waypoints}
+                            playlistPoints={playlistPoints}
                             focusedLocation={memoizedFocusedLocation}
-                            activeSegment={memoizedActiveSegment}
-                            onWaypointAdd={() => { }}
-                            onWaypointUpdate={() => { }}
-                            onWaypointRemove={() => { }}
                             height="400px"
                             className="w-full"
                         />

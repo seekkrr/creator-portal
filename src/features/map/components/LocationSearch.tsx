@@ -1,7 +1,19 @@
 import { useState, useRef, useEffect, useCallback, type ChangeEvent } from "react";
 import { Search, X, MapPin, Navigation } from "lucide-react";
 import { config } from "@config/env";
-import type { QuestLocation } from "@/types";
+
+/**
+ * A candidate NEW marker emitted when a creator picks a Mapbox place. Coordinates
+ * are [lng, lat] aligned. `category` is the first POI category when available so
+ * the marker step can prefill it.
+ */
+export interface LocationSearchResult {
+    longitude: number;
+    latitude: number;
+    place_name: string;
+    address?: string;
+    category?: string;
+}
 
 // ─── Search Box API Types ───────────────────────────────────────────────────
 
@@ -58,7 +70,7 @@ interface SearchBoxRetrieveResponse {
 // ─── Component ──────────────────────────────────────────────────────────────
 
 interface LocationSearchProps {
-    onSelect: (location: QuestLocation) => void;
+    onSelect: (location: LocationSearchResult) => void;
     placeholder?: string;
     defaultValue?: string;
     /** Bias results toward this coordinate (lng, lat). Strongly recommended. */
@@ -188,14 +200,18 @@ export function LocationSearch({
                 const [lng, lat] = feature.geometry.coordinates;
                 const props = feature.properties;
 
-                const location: QuestLocation = {
+                const location: LocationSearchResult = {
                     longitude: lng,
                     latitude: lat,
-                    place_name: props.full_address || props.name || suggestion.name,
-                    address: suggestion.address,
-                    city: props.context?.place?.name || suggestion.context?.place?.name,
-                    region: props.context?.region?.name || suggestion.context?.region?.name,
-                    country: props.context?.country?.name || suggestion.context?.country?.name,
+                    // Use the place NAME as the marker title — NOT the full address.
+                    // (e.g. "Garden of Spiritual Wisdom", not "Rishpattan Rd, …".)
+                    place_name: props.name || suggestion.name_preferred || suggestion.name,
+                    address:
+                        props.full_address ||
+                        suggestion.full_address ||
+                        suggestion.place_formatted ||
+                        suggestion.address,
+                    category: suggestion.poi_category?.[0],
                 };
 
                 setQuery(suggestion.name);

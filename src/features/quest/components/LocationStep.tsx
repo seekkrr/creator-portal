@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ChevronRight, MapPin, Link2, Navigation } from "lucide-react";
 import { Button, FloatingInput, InfoHint } from "@components/ui";
 import { RegionSearchSelect } from "./RegionSearchSelect";
+import { regionService } from "@services/region.service";
 import { locationStepSchema, type LocationStepData } from "../schemas/quest.schema";
 import { config } from "@config/env";
 import { VideoWalkthroughModal, VideoHelpButton } from "@components/VideoWalkthroughModal";
@@ -43,6 +44,10 @@ export function LocationStep({ defaultValues, onNext }: LocationStepProps) {
     const [prefillQuery, setPrefillQuery] = useState<string | undefined>(undefined);
     const [prefillNonce, setPrefillNonce] = useState(0);
     const [proximity, setProximity] = useState<string | undefined>(undefined);
+    // Region resolution is deferred to "Next" (see handleNextClick), so we track
+    // its in-flight / error state here rather than in the search dropdown.
+    const [isResolving, setIsResolving] = useState(false);
+    const [resolveError, setResolveError] = useState<string | null>(null);
 
     const {
         control,
@@ -70,7 +75,55 @@ export function LocationStep({ defaultValues, onNext }: LocationStepProps) {
         onNext(data);
     };
 
+    // Resolve/create the region ONLY here, on an explicit "Next" — never on
+    // dropdown selection — so clicking around can't spawn orphan regions. Existing
+    // regions already carry a real region_id and skip the network call entirely.
+    const handleNextClick = async () => {
+        if (activeSection === "url") {
+            handleSubmit(onSubmit)();
+            return;
+        }
+        if (!selectedRegion) return;
+
+        let region = selectedRegion;
+        if (!region.region_id && region.pending_payload) {
+            setIsResolving(true);
+            setResolveError(null);
+            try {
+                const created = await regionService.resolveOrCreateRegion(region.pending_payload);
+                const c = created.center_point?.coordinates;
+                region = {
+                    region_id: created.id,
+                    name: created.name ?? region.name,
+                    type: created.type,
+                    center: Array.isArray(c) && c.length === 2 ? [c[0], c[1]] : region.center,
+                };
+                setSelectedRegion(region);
+            } catch (err) {
+                setResolveError(
+                    err instanceof Error ? err.message : "Couldn't set that region. Try again."
+                );
+                setIsResolving(false);
+                return;
+            }
+            setIsResolving(false);
+        }
+
+        if (!region.region_id) return;
+        onNext({
+            locationType: "city",
+            city: region.name,
+            sourceUrl: "",
+            regionId: region.region_id,
+            regionName: region.name,
+            regionType: region.type,
+            longitude: region.center[0],
+            latitude: region.center[1],
+        });
+    };
+
     const handleRegionSelect = (region: ResolvedRegion | null) => {
+        setResolveError(null);
         setSelectedRegion(region);
         if (region) {
             setValue("regionId", region.region_id);
@@ -212,8 +265,11 @@ export function LocationStep({ defaultValues, onNext }: LocationStepProps) {
                                 prefillNonce={prefillNonce}
                                 highlightOnFocus={activeSection === "location"}
                                 error={
-                                    activeSection === "location" && !selectedRegion
-                                        ? (errors.locationType?.message as string | undefined)
+                                    activeSection === "location"
+                                        ? (resolveError ??
+                                          (!selectedRegion
+                                              ? (errors.locationType?.message as string | undefined)
+                                              : undefined))
                                         : undefined
                                 }
                             />
@@ -338,13 +394,14 @@ export function LocationStep({ defaultValues, onNext }: LocationStepProps) {
                 {/* Next */}
                 <div className="flex justify-center mt-10">
                     <Button
-                        type="submit"
-                        disabled={!canProceed}
+                        type="button"
+                        onClick={handleNextClick}
+                        disabled={!canProceed || isResolving}
                         variant="outline"
                         className="rounded-lg px-10 py-3 text-sm font-medium border border-slate-900 text-slate-900 hover:bg-slate-900 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                         rightIcon={<ChevronRight className="w-5 h-5" />}
                     >
-                        Next
+                        {isResolving ? "Setting region…" : "Next"}
                     </Button>
                 </div>
             </form>

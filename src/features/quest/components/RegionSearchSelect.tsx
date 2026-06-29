@@ -59,7 +59,6 @@ export function RegionSearchSelect({
     const [query, setQuery] = useState("");
     const [suggestions, setSuggestions] = useState<MapboxRegionCandidate[]>([]);
     const [isLoading, setIsLoading] = useState(false);
-    const [isResolving, setIsResolving] = useState(false);
     const [showDropdown, setShowDropdown] = useState(false);
     const [isFocused, setIsFocused] = useState(false);
     const [resolveError, setResolveError] = useState<string | null>(null);
@@ -118,45 +117,30 @@ export function RegionSearchSelect({
         debounceRef.current = setTimeout(() => runSearch(next), 300);
     };
 
-    const handleSelect = async (candidate: MapboxRegionCandidate) => {
+    const handleSelect = (candidate: MapboxRegionCandidate) => {
         setShowDropdown(false);
         setSuggestions([]);
         setQuery(candidate.name);
         setResolveError(null);
-        setIsResolving(true);
-        try {
-            // Exact existing match → reuse directly. Otherwise resolve-or-create
-            // (the backend dedupes by overlap, so this won't create duplicates).
-            if (candidate.existing_region) {
-                onChange({
-                    region_id: candidate.existing_region.id,
-                    name: candidate.name,
-                    type: candidate.existing_region.type,
-                    center: candidate.center,
-                });
-            } else {
-                const region = await regionService.resolveOrCreateRegion(
-                    candidate.resolve_payload
-                );
-                const center = region.center_point?.coordinates;
-                onChange({
-                    region_id: region.id,
-                    name: region.name ?? candidate.name,
-                    type: region.type,
-                    center:
-                        Array.isArray(center) && center.length === 2
-                            ? [center[0], center[1]]
-                            : candidate.center,
-                });
-            }
-        } catch (err) {
-            console.error("Region resolve error:", err);
-            setResolveError(
-                err instanceof Error ? err.message : "Couldn't resolve that region. Try again."
-            );
-            onChange(null);
-        } finally {
-            setIsResolving(false);
+        // IMPORTANT: selecting a candidate must NOT write to the backend. Creating
+        // a region here would spawn orphan regions every time a creator clicks
+        // through the dropdown. Existing regions are referenced directly; new ones
+        // carry a pending payload that the Location step resolves on "Next".
+        if (candidate.existing_region) {
+            onChange({
+                region_id: candidate.existing_region.id,
+                name: candidate.name,
+                type: candidate.existing_region.type,
+                center: candidate.center,
+            });
+        } else {
+            onChange({
+                region_id: "",
+                name: candidate.name,
+                type: candidate.suggested_type,
+                center: candidate.center,
+                pending_payload: candidate.resolve_payload,
+            });
         }
     };
 
@@ -241,17 +225,16 @@ export function RegionSearchSelect({
                             setIsFocused(true);
                             if (suggestions.length > 0) setShowDropdown(true);
                         }}
-                        disabled={isResolving}
                         aria-label={label}
                         placeholder={label}
                         className="w-full pl-11 pr-11 py-3 bg-transparent text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none rounded-xl disabled:opacity-60"
                     />
 
                     <div className="absolute right-3.5 flex items-center gap-2">
-                        {(isLoading || isResolving) && (
+                        {isLoading && (
                             <Loader2 className="w-4 h-4 animate-spin text-slate-500" />
                         )}
-                        {query && !isLoading && !isResolving && (
+                        {query && !isLoading && (
                             <button
                                 type="button"
                                 onClick={handleClear}

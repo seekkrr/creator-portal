@@ -1,34 +1,60 @@
+// NOTE: This step is no longer part of the CREATE-quest flow (per-waypoint
+// details + narratives are a deferred follow-up). It is kept compiling as a
+// self-contained component so it can be wired back in later. It is decoupled
+// from the wizard's CreateQuestFormData and uses its own local types/schema.
 import { useState, useEffect } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { ChevronDown, ChevronUp, MapPin, X, ChevronLeft, ChevronRight, Info, Image } from "lucide-react";
-import {
-    type WaypointDetailsStepData,
-    waypointDetailsStepSchema,
-    type CreateQuestFormData
-} from "../schemas/quest.schema";
 import { Button, Textarea } from "@/components/ui";
 import { ImageUpload } from "./ImageUpload";
-import { WaypointMapComponent } from "@features/map";
-import type { CloudinaryAsset, QuestLocation } from "@/types";
+import { WaypointMapComponent, type PlaylistPoint } from "@features/map";
+import type { CloudinaryAsset } from "@/types";
 import { VideoWalkthroughModal, VideoHelpButton } from "@components/VideoWalkthroughModal";
 import { WALKTHROUGH_VIDEOS } from "@config/walkthroughVideos";
 
+/** Local view-model for a waypoint (formerly the deleted QuestLocation). */
+interface LegacyWaypoint {
+    latitude: number;
+    longitude: number;
+    place_name?: string;
+}
+
+const waypointDetailSchema = z.object({
+    howToReach: z.string().min(1, "Navigation instructions are required"),
+    description: z.string().min(1, "Activity description is required"),
+    images: z.array(z.any()).optional(),
+});
+
+const waypointDetailsStepSchema = z.object({
+    waypointDetails: z.array(waypointDetailSchema),
+    galleryImages: z.array(z.any()).optional(),
+});
+
+type WaypointDetailsStepData = z.infer<typeof waypointDetailsStepSchema>;
+
 interface WaypointDetailsStepProps {
-    defaultValues: Partial<CreateQuestFormData>;
+    defaultValues: {
+        waypoints?: LegacyWaypoint[];
+        waypointDetails?: WaypointDetailsStepData["waypointDetails"];
+        galleryImages?: CloudinaryAsset[];
+    };
     onNext: (data: WaypointDetailsStepData) => void;
     onBack?: (data: WaypointDetailsStepData) => void;
 }
 
 export function WaypointDetailsStep({ defaultValues, onNext, onBack }: WaypointDetailsStepProps) {
+    const waypoints: LegacyWaypoint[] = defaultValues.waypoints || [];
+
     // Ensure we have waypoint details for each waypoint
-    const initialDetails = defaultValues.waypoints?.map((_, index) => {
+    const initialDetails = waypoints.map((_, index) => {
         return defaultValues.waypointDetails?.[index] || {
             howToReach: "",
             description: "",
             images: []
         };
-    }) || [];
+    });
 
     const {
         register,
@@ -52,11 +78,10 @@ export function WaypointDetailsStep({ defaultValues, onNext, onBack }: WaypointD
 
     const watchedDetails = watch("waypointDetails");
     const galleryImages = watch("galleryImages");
-    const waypoints = defaultValues.waypoints || [];
 
     // Manage accordion state
     const [openIndex, setOpenIndex] = useState<number | null>(null);
-    const [activeWaypoint, setActiveWaypoint] = useState<QuestLocation | null>(null);
+    const [activeWaypoint, setActiveWaypoint] = useState<LegacyWaypoint | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     // Update active waypoint when accordion changes
@@ -97,7 +122,7 @@ export function WaypointDetailsStep({ defaultValues, onNext, onBack }: WaypointD
         const currentImages = watchedDetails[index]?.images || [];
         setValue(
             `waypointDetails.${index}.images`,
-            currentImages.filter((img) => img.public_id !== publicId),
+            currentImages.filter((img: CloudinaryAsset) => img.public_id !== publicId),
             { shouldValidate: true }
         );
     };
@@ -125,6 +150,12 @@ export function WaypointDetailsStep({ defaultValues, onNext, onBack }: WaypointD
         : firstWaypoint
             ? { lng: firstWaypoint.longitude, lat: firstWaypoint.latitude }
             : { lng: 77.5946, lat: 12.9716 };
+
+    const playlistPoints: PlaylistPoint[] = waypoints.map((wp) => ({
+        lng: wp.longitude,
+        lat: wp.latitude,
+        title: wp.place_name,
+    }));
 
     return (
         <>
@@ -250,7 +281,7 @@ export function WaypointDetailsStep({ defaultValues, onNext, onBack }: WaypointD
                                                     Visual Enablers
                                                 </label>
                                                 <div className="flex flex-wrap gap-3 ml-6">
-                                                    {waypointImages.map((img) => (
+                                                    {waypointImages.map((img: CloudinaryAsset) => (
                                                         <div key={img.public_id} className="relative group w-20 h-20 rounded-lg overflow-hidden border border-slate-200 bg-white shadow-sm shrink-0">
                                                             <img
                                                                 src={img.secure_url}
@@ -289,15 +320,11 @@ export function WaypointDetailsStep({ defaultValues, onNext, onBack }: WaypointD
                     <div className="rounded-2xl overflow-hidden shadow-lg border border-slate-200 bg-white">
                         <WaypointMapComponent
                             center={mapCenter}
-                            waypoints={waypoints}
+                            playlistPoints={playlistPoints}
                             focusedLocation={activeWaypoint ? { lng: activeWaypoint.longitude, lat: activeWaypoint.latitude } : null}
-                            onWaypointAdd={() => { }}
-                            onWaypointUpdate={() => { }}
-                            onWaypointRemove={() => { }}
                             height="400px"
                             className="w-full"
                         />
-                        {/* Footer removed as requested */}
                     </div>
                 </div>
             </div>

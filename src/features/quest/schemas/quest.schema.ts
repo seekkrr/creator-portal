@@ -65,61 +65,60 @@ export const detailsStepSchema = z.object({
 export type DetailsStepData = z.infer<typeof detailsStepSchema>;
 export type QuestTheme = (typeof DETAILS_THEMES)[number];
 
-// Step 3: Waypoints
-export const waypointSchema = z.object({
-    latitude: z.number().min(-90).max(90),
+// ─────────────────────────────────────────────────────────────────────────────
+// Step 3: Markers (the marker playlist)
+//
+// Each item is EITHER a reference to an existing approved SeekKrr marker
+// (`marker_id`) OR an inline new marker to be created on submit (`new_marker`).
+// `_display` carries enough to render the ordered list + map pins for both kinds
+// without an extra lookup (mirrors the backend playlist resolution shape).
+// Coordinate order on `new_marker` is split into longitude/latitude for the form;
+// it is reassembled into a GeoPoint ([lng, lat]) when building the payload.
+// ─────────────────────────────────────────────────────────────────────────────
+export const inlineNewMarkerSchema = z.object({
+    title: z.string().min(1, "Marker title is required"),
     longitude: z.number().min(-180).max(180),
-    place_name: z.string().optional(),
+    latitude: z.number().min(-90).max(90),
+    category: z.string().optional(),
+    description: z.string().optional(),
     address: z.string().optional(),
-    city: z.string().optional(),
-    region: z.string().optional(),
-    country: z.string().optional(),
 });
 
-export const waypointsStepSchema = z.object({
-    waypoints: z
-        .array(waypointSchema)
-        .min(2, "Add at least two waypoints (Start and End)"),
+export type InlineNewMarkerData = z.infer<typeof inlineNewMarkerSchema>;
+
+export const markerPlaylistItemSchema = z
+    .object({
+        marker_id: z.string().optional(),
+        new_marker: inlineNewMarkerSchema.optional(),
+        is_required: z.boolean().default(true),
+        custom_description: z.string().optional(),
+        // View-model for rendering the list / map pins (always populated on add).
+        _display: z
+            .object({
+                title: z.string(),
+                lng: z.number(),
+                lat: z.number(),
+            })
+            .optional(),
+    })
+    .refine((item) => !!item.marker_id || !!item.new_marker, {
+        message: "Each playlist item must reference a marker or define a new one.",
+    });
+
+export type MarkerPlaylistItemData = z.infer<typeof markerPlaylistItemSchema>;
+
+export const markerPlaylistStepSchema = z.object({
+    markerPlaylist: z
+        .array(markerPlaylistItemSchema)
+        .min(2, "Add at least two markers"),
 });
 
-export type WaypointsStepData = z.infer<typeof waypointsStepSchema>;
+export type MarkerPlaylistStepData = z.infer<typeof markerPlaylistStepSchema>;
 
-// Step 4: Waypoint Details
-export const waypointDetailSchema = z.object({
-    howToReach: z.string().min(1, "Navigation instructions are required"),
-    description: z.string().min(1, "Activity description is required"),
-    images: z.array(z.any()).optional(), // Array of CloudinaryAsset
-});
-
-export const waypointDetailsStepSchema = z.object({
-    waypointDetails: z.array(waypointDetailSchema),
-    galleryImages: z.array(z.any()).optional(), // Array of CloudinaryAsset
-});
-
-export type WaypointDetailsStepData = z.infer<typeof waypointDetailsStepSchema>;
-
-// Step 5: Narratives (optional)
-export const narrativeItemSchema = z.object({
-    fromStepIndex: z.number().min(0),
-    toStepIndex: z.number().min(1),
-    title: z.string().max(100).optional().default(""),
-    content: z.string().min(5, "Narrative content must be at least 5 characters"),
-    triggerRadiusM: z.number().min(1).max(500).optional().default(50),
-    isMandatory: z.boolean().optional().default(false),
-});
-
-export const narrativeStepSchema = z.object({
-    narratives: z.array(narrativeItemSchema).optional().default([]),
-});
-
-export type NarrativeStepData = z.infer<typeof narrativeStepSchema>;
-
-// Combined form data schema using intersection
+// Combined form data schema using merge (Location + Details + Markers).
 export const createQuestSchema = locationStepBaseSchema
     .merge(detailsStepSchema)
-    .merge(waypointsStepSchema)
-    .merge(waypointDetailsStepSchema)
-    .merge(narrativeStepSchema);
+    .merge(markerPlaylistStepSchema);
 
 export type CreateQuestFormData = z.infer<typeof createQuestSchema>;
 
@@ -133,8 +132,5 @@ export const defaultFormValues: Partial<CreateQuestFormData> = {
     theme: ["adventure"],
     difficulty: "moderate",
     duration: 60,
-    waypoints: [],
-    waypointDetails: [],
-    galleryImages: [],
-    narratives: [],
+    markerPlaylist: [],
 };
