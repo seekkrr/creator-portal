@@ -13,11 +13,10 @@ import {
     Lock,
     ImageOff,
 } from "lucide-react";
-import { Card, Button } from "@components/ui";
+import { Card, Button, Badge } from "@components/ui";
 import { markerService } from "@services/marker.service";
 import { MapComponent } from "@features/map/components/MapComponent";
 import { MarkerFormModal } from "../components/MarkerFormModal";
-import { getMarkerStatusColor } from "../utils/status";
 import type { Marker } from "@/types";
 
 function InfoRow({
@@ -31,11 +30,11 @@ function InfoRow({
 }) {
     if (!value) return null;
     return (
-        <div className="flex items-start gap-3 py-3 border-b border-slate-100 last:border-b-0">
-            <span className="flex-shrink-0 mt-0.5 text-slate-400">{icon}</span>
+        <div className="flex items-start gap-3 py-3 border-b border-neutral-100 last:border-b-0">
+            <span className="flex-shrink-0 mt-0.5 text-neutral-400">{icon}</span>
             <div className="min-w-0">
-                <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">{label}</p>
-                <p className="text-sm text-slate-700 mt-0.5 break-words">{value}</p>
+                <p className="text-xs font-medium text-neutral-400 uppercase tracking-wider">{label}</p>
+                <p className="text-sm text-neutral-700 mt-0.5 break-words">{value}</p>
             </div>
         </div>
     );
@@ -66,7 +65,7 @@ export function MarkerDetailPage() {
     if (isLoading) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
-                <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
             </div>
         );
     }
@@ -74,7 +73,7 @@ export function MarkerDetailPage() {
     if (error || !marker) {
         return (
             <div className="max-w-3xl mx-auto px-4 py-12 text-center">
-                <p className="text-slate-500 mb-4">Marker not found or failed to load.</p>
+                <p className="text-neutral-500 mb-4">Marker not found or failed to load.</p>
                 <Button variant="outline" onClick={() => navigate("/creator/markers")}>
                     Back to My Markers
                 </Button>
@@ -92,7 +91,7 @@ export function MarkerDetailPage() {
             <div className="flex items-center justify-between gap-4 pt-4">
                 <button
                     onClick={() => navigate("/creator/markers")}
-                    className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors"
+                    className="inline-flex items-center gap-2 text-sm font-medium text-neutral-500 hover:text-neutral-900 transition-colors"
                 >
                     <ArrowLeft className="w-4 h-4" />
                     Back to My Markers
@@ -113,23 +112,21 @@ export function MarkerDetailPage() {
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-1">
-                            <span
-                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider ${getMarkerStatusColor(marker.status)}`}
-                            >
+                            <Badge status={marker.status === "pending" ? "under_review" : marker.status === "hidden" ? "archived" : marker.status as "approved" | "rejected"}>
                                 {marker.status}
-                            </span>
+                            </Badge>
                             {marker.is_locked && (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider bg-slate-100 text-slate-500 border border-slate-200">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider bg-neutral-100 text-neutral-500 border border-neutral-200">
                                     <Lock className="w-3 h-3" /> Locked
                                 </span>
                             )}
                         </div>
-                        <h1 className="text-2xl font-bold text-slate-900 mt-1">{marker.title}</h1>
+                        <h1 className="text-2xl font-display font-bold text-primary-900 tracking-tight mt-1">{marker.title}</h1>
                         {marker.category && (
-                            <p className="text-sm text-slate-500 mt-1">{marker.category}</p>
+                            <p className="text-sm text-neutral-500 mt-1">{marker.category}</p>
                         )}
                     </div>
-                    <div className="text-xs text-slate-400 flex-shrink-0 sm:text-right">
+                    <div className="text-xs text-neutral-400 flex-shrink-0 sm:text-right">
                         {marker.created_at && (
                             <p>Created {new Date(marker.created_at).toLocaleDateString()}</p>
                         )}
@@ -140,16 +137,16 @@ export function MarkerDetailPage() {
                 </div>
 
                 {marker.description && (
-                    <p className="mt-4 text-sm text-slate-600 leading-relaxed">{marker.description}</p>
+                    <p className="mt-4 text-sm text-neutral-600 leading-relaxed">{marker.description}</p>
                 )}
             </Card>
 
             {/* Map */}
             {hasLocation && !marker.is_locked ? (
                 <Card className="overflow-hidden p-0">
-                    <div className="px-6 py-4 border-b border-slate-100">
-                        <h2 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                            <MapPin className="w-4 h-4 text-indigo-500" /> Location
+                    <div className="px-6 py-4 border-b border-neutral-100">
+                        <h2 className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
+                            <MapPin className="w-4 h-4 text-primary-500" /> Location
                         </h2>
                     </div>
                     <MapComponent
@@ -160,13 +157,13 @@ export function MarkerDetailPage() {
                         height="280px"
                         preview={true}
                     />
-                    <div className="px-6 py-3 text-xs text-slate-400">
+                    <div className="px-6 py-3 text-xs text-neutral-400">
                         {lat.toFixed(5)}, {lng.toFixed(5)}
                     </div>
                 </Card>
             ) : (
                 // Defensive guard: is_locked is unreachable for owner views; retained for teaser shape.
-                <Card className="p-6 text-center text-slate-400">
+                <Card className="p-6 text-center text-neutral-400">
                     <Lock className="w-6 h-6 mx-auto mb-2" />
                     <p className="text-sm">Location is locked for this marker.</p>
                 </Card>
@@ -174,8 +171,8 @@ export function MarkerDetailPage() {
 
             {/* Details */}
             <Card className="p-6">
-                <h2 className="text-sm font-semibold text-slate-700 mb-2">Details</h2>
-                <div className="divide-y divide-slate-100">
+                <h2 className="text-sm font-semibold text-neutral-700 mb-2">Details</h2>
+                <div className="divide-y divide-neutral-100">
                     <InfoRow icon={<MapPin className="w-4 h-4" />} label="Address" value={marker.address} />
                     <InfoRow icon={<Phone className="w-4 h-4" />} label="Contact" value={marker.contact} />
                     <InfoRow icon={<Globe className="w-4 h-4" />} label="Website" value={marker.website_url} />
@@ -204,9 +201,9 @@ export function MarkerDetailPage() {
             {/* Things To Do */}
             {(marker.things_to_do_text || marker.things_to_do_image_url) && (
                 <Card className="p-6">
-                    <h2 className="text-sm font-semibold text-slate-700 mb-3">Things To Do</h2>
+                    <h2 className="text-sm font-semibold text-neutral-700 mb-3">Things To Do</h2>
                     {marker.things_to_do_text && (
-                        <p className="text-sm text-slate-600 leading-relaxed mb-3">
+                        <p className="text-sm text-neutral-600 leading-relaxed mb-3">
                             {marker.things_to_do_text}
                         </p>
                     )}
@@ -223,14 +220,14 @@ export function MarkerDetailPage() {
             {/* Tags */}
             {marker.tags && marker.tags.length > 0 && (
                 <Card className="p-6">
-                    <h2 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-                        <Tag className="w-4 h-4 text-indigo-500" /> Tags
+                    <h2 className="text-sm font-semibold text-neutral-700 mb-3 flex items-center gap-2">
+                        <Tag className="w-4 h-4 text-primary-500" /> Tags
                     </h2>
                     <div className="flex flex-wrap gap-2">
                         {marker.tags.map((tag) => (
                             <span
                                 key={tag}
-                                className="px-2.5 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full text-xs font-medium"
+                                className="px-2.5 py-0.5 bg-primary-50 text-primary-700 border border-primary-200 rounded-full text-xs font-medium"
                             >
                                 {tag}
                             </span>
@@ -242,10 +239,10 @@ export function MarkerDetailPage() {
             {/* Media Gallery */}
             {marker.media && marker.media.length > 0 ? (
                 <Card className="p-6">
-                    <h2 className="text-sm font-semibold text-slate-700 mb-3">Media</h2>
+                    <h2 className="text-sm font-semibold text-neutral-700 mb-3">Media</h2>
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                         {marker.media.map((url) => (
-                            <div key={url} className="aspect-square rounded-lg overflow-hidden bg-slate-100">
+                            <div key={url} className="aspect-square rounded-lg overflow-hidden bg-neutral-100">
                                 <img
                                     src={url}
                                     alt="Marker media"
@@ -256,7 +253,7 @@ export function MarkerDetailPage() {
                     </div>
                 </Card>
             ) : (
-                <Card className="p-6 text-center text-slate-400">
+                <Card className="p-6 text-center text-neutral-400">
                     <ImageOff className="w-6 h-6 mx-auto mb-2" />
                     <p className="text-sm">No media uploaded yet.</p>
                 </Card>

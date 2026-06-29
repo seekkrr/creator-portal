@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { MoreVertical, AlertTriangle, Search, Plus } from "lucide-react";
-import { Card, Button, Input } from "@components/ui";
+import { Card, Button, Input, Badge } from "@components/ui";
 import { markerService } from "@services/marker.service";
 import { useAuthStore } from "@store/auth.store";
 import { ALLOWED_CREATOR_ROLES } from "@/types";
@@ -10,7 +10,6 @@ import type { MarkerStatus } from "@/types";
 import type { Marker } from "@/types";
 import { toast } from "sonner";
 import { MarkerFormModal } from "../components/MarkerFormModal";
-import { getMarkerStatusColor } from "../utils/status";
 
 type StatusFilter = MarkerStatus | "all";
 
@@ -126,12 +125,13 @@ export function MarkersPage() {
             {/* Page Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-900">My Markers</h1>
-                    <p className="text-slate-500 mt-1">Manage your place markers</p>
+                    <h1 className="text-3xl font-display font-bold text-primary-900 tracking-tight">My Markers</h1>
+                    <p className="text-neutral-500 mt-1">Manage your place markers</p>
                 </div>
                 <Button
+                    variant="accent"
                     onClick={openCreateModal}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white w-full sm:w-auto"
+                    className="w-full sm:w-auto"
                     leftIcon={<Plus className="w-4 h-4" />}
                 >
                     Create New Marker
@@ -140,7 +140,7 @@ export function MarkersPage() {
 
             {/* Delete Confirmation Modal */}
             {isDeleteModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-sm animate-fade-in">
                     <Card className="w-full max-w-md shadow-2xl border-red-100 overflow-hidden animate-scale-up">
                         <div className="p-6">
                             <div className="flex items-center gap-3 text-red-600 mb-4">
@@ -149,9 +149,9 @@ export function MarkersPage() {
                                 </div>
                                 <h3 className="text-xl font-bold">Delete Marker?</h3>
                             </div>
-                            <p className="text-slate-600 mb-6">
+                            <p className="text-neutral-600 mb-6">
                                 This action cannot be undone. To confirm, type{" "}
-                                <span className="font-bold text-slate-900 select-none">CONFIRM</span> below.
+                                <span className="font-bold text-neutral-900 select-none">CONFIRM</span> below.
                             </p>
                             <div className="space-y-4">
                                 <Input
@@ -208,8 +208,8 @@ export function MarkersPage() {
                             onClick={() => setStatusFilter(f.value)}
                             className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors
                                 ${statusFilter === f.value
-                                    ? "bg-indigo-600 text-white"
-                                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                    ? "bg-primary-600 text-white"
+                                    : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
                                 }`}
                         >
                             {f.label}
@@ -218,13 +218,13 @@ export function MarkersPage() {
                 </div>
                 <form onSubmit={handleSearch} className="flex gap-2 sm:ml-auto w-full sm:w-auto">
                     <div className="relative flex-1 sm:flex-none sm:w-60">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
                         <input
                             type="text"
                             value={searchInput}
                             onChange={(e) => setSearchInput(e.target.value)}
                             placeholder="Search markers…"
-                            className="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400"
+                            className="w-full pl-9 pr-4 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
                         />
                     </div>
                     <Button type="submit" variant="outline" size="sm">
@@ -234,39 +234,39 @@ export function MarkersPage() {
             </div>
 
             {/* Table */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
+            <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm">
                 <div className="w-full overflow-y-auto overflow-x-auto max-h-[60vh] min-h-[300px]">
                     <table className="w-full text-left border-collapse min-w-[700px] table-fixed">
-                        <thead className="sticky top-0 z-20 bg-slate-50 shadow-sm outline outline-1 outline-slate-200">
-                            <tr className="border-b border-slate-200">
-                                <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[35%]">
+                        <thead className="sticky top-0 z-20 bg-neutral-50 shadow-sm outline outline-1 outline-neutral-200">
+                            <tr className="border-b border-neutral-200">
+                                <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[35%]">
                                     Title
                                 </th>
-                                <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[15%]">
+                                <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[15%]">
                                     Category
                                 </th>
-                                <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[15%] text-center">
+                                <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[15%] text-center">
                                     Status
                                 </th>
-                                <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[15%] text-center">
+                                <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[15%] text-center">
                                     Created
                                 </th>
-                                <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[20%] text-right">
+                                <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[20%] text-right">
                                     Actions
                                 </th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className="divide-y divide-neutral-100">
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan={5} className="py-8 text-center text-slate-500">
+                                    <td colSpan={5} className="py-8 text-center text-neutral-500">
                                         Loading markers…
                                     </td>
                                 </tr>
                             ) : markers.length === 0 ? (
                                 <tr>
                                     <td colSpan={5} className="py-12 text-center">
-                                        <div className="text-slate-400 mb-2">No markers found</div>
+                                        <div className="text-neutral-400 mb-2">No markers found</div>
                                         <Button
                                             variant="outline"
                                             className="mt-4 border-dashed border-2"
@@ -282,25 +282,23 @@ export function MarkersPage() {
                                     return (
                                         <tr
                                             key={marker.id}
-                                            className="hover:bg-slate-50/50 transition-colors"
+                                            className="hover:bg-neutral-50/50 transition-colors"
                                         >
                                             <td
-                                                className="py-4 px-6 font-medium text-slate-900 truncate max-w-[200px]"
+                                                className="py-4 px-6 font-medium text-neutral-900 truncate max-w-[200px]"
                                                 title={title}
                                             >
                                                 {title}
                                             </td>
-                                            <td className="py-4 px-6 text-sm text-slate-500 truncate">
+                                            <td className="py-4 px-6 text-sm text-neutral-500 truncate">
                                                 {marker.category ?? "—"}
                                             </td>
                                             <td className="py-4 px-6 text-center">
-                                                <span
-                                                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wider ${getMarkerStatusColor(marker.status)}`}
-                                                >
+                                                <Badge status={marker.status === "pending" ? "under_review" : marker.status === "hidden" ? "archived" : marker.status as "approved" | "rejected"}>
                                                     {marker.status}
-                                                </span>
+                                                </Badge>
                                             </td>
-                                            <td className="py-4 px-6 text-sm text-slate-500 whitespace-nowrap text-center">
+                                            <td className="py-4 px-6 text-sm text-neutral-500 whitespace-nowrap text-center">
                                                 {marker.created_at
                                                     ? new Date(marker.created_at).toLocaleDateString()
                                                     : "—"}
@@ -338,7 +336,7 @@ export function MarkersPage() {
                                                                         navigate(`/creator/markers/view/${marker.id}`);
                                                                         setOpenDropdownId(null);
                                                                     }}
-                                                                    className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-slate-50 flex items-center gap-2 font-medium"
+                                                                    className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 font-medium"
                                                                 >
                                                                     View Details
                                                                 </button>
@@ -347,7 +345,7 @@ export function MarkersPage() {
                                                                         openEditModal(marker);
                                                                         setOpenDropdownId(null);
                                                                     }}
-                                                                    className="w-full text-left px-4 py-2 text-sm text-indigo-600 hover:bg-indigo-50 flex items-center gap-2 font-medium"
+                                                                    className="w-full text-left px-4 py-2 text-sm text-primary-600 hover:bg-primary-50 flex items-center gap-2 font-medium"
                                                                 >
                                                                     Edit Marker
                                                                 </button>

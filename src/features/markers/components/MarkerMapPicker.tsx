@@ -58,7 +58,7 @@ export function MarkerMapPicker({ value, onChange }: MarkerMapPickerProps) {
                 preview={false}
             />
             {value ? (
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-neutral-500">
                     Pin at {value.lat.toFixed(5)}, {value.lng.toFixed(5)} — click the map to move it.
                 </p>
             ) : (

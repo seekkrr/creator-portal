@@ -64,33 +64,33 @@ export function MarkerRegionSelect({ value, onChange }: MarkerRegionSelectProps)
             <button
                 type="button"
                 onClick={() => setIsOpen((o) => !o)}
-                className="w-full flex items-center justify-between px-4 py-2.5 bg-white border border-slate-300 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500"
+                className="w-full flex items-center justify-between px-4 py-2.5 bg-white border border-neutral-300 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-500"
             >
-                <span className={`flex items-center gap-2 text-sm ${value ? "text-slate-900" : "text-slate-400"}`}>
+                <span className={`flex items-center gap-2 text-sm ${value ? "text-neutral-900" : "text-neutral-400"}`}>
                     {value ? (
                         <>
-                            <MapPinned className="w-4 h-4 text-indigo-500 shrink-0" />
+                            <MapPinned className="w-4 h-4 text-primary-500 shrink-0" />
                             <span className="truncate">{displayName ?? "Loading region…"}</span>
                         </>
                     ) : (
                         "Search & select a region…"
                     )}
                 </span>
-                <ChevronDown className={`w-4 h-4 text-slate-400 shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                <ChevronDown className={`w-4 h-4 text-neutral-400 shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`} />
             </button>
 
             {isOpen && (
-                <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden">
-                    <div className="p-2 border-b border-slate-100">
+                <div className="absolute z-50 mt-1 w-full bg-white border border-neutral-200 rounded-xl shadow-xl overflow-hidden">
+                    <div className="p-2 border-b border-neutral-100">
                         <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
                             <input
                                 autoFocus
                                 type="text"
                                 value={search}
                                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
                                 placeholder="Search SeekKrr regions…"
-                                className="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400"
+                                className="w-full pl-9 pr-4 py-2 text-sm bg-neutral-50 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
                             />
                         </div>
                     </div>
@@ -99,16 +99,16 @@ export function MarkerRegionSelect({ value, onChange }: MarkerRegionSelectProps)
                             <button
                                 type="button"
                                 onClick={() => handleSelect("")}
-                                className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2 hover:bg-slate-50 transition-colors ${value === "" ? "text-indigo-700 font-medium" : "text-slate-500"}`}
+                                className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2 hover:bg-neutral-50 transition-colors ${value === "" ? "text-primary-700 font-medium" : "text-neutral-500"}`}
                             >
-                                <X className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                <X className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
                                 No region
                             </button>
                         </li>
                         {isLoading ? (
-                            <li className="px-4 py-3 text-sm text-slate-500 text-center">Loading…</li>
+                            <li className="px-4 py-3 text-sm text-neutral-500 text-center">Loading…</li>
                         ) : regions.length === 0 ? (
-                            <li className="px-4 py-3 text-sm text-slate-500 text-center">
+                            <li className="px-4 py-3 text-sm text-neutral-500 text-center">
                                 {search ? "No regions found" : "Type to search regions"}
                             </li>
                         ) : (
@@ -117,11 +117,11 @@ export function MarkerRegionSelect({ value, onChange }: MarkerRegionSelectProps)
                                     <button
                                         type="button"
                                         onClick={() => handleSelect(region.id)}
-                                        className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2 hover:bg-indigo-50 transition-colors ${region.id === value ? "bg-indigo-50 text-indigo-700 font-medium" : "text-slate-700"}`}
+                                        className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2 hover:bg-primary-50 transition-colors ${region.id === value ? "bg-primary-50 text-primary-700 font-medium" : "text-neutral-700"}`}
                                     >
-                                        <MapPinned className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                                        <MapPinned className="w-3.5 h-3.5 text-primary-400 shrink-0" />
                                         <span className="truncate">{region.name}</span>
-                                        <span className="ml-auto text-xs text-slate-400 shrink-0 capitalize">{region.type}</span>
+                                        <span className="ml-auto text-xs text-neutral-400 shrink-0 capitalize">{region.type}</span>
                                     </button>
                                 </li>
                             ))

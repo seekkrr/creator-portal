@@ -6,6 +6,6 @@ export function getMarkerStatusColor(status: MarkerStatus): string {
         case "pending": return "bg-amber-100 text-amber-700 border border-amber-200";
         case "rejected": return "bg-red-100 text-red-700 border border-red-200";
         case "hidden": return "bg-neutral-100 text-neutral-500 border border-neutral-200";
-        default: return "bg-slate-100 text-slate-700 border border-slate-200";
+        default: return "bg-neutral-100 text-neutral-700 border border-neutral-200";
     }
 }

@@ -228,16 +228,16 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
     const isBusy = isSubmitting || createMutation.isPending || updateMutation.isPending;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-start justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
-            <Card className="w-full max-w-3xl my-8 shadow-2xl border-slate-200 overflow-hidden animate-scale-up">
+        <div className="fixed inset-0 z-[100] flex items-start justify-center p-4 bg-neutral-900/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
+            <Card className="w-full max-w-3xl my-8 shadow-2xl border-neutral-200 overflow-hidden animate-scale-up">
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white sticky top-0 z-10">
-                    <h2 className="text-xl font-bold text-slate-900">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 bg-white sticky top-0 z-10">
+                    <h2 className="text-xl font-bold text-neutral-900">
                         {mode === "create" ? "Create New Marker" : "Edit Marker"}
                     </h2>
                     <button
                         onClick={onClose}
-                        className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                        className="p-2 rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors"
                         aria-label="Close modal"
                     >
                         <X className="w-5 h-5" />
@@ -245,16 +245,16 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
                 </div>
 
                 <form onSubmit={handleSubmit(onSubmit)} noValidate>
-                    <div className="p-6 space-y-5 bg-slate-50">
+                    <div className="p-6 space-y-5 bg-neutral-50">
 
                         {/* ── Section: Basic Info ── */}
-                        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                            <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">
+                        <section className="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm">
+                            <h3 className="text-sm font-semibold text-neutral-500 uppercase tracking-wider mb-3">
                                 Basic Info
                             </h3>
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                                    <label className="block text-sm font-medium text-neutral-700 mb-1">
                                         Title <span className="text-red-500">*</span>
                                     </label>
                                     <Input
@@ -270,12 +270,12 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                                    <label className="block text-sm font-medium text-neutral-700 mb-1">
                                         Category
                                     </label>
                                     <select
                                         {...register("category")}
-                                        className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500"
+                                        className="w-full px-4 py-2.5 bg-white border border-neutral-300 rounded-lg text-neutral-900 text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-500"
                                     >
                                         <option value="">Select a category…</option>
                                         {MARKER_CATEGORIES.map((c) => (
@@ -285,7 +285,7 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                                    <label className="block text-sm font-medium text-neutral-700 mb-1">
                                         Description
                                     </label>
                                     <Textarea
@@ -298,8 +298,8 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
                         </section>
 
                         {/* ── Section: Location ── */}
-                        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                            <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">
+                        <section className="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm">
+                            <h3 className="text-sm font-semibold text-neutral-500 uppercase tracking-wider mb-3">
                                 Location {mode === "create" && <span className="text-red-500">*</span>}
                             </h3>
                             {mode === "edit" && (
@@ -331,39 +331,39 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
                             )}
 
                             <div className="mt-4">
-                                <label className="block text-sm font-medium text-slate-700 mb-1">
+                                <label className="block text-sm font-medium text-neutral-700 mb-1">
                                     Region
                                 </label>
                                 <MarkerRegionSelect
                                     value={regionId ?? ""}
                                     onChange={(id) => setValue("region_id", id, { shouldValidate: true })}
                                 />
-                                <p className="mt-1 text-xs text-slate-400">
+                                <p className="mt-1 text-xs text-neutral-400">
                                     Attach this marker to an existing SeekKrr region (optional).
                                 </p>
                             </div>
                         </section>
 
                         {/* ── Section: Contact & URLs ── */}
-                        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                            <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">
+                        <section className="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm">
+                            <h3 className="text-sm font-semibold text-neutral-500 uppercase tracking-wider mb-3">
                                 Contact &amp; Links
                             </h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                                    <label className="block text-sm font-medium text-neutral-700 mb-1">
                                         Address
                                     </label>
                                     <Input {...register("address")} placeholder="Street address…" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                                    <label className="block text-sm font-medium text-neutral-700 mb-1">
                                         Contact
                                     </label>
                                     <Input {...register("contact")} placeholder="Phone / email…" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                                    <label className="block text-sm font-medium text-neutral-700 mb-1">
                                         Website URL
                                     </label>
                                     <Input
@@ -376,7 +376,7 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
                                     )}
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                                    <label className="block text-sm font-medium text-neutral-700 mb-1">
                                         Map URL
                                     </label>
                                     <Input
@@ -392,13 +392,13 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
                         </section>
 
                         {/* ── Section: Things To Do ── */}
-                        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                            <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">
+                        <section className="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm">
+                            <h3 className="text-sm font-semibold text-neutral-500 uppercase tracking-wider mb-3">
                                 Things To Do
                             </h3>
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                                    <label className="block text-sm font-medium text-neutral-700 mb-1">
                                         Description
                                     </label>
                                     <Textarea
@@ -408,7 +408,7 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                                    <label className="block text-sm font-medium text-neutral-700 mb-1">
                                         Image
                                     </label>
                                     <input
@@ -419,7 +419,7 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
                                         onChange={handleThingsToDoUpload}
                                     />
                                     {thingsToDoImage ? (
-                                        <div className="relative inline-block rounded-lg overflow-hidden border border-slate-200">
+                                        <div className="relative inline-block rounded-lg overflow-hidden border border-neutral-200">
                                             <img
                                                 src={thingsToDoImage}
                                                 alt="Things to do"
@@ -454,13 +454,13 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
                         </section>
 
                         {/* ── Section: Expenses & Hours ── */}
-                        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                            <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">
+                        <section className="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm">
+                            <h3 className="text-sm font-semibold text-neutral-500 uppercase tracking-wider mb-3">
                                 Expenses &amp; Hours
                             </h3>
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                                    <label className="block text-sm font-medium text-neutral-700 mb-1">
                                         Min Expense (₹)
                                     </label>
                                     <Input
@@ -471,7 +471,7 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                                    <label className="block text-sm font-medium text-neutral-700 mb-1">
                                         Max Expense (₹)
                                     </label>
                                     <Input
@@ -482,7 +482,7 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                                    <label className="block text-sm font-medium text-neutral-700 mb-1">
                                         Opens At
                                     </label>
                                     <Input
@@ -495,7 +495,7 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
                                     )}
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                                    <label className="block text-sm font-medium text-neutral-700 mb-1">
                                         Closes At
                                     </label>
                                     <Input
@@ -511,8 +511,8 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
                         </section>
 
                         {/* ── Section: Tags ── */}
-                        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                            <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">
+                        <section className="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm">
+                            <h3 className="text-sm font-semibold text-neutral-500 uppercase tracking-wider mb-3">
                                 Tags
                             </h3>
                             <div className="flex gap-2">
@@ -534,13 +534,13 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
                                     {tags.map((tag) => (
                                         <span
                                             key={tag}
-                                            className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full text-xs font-medium"
+                                            className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-primary-50 text-primary-700 border border-primary-200 rounded-full text-xs font-medium"
                                         >
                                             {tag}
                                             <button
                                                 type="button"
                                                 onClick={() => removeTag(tag)}
-                                                className="text-indigo-400 hover:text-indigo-700"
+                                                className="text-primary-400 hover:text-primary-700"
                                                 aria-label={`Remove tag ${tag}`}
                                             >
                                                 <X className="w-3 h-3" />
@@ -552,8 +552,8 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
                         </section>
 
                         {/* ── Section: Media ── */}
-                        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                            <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">
+                        <section className="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm">
+                            <h3 className="text-sm font-semibold text-neutral-500 uppercase tracking-wider mb-3">
                                 Media
                             </h3>
                             <div className="space-y-3">
@@ -580,7 +580,7 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
                                 {media && media.length > 0 && (
                                     <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                                         {media.map((url) => (
-                                            <div key={url} className="relative group rounded-lg overflow-hidden aspect-square bg-slate-100">
+                                            <div key={url} className="relative group rounded-lg overflow-hidden aspect-square bg-neutral-100">
                                                 <img
                                                     src={url}
                                                     alt="Marker media"
@@ -603,7 +603,7 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
                     </div>
 
                     {/* Footer */}
-                    <div className="flex gap-3 px-6 py-4 border-t border-slate-200 bg-slate-50">
+                    <div className="flex gap-3 px-6 py-4 border-t border-neutral-200 bg-neutral-50">
                         <Button
                             type="button"
                             variant="ghost"
@@ -628,8 +628,8 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
 
             {/* Spinning overlay while uploading media */}
             {uploadingMedia && (
-                <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/30">
-                    <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+                <div className="fixed inset-0 z-[110] flex items-center justify-center bg-neutral-900/30">
+                    <Loader2 className="w-8 h-8 text-primary-600 animate-spin" />
                 </div>
             )}
         </div>
