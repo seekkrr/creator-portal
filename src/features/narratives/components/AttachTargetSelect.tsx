@@ -235,8 +235,8 @@ export function AttachTargetSelect({
 
             {/* Existing narratives notice */}
             {summaryNotice && (
-                <div className="flex items-start gap-2 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
-                    <span className="mt-0.5 shrink-0">ℹ</span>
+                <div className="flex items-start gap-2 px-3 py-2.5 bg-[#8398FF]/10 border border-[#8398FF]/30 rounded-lg text-xs text-[#3D4E99]">
+                    <span className="mt-0.5 shrink-0 text-[#5C6FD9]">ℹ</span>
                     <span>{summaryNotice}</span>
                 </div>
             )}

@@ -5,6 +5,7 @@ import { MoreVertical, AlertTriangle, Volume2, Link2, BookOpen } from "lucide-re
 import { Card, Button, Input, Badge, EmptyState, ErrorState, SkeletonTableRows } from "@components/ui";
 import type { BadgeStatus } from "@components/ui";
 import { narrativeService } from "@services/narrative.service";
+import { markerService } from "@services/marker.service";
 import { useAuthStore } from "@store/auth.store";
 import { NarrativeFormModal } from "../components/NarrativeFormModal";
 import { ChainGroupRows } from "../components/ChainGroupRows";
@@ -150,6 +151,20 @@ export function NarrativesPage() {
     });
 
     const narratives = data?.items ?? [];
+
+    const { data: allMarkersData } = useQuery({
+        queryKey: ["creator-markers-all"],
+        queryFn: () => markerService.listMarkers({ mine: true, page_size: 200 }),
+        enabled: !!user,
+        staleTime: 5 * 60 * 1000,
+    });
+    const markerTitleMap = React.useMemo(() => {
+        const map = new Map<string, string>();
+        for (const m of (allMarkersData?.items ?? [])) {
+            map.set(m.id, m.title);
+        }
+        return map;
+    }, [allMarkersData]);
 
     const handleSubmitForReview = (narrativeId: string) => {
         const promise = narrativeService.submitNarrative(narrativeId);
@@ -322,11 +337,11 @@ export function NarrativesPage() {
                         <table className="w-full text-left border-collapse min-w-[900px] table-fixed">
                             <thead className="sticky top-0 z-20 bg-neutral-50 shadow-sm outline outline-1 outline-neutral-200">
                                 <tr className="border-b border-neutral-200">
-                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[28%]">Title</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[18%]">Attach</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[14%] text-center">Status</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[14%] text-center">Audio</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[12%] text-center">Created</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[36%]">Title</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[16%]">Attach</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[12%] text-center">Status</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[12%] text-center">Audio</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[10%] text-center">Created</th>
                                     <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[14%] text-right">Actions</th>
                                 </tr>
                             </thead>
@@ -393,6 +408,7 @@ export function NarrativesPage() {
                                                     openDropdownId={openDropdownId}
                                                     dropdownPosition={dropdownPosition}
                                                     onDropdownToggle={handleDropdownToggle}
+                                                    markerTitleMap={markerTitleMap}
                                                     onView={(id) => {
                                                         navigate(`/creator/narratives/view/${id}`);
                                                         setOpenDropdownId(null);
@@ -424,7 +440,7 @@ export function NarrativesPage() {
                                                         className="hover:bg-neutral-50/50 transition-colors group"
                                                     >
                                                         {/* Title — chain-link icon for lone chain members */}
-                                                        <td className="py-4 px-6 font-medium text-neutral-900 truncate max-w-[200px]" title={narrative.title}>
+                                                        <td className="py-4 px-6 font-medium text-neutral-900 truncate max-w-[280px]" title={narrative.title}>
                                                             <div className="flex items-center gap-1.5">
                                                                 {narrative.chain_id && (
                                                                     <span
@@ -447,8 +463,8 @@ export function NarrativesPage() {
                                                                 <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-primary-50 text-primary-600 border border-primary-100 w-fit">
                                                                     {narrative.attach_type}
                                                                 </span>
-                                                                <span className="text-xs text-neutral-400 truncate max-w-[120px]">
-                                                                    {narrative.attach_id}
+                                                                <span className="text-xs text-neutral-600 truncate max-w-[140px]" title={markerTitleMap.get(narrative.attach_id) ?? narrative.attach_id}>
+                                                                    {markerTitleMap.get(narrative.attach_id) ?? narrative.attach_id}
                                                                 </span>
                                                             </div>
                                                         </td>

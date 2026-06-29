@@ -14,6 +14,7 @@ export interface ChainGroupRowsProps {
     openDropdownId: string | null;
     dropdownPosition: "bottom" | "top";
     onDropdownToggle: (id: string, e: React.MouseEvent<HTMLButtonElement>) => void;
+    markerTitleMap: Map<string, string>;
     onView: (id: string) => void;
     onEdit: (narrative: Narrative) => void;
     onDelete: (id: string) => void;
@@ -67,6 +68,7 @@ export function ChainGroupRows({
     openDropdownId,
     dropdownPosition,
     onDropdownToggle,
+    markerTitleMap,
     onView,
     onEdit,
     onDelete,
@@ -116,7 +118,7 @@ export function ChainGroupRows({
                         >
                             {/* Title — indented to signal membership */}
                             <td
-                                className="py-4 pl-12 pr-6 font-medium text-neutral-900 truncate max-w-[200px]"
+                                className="py-4 pl-12 pr-6 font-medium text-neutral-900 truncate max-w-[280px]"
                                 title={narrative.title}
                             >
                                 <div className="flex items-center gap-2">
@@ -140,8 +142,8 @@ export function ChainGroupRows({
                                     <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-primary-50 text-primary-600 border border-primary-100 w-fit">
                                         {narrative.attach_type}
                                     </span>
-                                    <span className="text-xs text-neutral-400 truncate max-w-[120px]">
-                                        {narrative.attach_id}
+                                    <span className="text-xs text-neutral-600 truncate max-w-[140px]" title={markerTitleMap.get(narrative.attach_id) ?? narrative.attach_id}>
+                                        {markerTitleMap.get(narrative.attach_id) ?? narrative.attach_id}
                                     </span>
                                 </div>
                             </td>

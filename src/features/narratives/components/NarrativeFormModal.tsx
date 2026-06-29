@@ -50,6 +50,7 @@ export function NarrativeFormModal({
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [uploadingMedia, setUploadingMedia] = useState(false);
     const [uploadError, setUploadError] = useState<string | null>(null);
+    const [attachLabel, setAttachLabel] = useState<string>("");
 
     const {
         register,
@@ -90,6 +91,7 @@ export function NarrativeFormModal({
                 is_unlocked: initial.is_unlocked,
                 sequence_order: initial.sequence_order ?? undefined,
             });
+            setAttachLabel("");
         } else if (mode === "create") {
             reset({
                 title: "",
@@ -103,6 +105,7 @@ export function NarrativeFormModal({
                 is_unlocked: false,
                 sequence_order: undefined,
             });
+            setAttachLabel("");
         }
     }, [mode, initial, reset, open]);
 
@@ -290,7 +293,7 @@ export function NarrativeFormModal({
         ? {
               attach_type: attachType,
               attach_id: attachId,
-              label: mode === "edit" ? editLabel : attachId,
+              label: mode === "edit" ? editLabel : (attachLabel || attachId),
           }
         : null;
 
@@ -351,6 +354,7 @@ export function NarrativeFormModal({
                                 onChange={(sel) => {
                                     setValue("attach_type", sel.attach_type as "marker" | "quest");
                                     setValue("attach_id", sel.attach_id);
+                                    setAttachLabel(sel.label);
                                 }}
                             />
                         )}
@@ -358,17 +362,17 @@ export function NarrativeFormModal({
 
                     {/* Conflict notice (create mode only) — shows when there are existing narratives */}
                     {mode === "create" && attachSummary?.has_conflict && (
-                        <div className="flex items-start gap-2 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
-                            <Info className="w-4 h-4 mt-0.5 shrink-0 text-amber-600" />
+                        <div className="flex items-start gap-2 px-3 py-2.5 bg-[#8398FF]/10 border border-[#8398FF]/30 rounded-lg text-sm text-[#3D4E99]">
+                            <Info className="w-4 h-4 mt-0.5 shrink-0 text-[#5C6FD9]" />
                             <div className="flex-1 min-w-0">
                                 {firstChain !== undefined ? (
                                     <p>
-                                        Will be added as part #{firstChain.next_sequence_order} of &lsquo;
+                                        Adding to existing chain — Will be added as part #{firstChain.next_sequence_order} of &lsquo;
                                         {firstChain.label}&rsquo;.
                                     </p>
                                 ) : firstStandalone !== undefined ? (
                                     <p>
-                                        Will be chained after &lsquo;{firstStandalone.title}&rsquo;.
+                                        Adding to existing chain — Will be chained after &lsquo;{firstStandalone.title}&rsquo;.
                                     </p>
                                 ) : null}
                                 <Link
@@ -377,7 +381,7 @@ export function NarrativeFormModal({
                                             ? firstChain.first_narrative_id
                                             : (firstStandalone?.id ?? "")
                                     }`}
-                                    className="text-amber-700 underline text-xs mt-0.5 inline-block hover:text-amber-900"
+                                    className="text-[#5C6FD9]/70 text-xs mt-1 inline-block hover:text-[#3D4E99] hover:underline"
                                     onClick={onClose}
                                 >
                                     Edit existing instead
@@ -592,7 +596,8 @@ export function NarrativeFormModal({
                             render={({ field }) => (
                                 <input
                                     type="number"
-                                    min={0}
+                                    min={1}
+                                    max={999}
                                     step={1}
                                     placeholder="e.g. 1"
                                     value={field.value ?? ""}
