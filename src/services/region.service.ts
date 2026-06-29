@@ -6,6 +6,7 @@ import type {
     RegionListItem,
     RegionType,
     ResolveOrCreateRegionPayload,
+    MapboxRegionCandidate,
     Paginated,
 } from "@/types";
 
@@ -16,11 +17,35 @@ export interface ListRegionsParams {
     page_size?: number;
 }
 
+export interface MapboxSearchParams {
+    limit?: number;
+    /** "lng,lat" to bias results toward a point. */
+    proximity?: string;
+    /** ISO 3166-1 alpha-2 to restrict results (e.g. "in"). */
+    country?: string;
+}
+
 export const regionService = {
     /** GET /api/v2/regions → { regions, total, page, page_size, total_pages } */
     async listRegions(params: ListRegionsParams = {}): Promise<Paginated<RegionListItem>> {
         const res = await api.get<Record<string, unknown>>(API_ENDPOINTS.REGIONS.BASE, { params });
         return toPaginated<RegionListItem>(res.data, "regions");
+    },
+
+    /**
+     * Combined Mapbox + backend region search for the creator quest builder.
+     * Each candidate is annotated with existing/overlap regions and a
+     * resolve_payload. GET /api/v2/regions/mapbox-search → { results }
+     */
+    async mapboxSearch(
+        q: string,
+        params: MapboxSearchParams = {}
+    ): Promise<MapboxRegionCandidate[]> {
+        const res = await api.get<{ results: MapboxRegionCandidate[] }>(
+            API_ENDPOINTS.REGIONS.MAPBOX_SEARCH,
+            { params: { q, ...params } }
+        );
+        return res.data.results ?? [];
     },
 
     /** Name search. GET /api/v2/regions/search?q= → { regions, total, ... } */

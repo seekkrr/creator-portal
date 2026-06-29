@@ -700,6 +700,48 @@ export interface ResolveOrCreateRegionPayload {
     context?: Record<string, unknown>;
 }
 
+/** A region this candidate exactly matches or geographically overlaps. */
+export interface RegionMatchRef {
+    id: string;
+    name: string | null;
+    type: RegionType;
+}
+
+/**
+ * One result from `GET /regions/mapbox-search` — a Mapbox v6 place annotated by
+ * the backend with how it maps onto SeekKrr regions. The dropdown reuses
+ * `existing_region` when present and otherwise POSTs `resolve_payload` (the
+ * backend dedupes by overlap underneath).
+ */
+export interface MapboxRegionCandidate {
+    mapbox_id: string;
+    name: string;
+    full_address: string | null;
+    place_formatted: string | null;
+    feature_type: string;
+    suggested_type: RegionType;
+    /** [lng, lat] */
+    center: [number, number];
+    bbox: GeoPolygon | null;
+    /** exact match by mapbox_place_id — reuse this region id directly. */
+    existing_region: RegionMatchRef | null;
+    /** same-type regions whose bbox already contains this point (likely covered). */
+    overlaps: RegionMatchRef[];
+    /** for hotspots, the enclosing city (from Mapbox context). */
+    parent_city: { name: string | null; mapbox_id: string | null } | null;
+    /** ready-to-POST body for `POST /regions/resolve-or-create`. */
+    resolve_payload: ResolveOrCreateRegionPayload;
+}
+
+/** The region a creator settled on in the quest builder. */
+export interface ResolvedRegion {
+    region_id: string;
+    name: string;
+    type: RegionType;
+    /** [lng, lat] — region center, used to seed the markers map. */
+    center: [number, number];
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Narrative Types (V2 attach model) — serialized via to_dict(): raw doc uses
 // `_id`, normalized to `id` at the service boundary.

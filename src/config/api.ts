@@ -58,6 +58,8 @@ export const API_ENDPOINTS = {
         BASE: "/api/v2/regions",
         BY_ID: (id: string) => `/api/v2/regions/${id}`,
         SEARCH: "/api/v2/regions/search",
+        // Creator region picker: Mapbox v6 candidates annotated against backend regions.
+        MAPBOX_SEARCH: "/api/v2/regions/mapbox-search",
         RESOLVE: "/api/v2/regions/resolve",
         RESOLVE_OR_CREATE: "/api/v2/regions/resolve-or-create",
     },
