@@ -103,11 +103,16 @@ export function WaypointsStep({ defaultValues, onNext, onBack, onRegionChange }:
     const getPlaylist = useCallback(() => watch("markerPlaylist") ?? [], [watch]);
 
     // ─── Region (bbox / center / parent) ─────────────────────────────────────
+    // Only fetch when regionId is a real MongoDB ObjectId (24-char hex). This
+    // prevents 404 spam when the draft was saved with a placeholder string like
+    // "fake-region-id-manali" from a previous dev/test session.
+    const isRealRegionId = !!regionId && /^[0-9a-f]{24}$/i.test(regionId);
+
     const { data: region } = useQuery({
         queryKey: ["region", regionId],
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         queryFn: () => regionService.getRegion(regionId!),
-        enabled: !!regionId,
+        enabled: isRealRegionId,
         staleTime: 5 * 60 * 1000,
     });
 
@@ -139,7 +144,8 @@ export function WaypointsStep({ defaultValues, onNext, onBack, onRegionChange }:
                 max_lat: bbox!.max_lat,
                 page_size: 100,
             }),
-        enabled: !!bbox,
+        // bbox is derived from region which only loads for real ObjectIds (F1 fix).
+        enabled: !!bbox && isRealRegionId,
         staleTime: 60 * 1000,
     });
     const existingMarkers = useMemo(() => existingPage?.items ?? [], [existingPage]);
@@ -713,7 +719,9 @@ export function WaypointsStep({ defaultValues, onNext, onBack, onRegionChange }:
                             regionBbox={region?.bbox ?? null}
                             height="560px"
                         />
-                        {!isLoadingMarkers && existingMarkers.length === 0 && (
+                        {/* F7: only show zero-state hint when playlist is also empty, so it
+                            disappears once the creator has added stops. */}
+                        {!isLoadingMarkers && existingMarkers.length === 0 && markerPlaylist.length === 0 && (
                             <p className="mt-2 text-xs text-neutral-500">
                                 No existing markers in {region?.name ?? "this region"} yet — click the map or
                                 search a place to add the first ones.
