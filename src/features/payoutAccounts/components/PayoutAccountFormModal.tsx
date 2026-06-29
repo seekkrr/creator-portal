@@ -107,16 +107,16 @@ export function PayoutAccountFormModal({ open, mode, initial, onClose, onSaved }
             : "Account number";
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-sm animate-fade-in">
             <Card className="w-full max-w-lg shadow-2xl overflow-hidden animate-scale-up">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-                    <h3 className="text-lg font-bold text-slate-900">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100">
+                    <h3 className="text-lg font-display font-semibold text-primary-900 tracking-tight">
                         {isEdit ? "Edit payout account" : "Add payout account"}
                     </h3>
                     <button
                         type="button"
                         onClick={onClose}
-                        className="p-1 text-slate-400 hover:text-slate-700"
+                        className="p-1 text-neutral-400 hover:text-neutral-700"
                         aria-label="Close"
                     >
                         <X className="w-5 h-5" />
@@ -125,13 +125,13 @@ export function PayoutAccountFormModal({ open, mode, initial, onClose, onSaved }
 
                 <form onSubmit={handleSubmit(onSubmit)} noValidate className="p-6 space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                        <label className="block text-sm font-medium text-neutral-700 mb-1.5">
                             Method
                         </label>
                         <select
                             {...register("method")}
                             disabled={isEdit}
-                            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 disabled:bg-slate-50 disabled:text-slate-500"
+                            className="w-full px-3 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 disabled:bg-neutral-50 disabled:text-neutral-500"
                         >
                             <option value="bank_transfer">Bank transfer</option>
                             <option value="upi">UPI</option>
@@ -139,12 +139,12 @@ export function PayoutAccountFormModal({ open, mode, initial, onClose, onSaved }
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                        <label className="block text-sm font-medium text-neutral-700 mb-1.5">
                             Currency
                         </label>
                         <select
                             {...register("currency")}
-                            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400"
+                            className="w-full px-3 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
                         >
                             {PAYOUT_CURRENCIES.map((c) => (
                                 <option key={c} value={c}>
@@ -194,9 +194,9 @@ export function PayoutAccountFormModal({ open, mode, initial, onClose, onSaved }
                         </Button>
                         <Button
                             type="submit"
+                            variant="accent"
                             fullWidth
                             isLoading={isSubmitting}
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white"
                         >
                             {isEdit ? "Save changes" : "Add account"}
                         </Button>
