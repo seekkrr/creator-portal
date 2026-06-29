@@ -14,7 +14,7 @@ export function AuthLayout() {
                         const parent = e.currentTarget.parentElement;
                         if (parent) {
                             parent.innerText = 'SeekKrr';
-                            parent.className = 'mb-8 text-4xl font-bold text-teal-900 font-serif';
+                            parent.className = 'mb-8 text-4xl font-display font-bold text-primary-900 tracking-tight';
                         }
                     }}
                 />
