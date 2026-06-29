@@ -5,6 +5,7 @@ import { MoreVertical, AlertTriangle, Search, Plus } from "lucide-react";
 import { Card, Button, Input } from "@components/ui";
 import { markerService } from "@services/marker.service";
 import { useAuthStore } from "@store/auth.store";
+import { ALLOWED_CREATOR_ROLES } from "@/types";
 import type { MarkerStatus } from "@/types";
 import type { Marker } from "@/types";
 import { toast } from "sonner";
@@ -28,9 +29,12 @@ export function MarkersPage() {
 
     // Staff may delete anything; a creator must NOT delete an admin-approved
     // marker (it is live content). Non-approved states a creator owns (pending,
-    // rejected, hidden) remain deletable.
-    const isStaff = !!user?.role?.some((r) => r === "admin" || r === "super_admin");
-    const canDelete = (status: string) => isStaff || status !== "approved";
+    // rejected, hidden) remain deletable. Reuse the portal's canonical staff
+    // role set so this never drifts from the rest of the access logic.
+    const isStaff = !!user?.role?.some((r) =>
+        (ALLOWED_CREATOR_ROLES as readonly string[]).includes(r)
+    );
+    const canDelete = (status: MarkerStatus) => isStaff || status !== "approved";
 
     const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
     const [search, setSearch] = useState("");
