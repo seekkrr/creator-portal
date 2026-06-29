@@ -94,7 +94,7 @@ export function ContactUsPage() {
                     </p>
                     <button
                         onClick={() => setIsSuccess(false)}
-                        className="inline-flex items-center justify-center px-6 py-2.5 bg-indigo-600 text-white font-medium rounded-full hover:bg-indigo-700 transition-colors"
+                        className="inline-flex items-center justify-center px-6 py-2.5 bg-accent-500 text-white font-medium rounded-full hover:bg-accent-600 transition-colors"
                     >
                         Send Another Message
                     </button>
@@ -120,7 +120,7 @@ export function ContactUsPage() {
 
                     <div className="space-y-6 pt-4">
                         <div className="flex items-center gap-4 text-neutral-600">
-                            <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                            <div className="w-10 h-10 rounded-full bg-primary-50 text-primary-600 flex items-center justify-center shrink-0">
                                 <Mail className="w-5 h-5" />
                             </div>
                             <div>
@@ -129,7 +129,7 @@ export function ContactUsPage() {
                             </div>
                         </div>
                         <div className="flex items-center gap-4 text-neutral-600">
-                            <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                            <div className="w-10 h-10 rounded-full bg-primary-50 text-primary-600 flex items-center justify-center shrink-0">
                                 <MessageSquare className="w-5 h-5" />
                             </div>
                             <div>
@@ -158,7 +158,7 @@ export function ContactUsPage() {
                                     value={formData.name}
                                     onChange={handleChange}
                                     placeholder="John Doe"
-                                    className="block w-full pl-10 pr-3 py-2.5 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-neutral-50/50 transition-all outline-none"
+                                    className="block w-full pl-10 pr-3 py-2.5 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 bg-neutral-50 transition-all outline-none"
                                     required
                                 />
                             </div>
@@ -179,7 +179,7 @@ export function ContactUsPage() {
                                     value={formData.email}
                                     onChange={handleChange}
                                     placeholder="john@example.com"
-                                    className="block w-full pl-10 pr-3 py-2.5 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-neutral-50/50 transition-all outline-none"
+                                    className="block w-full pl-10 pr-3 py-2.5 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 bg-neutral-50 transition-all outline-none"
                                     required
                                 />
                             </div>
@@ -200,7 +200,7 @@ export function ContactUsPage() {
                                     value={formData.mobile}
                                     onChange={handleChange}
                                     placeholder="9876543210"
-                                    className="block w-full pl-10 pr-3 py-2.5 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-neutral-50/50 transition-all outline-none"
+                                    className="block w-full pl-10 pr-3 py-2.5 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 bg-neutral-50 transition-all outline-none"
                                 />
                             </div>
                         </div>
@@ -216,7 +216,7 @@ export function ContactUsPage() {
                                 onChange={handleChange}
                                 rows={4}
                                 placeholder="How can we help you?"
-                                className="block w-full p-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-neutral-50/50 transition-all outline-none resize-none"
+                                className="block w-full p-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 bg-neutral-50 transition-all outline-none resize-none"
                                 required
                             />
                         </div>
@@ -224,7 +224,7 @@ export function ContactUsPage() {
                         <button
                             type="submit"
                             disabled={isSubmitting}
-                            className="w-full flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all disabled:opacity-70 disabled:cursor-not-allowed shadow-md hover:shadow-lg disabled:shadow-none translate-y-0 hover:-translate-y-0.5 active:translate-y-0"
+                            className="w-full flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-xl text-white bg-accent-500 hover:bg-accent-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-500 transition-all disabled:opacity-70 disabled:cursor-not-allowed shadow-md hover:shadow-lg disabled:shadow-none translate-y-0 hover:-translate-y-0.5 active:translate-y-0"
                         >
                             {isSubmitting ? (
                                 <>
