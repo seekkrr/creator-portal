@@ -447,7 +447,7 @@ export function ProfilePage() {
             actions={{
               profile_complete: { onClick: scrollToEditForm },
               first_quest_created: { onClick: () => navigate("/creator/quest/create") },
-              payout_account_set: { disabledHint: "Payout accounts are coming soon" },
+              payout_account_set: { onClick: () => navigate("/creator/payout-accounts") },
             }}
           />
 

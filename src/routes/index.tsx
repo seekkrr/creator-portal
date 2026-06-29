@@ -73,6 +73,12 @@ const TaskDetailPage = lazyRetry(() =>
     import("@features/tasks/pages/TaskDetailPage").then((m) => ({ default: m.TaskDetailPage }))
 );
 
+const PayoutAccountsPage = lazyRetry(() =>
+    import("@features/payoutAccounts/pages/PayoutAccountsPage").then((m) => ({
+        default: m.PayoutAccountsPage,
+    }))
+);
+
 export const router = createBrowserRouter([
     {
         element: <RootWrapper />,
@@ -242,6 +248,14 @@ export const router = createBrowserRouter([
                                 element: (
                                     <SuspenseWrapper>
                                         <TaskDetailPage />
+                                    </SuspenseWrapper>
+                                ),
+                            },
+                            {
+                                path: "payout-accounts",
+                                element: (
+                                    <SuspenseWrapper>
+                                        <PayoutAccountsPage />
                                     </SuspenseWrapper>
                                 ),
                             },

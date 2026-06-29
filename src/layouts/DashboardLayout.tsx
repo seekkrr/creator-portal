@@ -52,6 +52,12 @@ export function DashboardLayout() {
                                 My Tasks
                             </Link>
                             <Link
+                                to="/creator/payout-accounts"
+                                className="text-base font-normal text-neutral-600 hover:text-neutral-900 transition-colors"
+                            >
+                                My Payouts
+                            </Link>
+                            <Link
                                 to="/creator/profile"
                                 className="text-base font-normal text-neutral-600 hover:text-neutral-900 transition-colors"
                             >
@@ -116,6 +122,13 @@ export function DashboardLayout() {
                                 onClick={() => setIsMobileMenuOpen(false)}
                             >
                                 My Tasks
+                            </Link>
+                            <Link
+                                to="/creator/payout-accounts"
+                                className="block text-base font-normal text-neutral-600 hover:text-neutral-900"
+                                onClick={() => setIsMobileMenuOpen(false)}
+                            >
+                                My Payouts
                             </Link>
                             <Link
                                 to="/creator/profile"
