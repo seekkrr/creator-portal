@@ -3,6 +3,15 @@ import type { CreateTaskConfigPayload, UpdateTaskConfigPayload, TaskType } from 
 
 export const TASK_TYPES = ["photo_challenge", "qr_scan", "quiz", "collection", "social", "checkin"] as const;
 
+export const TASK_TYPE_LABELS: Record<TaskType, string> = {
+    photo_challenge: "Photo Challenge",
+    qr_scan: "QR Scan",
+    quiz: "Quiz",
+    collection: "Collection",
+    social: "Social",
+    checkin: "Check-in",
+};
+
 const quizData = z.object({
     question: z.string().min(1, "Question is required"),
     options: z.array(z.string().min(1)).min(2, "At least two options"),

@@ -6,7 +6,7 @@ import { X } from "lucide-react";
 import { toast } from "sonner";
 import { Card, Button, Input, Textarea } from "@components/ui";
 import { taskService } from "@services/task.service";
-import { taskFormSchema, toCreatePayload, toUpdatePayload, TASK_TYPES } from "../schemas/task.schema";
+import { taskFormSchema, toCreatePayload, toUpdatePayload, TASK_TYPES, TASK_TYPE_LABELS } from "../schemas/task.schema";
 import type { TaskFormData } from "../schemas/task.schema";
 import type { TaskConfig } from "@/types";
 import { MarkerSelect } from "./MarkerSelect";
@@ -15,15 +15,6 @@ import { QrFields } from "./task-type-fields/QrFields";
 import { PhotoFields } from "./task-type-fields/PhotoFields";
 import { CollectionFields } from "./task-type-fields/CollectionFields";
 import { SocialFields } from "./task-type-fields/SocialFields";
-
-const TASK_TYPE_LABELS: Record<string, string> = {
-    photo_challenge: "Photo Challenge",
-    qr_scan: "QR Scan",
-    quiz: "Quiz",
-    collection: "Collection",
-    social: "Social",
-    checkin: "Check-in",
-};
 
 interface TaskFormModalProps {
     open: boolean;

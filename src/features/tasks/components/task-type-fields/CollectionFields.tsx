@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useRef } from "react";
 import type { UseFormWatch, UseFormSetValue } from "react-hook-form";
 import { Plus, Trash2 } from "lucide-react";
 import { Input } from "@components/ui";
@@ -12,6 +12,12 @@ interface CollectionFieldsProps {
 export function CollectionFields({ watch, setValue }: CollectionFieldsProps) {
     const items = (watch("collection_items") ?? []) as string[];
 
+    // Stable keys for each item row — only used as React `key`s, never sent in the payload.
+    const stableIdCounter = useRef(0);
+    const [itemKeys, setItemKeys] = useState<number[]>(() =>
+        items.map(() => stableIdCounter.current++)
+    );
+
     const handleChange = (index: number, val: string) => {
         const next = [...items];
         next[index] = val;
@@ -19,10 +25,13 @@ export function CollectionFields({ watch, setValue }: CollectionFieldsProps) {
     };
 
     const handleAdd = () => {
+        const newKey = stableIdCounter.current++;
+        setItemKeys((prev) => [...prev, newKey]);
         setValue("collection_items", [...items, ""]);
     };
 
     const handleRemove = (index: number) => {
+        setItemKeys((prev) => prev.filter((_, i) => i !== index));
         const next = items.filter((_, i) => i !== index);
         setValue("collection_items", next);
     };
@@ -31,8 +40,10 @@ export function CollectionFields({ watch, setValue }: CollectionFieldsProps) {
         <div className="space-y-4 p-4 bg-purple-50/50 rounded-xl border border-purple-100">
             <h4 className="text-sm font-semibold text-purple-700 uppercase tracking-wider">Collection Items</h4>
             <div className="space-y-2">
-                {items.map((item, index) => (
-                    <div key={index} className="flex items-center gap-2">
+                {items.map((item, index) => {
+                    const stableKey = itemKeys[index] ?? index;
+                    return (
+                    <div key={stableKey} className="flex items-center gap-2">
                         <div className="flex-1">
                             <Input
                                 placeholder={`Item ${index + 1}`}
@@ -49,7 +60,8 @@ export function CollectionFields({ watch, setValue }: CollectionFieldsProps) {
                             <Trash2 className="w-4 h-4" />
                         </button>
                     </div>
-                ))}
+                    );
+                })}
                 <button
                     type="button"
                     onClick={handleAdd}

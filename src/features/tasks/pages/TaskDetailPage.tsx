@@ -7,15 +7,7 @@ import { taskService } from "@services/task.service";
 import { toast } from "sonner";
 import { TaskFormModal } from "../components/TaskFormModal";
 import type { TaskType } from "@/types";
-
-const TASK_TYPE_LABELS: Record<TaskType, string> = {
-    photo_challenge: "Photo Challenge",
-    qr_scan: "QR Scan",
-    quiz: "Quiz",
-    collection: "Collection",
-    social: "Social",
-    checkin: "Check-in",
-};
+import { TASK_TYPE_LABELS } from "../schemas/task.schema";
 
 const TYPE_BADGE_VARIANT: Record<TaskType, "primary" | "success" | "warning" | "info" | "default" | "danger"> = {
     photo_challenge: "success",

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useRef } from "react";
 import type { UseFormRegister, UseFormWatch, UseFormSetValue, FieldErrors } from "react-hook-form";
 import { Plus, Trash2 } from "lucide-react";
 import { Input } from "@components/ui";
@@ -17,7 +17,15 @@ export function QuizFields({ register, watch, setValue, errors }: QuizFieldsProp
 
     const quizErrors = errors.quiz_data as Record<string, { message?: string } | Array<{ message?: string }>> | undefined;
 
+    // Stable keys for each option row — only used as React `key`s, never sent in the payload.
+    const stableIdCounter = useRef(0);
+    const [optionKeys, setOptionKeys] = useState<number[]>(() =>
+        options.map(() => stableIdCounter.current++)
+    );
+
     const handleAddOption = () => {
+        const newKey = stableIdCounter.current++;
+        setOptionKeys((prev) => [...prev, newKey]);
         setValue("quiz_data.options", [...options, ""], { shouldValidate: false });
     };
 
@@ -26,13 +34,19 @@ export function QuizFields({ register, watch, setValue, errors }: QuizFieldsProp
         if (removed !== "" && removed === correctAnswer) {
             setValue("quiz_data.correct_answer", "");
         }
+        setOptionKeys((prev) => prev.filter((_, i) => i !== index));
         setValue("quiz_data.options", options.filter((_, i) => i !== index), { shouldValidate: false });
     };
 
     const handleOptionChange = (index: number, val: string) => {
+        const prev = options[index] ?? "";
         const next = [...options];
         next[index] = val;
         setValue(`quiz_data.options`, next, { shouldValidate: false });
+        // Keep correct_answer in sync: if this option WAS the correct answer, update it to the new text.
+        if (prev !== "" && prev === correctAnswer) {
+            setValue("quiz_data.correct_answer", val, { shouldValidate: true });
+        }
     };
 
     const handleSetCorrect = (optionVal: string) => {
@@ -59,9 +73,10 @@ export function QuizFields({ register, watch, setValue, errors }: QuizFieldsProp
                     const isCorrect = optionVal !== "" && optionVal === correctAnswer;
                     const optionErrors = Array.isArray(quizErrors?.["options"]) ? quizErrors?.["options"] : undefined;
                     const optionError = optionErrors?.[index]?.message;
+                    const stableKey = optionKeys[index] ?? index;
 
                     return (
-                        <div key={index} className="flex items-center gap-2">
+                        <div key={stableKey} className="flex items-center gap-2">
                             <button
                                 type="button"
                                 onClick={() => handleSetCorrect(optionVal)}

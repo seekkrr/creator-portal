@@ -8,17 +8,7 @@ import type { TaskType } from "@/types";
 import { toast } from "sonner";
 import { TaskFormModal } from "../components/TaskFormModal";
 import type { TaskConfig } from "@/types";
-
-const TASK_TYPES: TaskType[] = ["photo_challenge", "qr_scan", "quiz", "collection", "social", "checkin"];
-
-const TASK_TYPE_LABELS: Record<TaskType, string> = {
-    photo_challenge: "Photo Challenge",
-    qr_scan: "QR Scan",
-    quiz: "Quiz",
-    collection: "Collection",
-    social: "Social",
-    checkin: "Check-in",
-};
+import { TASK_TYPES, TASK_TYPE_LABELS } from "../schemas/task.schema";
 
 const TYPE_BADGE_COLORS: Record<TaskType, string> = {
     photo_challenge: "bg-emerald-100 text-emerald-700 border border-emerald-200",
