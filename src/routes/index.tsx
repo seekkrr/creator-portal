@@ -11,12 +11,16 @@ const LoginPage = lazyRetry(() =>
     import("@features/auth/pages/LoginPage").then((m) => ({ default: m.LoginPage }))
 );
 
-const AuthCallbackPage = lazyRetry(() =>
-    import("@features/auth/pages/AuthCallbackPage").then((m) => ({ default: m.AuthCallbackPage }))
+const AccessDeniedPage = lazyRetry(() =>
+    import("@features/auth/pages/AccessDeniedPage").then((m) => ({ default: m.AccessDeniedPage }))
 );
 
 const DashboardPage = lazyRetry(() =>
     import("@features/dashboard/pages/DashboardPage").then((m) => ({ default: m.DashboardPage }))
+);
+
+const ProfilePage = lazyRetry(() =>
+    import("@features/profile/pages/ProfilePage").then((m) => ({ default: m.ProfilePage }))
 );
 
 const CreateQuestPage = lazyRetry(() =>
@@ -107,10 +111,10 @@ export const router = createBrowserRouter([
                                 ),
                             },
                             {
-                                path: "auth/callback",
+                                path: "access-denied",
                                 element: (
                                     <SuspenseWrapper>
-                                        <AuthCallbackPage />
+                                        <AccessDeniedPage />
                                     </SuspenseWrapper>
                                 ),
                             },
@@ -128,6 +132,14 @@ export const router = createBrowserRouter([
                                 element: (
                                     <SuspenseWrapper>
                                         <DashboardPage />
+                                    </SuspenseWrapper>
+                                ),
+                            },
+                            {
+                                path: "profile",
+                                element: (
+                                    <SuspenseWrapper>
+                                        <ProfilePage />
                                     </SuspenseWrapper>
                                 ),
                             },

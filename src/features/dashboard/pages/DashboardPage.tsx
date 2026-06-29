@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom";
 import { useAuthStore } from "@store/auth.store";
-import { MapPin, Compass, Trophy, AlertCircle, Clock, Play } from "lucide-react";
+import { useCreatorStats } from "@hooks/useCreatorStats";
+import { MapPin, Compass, Trophy, Clock, Play, BadgeCheck, AlertTriangle } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import { creatorService, CreatorStats } from "@services/creator.service";
 import { WALKTHROUGH_VIDEOS } from "@config/walkthroughVideos";
 
 // ... (StackedHeroCards remains same)
@@ -149,48 +149,78 @@ function HowToVideoPlayer() {
 
 export function DashboardPage() {
     const { user, creator } = useAuthStore();
-    const [stats, setStats] = useState<CreatorStats | null>(null);
 
-    useEffect(() => {
-        async function fetchStats() {
-            if (user?._id) {
-                try {
-                    const data = await creatorService.getStats(user._id);
-                    setStats(data.stats);
-                } catch (error) {
-                    console.error("Failed to fetch dashboard stats:", error);
-                }
-            }
-        }
-        fetchStats();
-    }, [user?._id]);
-
-    const isRejected = creator?.status === "rejected";
-    const isApproved = creator?.status === "approved";
+    // Headline stats are pulled live from /creators/me/analytics/summary on mount,
+    // falling back to the creator profile cached at login.
+    const stats = useCreatorStats();
+    const isVerified = !!creator?.is_verified;
+    // Operational lifecycle. The portal login gate (evaluateCreatorAccess) only lets
+    // ACTIVE creators (or staff, where creator is null) in, so the suspended/rejected
+    // banners are defensive — they should only ever surface on a stale session.
+    const status = creator?.status;
+    const isBlocked = status === "suspended" || status === "rejected";
 
     return (
-        <div className="animate-fade-in font-sans space-y-12 lg:space-y-24">
-            {/* Approval Status Banner */}
-            {!isApproved && (
-                <div className={`p-4 rounded-2xl flex items-center gap-4 ${isRejected ? 'bg-red-50 text-red-700 border border-red-100' : 'bg-amber-50 text-amber-700 border border-amber-100'}`}>
-                    {isRejected ? <AlertCircle className="w-5 h-5" /> : <Clock className="w-5 h-5 animate-pulse" />}
+        <div className="animate-fade-in font-sans space-y-4 lg:space-y-6">
+            {/* Account status banners (defensive — the login gate normally blocks these) */}
+            {status === "suspended" && (
+                <div className="p-4 rounded-2xl flex items-center gap-4 bg-red-50 text-red-700 border border-red-100">
+                    <AlertTriangle className="w-5 h-5 flex-shrink-0" />
                     <div>
-                        <p className="font-semibold">
-                            {isRejected ? "Application Rejected" : "Verification in Progress"}
-                        </p>
+                        <p className="font-semibold">Account suspended</p>
                         <p className="text-sm opacity-90">
-                            {isRejected
-                                ? "Your creator application was not approved. You can still create draft quests, but cannot submit them for review."
-                                : "We're currently reviewing your creator application. You can start building your quests as drafts while you wait!"}
+                            Your creator account is suspended. Please contact support to restore access.
+                        </p>
+                    </div>
+                </div>
+            )}
+            {status === "rejected" && (
+                <div className="p-4 rounded-2xl flex items-center gap-4 bg-red-50 text-red-700 border border-red-100">
+                    <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+                    <div>
+                        <p className="font-semibold">Application not approved</p>
+                        <p className="text-sm opacity-90">
+                            Your creator application was not approved, so quest tools are unavailable.
                         </p>
                     </div>
                 </div>
             )}
 
+            {/* Verification is a trust BADGE, never a submission blocker. */}
+            {!isBlocked && (isVerified ? (
+                <div className="p-4 rounded-2xl max-[420px]:hidden flex items-center gap-4 bg-indigo-50 text-indigo-700 border border-indigo-100">
+                    <BadgeCheck className="w-5 h-5 flex-shrink-0" />
+                    <div>
+                        <p className="font-semibold">Verified Creator</p>
+                        <p className="text-sm opacity-90">
+                            Your account is verified — your published quests carry the Verified Creator badge.
+                        </p>
+                    </div>
+                </div>
+            ) : (
+                <div className="p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 bg-amber-50 text-amber-800 border border-amber-100">
+                    <div className="flex items-center gap-4 flex-1">
+                        <Clock className="w-5 h-5 flex-shrink-0" />
+                        <div>
+                            <p className="font-semibold">Not yet verified</p>
+                            <p className="text-sm opacity-90">
+                                You can create and submit quests for review right now. Getting verified just
+                                adds a Verified Creator badge to your published quests.
+                            </p>
+                        </div>
+                    </div>
+                    <Link to="/creator/profile" className="flex-shrink-0">
+                        <button className="px-4 py-2 rounded-full bg-white border border-amber-200 text-amber-800 text-sm font-semibold hover:bg-amber-100 transition-colors whitespace-nowrap cursor-pointer">
+                            Get verified
+                        </button>
+                    </Link>
+                </div>
+            ))}
+
             {/* Hero Section */}
             <div className="flex flex-col lg:flex-row gap-8 lg:gap-24 items-center justify-between mt-4">
-                <div className="space-y-6 lg:space-y-10 max-w-2xl flex-1">
-                    <h1 className="text-4xl lg:text-7xl font-light text-neutral-900 leading-tight tracking-tight">
+                <div className="space-y-4 sm:space-y-6 lg:space-y-8 xl:space-y-10 max-w-2xl flex-1">
+                    <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl xl:text-6xl 2xl:text-7xl font-light text-neutral-900 leading-tight tracking-tight">
                         Welcome to SeekKrr, {user?.first_name ? `${user.first_name}` : "Creator"}
                     </h1>
 
@@ -205,8 +235,8 @@ export function DashboardPage() {
                         </p>
                     </div>
 
-                    <div className="pt-2 lg:pt-4">
-                        <p className="text-lg lg:text-xl font-medium text-neutral-900 mb-4 lg:mb-8">
+                    <div className="pt-1 lg:pt-2">
+                        <p className="text-lg lg:text-xl font-medium text-neutral-900 mb-3 sm:mb-4 lg:mb-6 xl:mb-8">
                             What's the wait then, create your first Quest today
                         </p>
                         <Link to="/creator/quest/create">
@@ -231,7 +261,7 @@ export function DashboardPage() {
                         </div>
                         <div>
                             <p className="text-sm font-medium text-neutral-500 uppercase tracking-wider">Quests Published</p>
-                            <p className="text-3xl font-bold text-neutral-900">{stats?.total_quests ?? 0}</p>
+                            <p className="text-3xl font-bold text-neutral-900">{stats.total_quests}</p>
                         </div>
                     </div>
                 </div>
@@ -242,8 +272,8 @@ export function DashboardPage() {
                             <Compass className="w-6 h-6" />
                         </div>
                         <div>
-                            <p className="text-sm font-medium text-neutral-500 uppercase tracking-wider">Impressions</p>
-                            <p className="text-3xl font-bold text-neutral-900">{stats?.impressions ?? 0}</p>
+                            <p className="text-sm font-medium text-neutral-500 uppercase tracking-wider">Travelers Served</p>
+                            <p className="text-3xl font-bold text-neutral-900">{stats.travelers_served}</p>
                         </div>
                     </div>
                 </div>
@@ -255,7 +285,7 @@ export function DashboardPage() {
                         </div>
                         <div>
                             <p className="text-sm font-medium text-neutral-500 uppercase tracking-wider">Total Earnings</p>
-                            <p className="text-3xl font-bold text-neutral-900">₹{stats?.total_earnings?.toLocaleString() ?? 0}</p>
+                            <p className="text-3xl font-bold text-neutral-900">₹{stats.total_earnings.toLocaleString()}</p>
                         </div>
                     </div>
                 </div>

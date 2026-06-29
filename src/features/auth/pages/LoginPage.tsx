@@ -1,9 +1,40 @@
+import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { authService } from "@services/auth.service";
+import { useAuthStore } from "@store/auth.store";
+import { evaluateCreatorAccess } from "@/types";
 import { Card } from "@components/ui";
 
 export function LoginPage() {
-    const handleGoogleLogin = () => {
-        authService.initiateGoogleLogin();
+    const { login, checkAuth } = useAuthStore();
+    const navigate = useNavigate();
+
+    const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
+        if (!credentialResponse.credential) {
+            toast.error("Invalid Google login response.");
+            return;
+        }
+
+        try {
+            const tokens = await authService.loginWithGoogleCredential(credentialResponse.credential);
+            login(tokens);
+
+            const success = await checkAuth();
+            if (success) {
+                toast.success("Welcome back!");
+                navigate("/creator/dashboard", { replace: true });
+            } else {
+                const state = useAuthStore.getState();
+                if (state.user && !evaluateCreatorAccess(state.user, state.creator).allowed) {
+                    navigate("/creator/access-denied", { replace: true });
+                    return;
+                }
+                toast.error("Failed to load user profile.");
+            }
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Authentication failed. Please try again.");
+        }
     };
 
     return (
@@ -31,16 +62,19 @@ export function LoginPage() {
                         Step In. Build What Others Explore.
                     </p>
 
-                    <div className="bg-white border border-neutral-200 rounded-2xl lg:rounded-[2rem] p-6 lg:p-6 shadow-sm lg:shadow-md shadow-neutral-100/50 w-full">
+                    <div className="bg-white border border-neutral-200 rounded-2xl lg:rounded-[2rem] p-6 lg:p-6 shadow-sm lg:shadow-md shadow-neutral-100/50 w-full flex flex-col items-center">
                         <h3 className="text-2xl lg:text-[2em] leading-none font-medium text-brand-purple text-center mb-6 lg:mb-6 tracking-wide">Login</h3>
 
-                        <button
-                            onClick={handleGoogleLogin}
-                            className="w-full bg-white text-neutral-700 border border-neutral-300 hover:bg-neutral-50 hover:border-neutral-400 active:bg-neutral-100 transition-all duration-200 h-12 lg:h-[4em] rounded-full flex items-center justify-center gap-3 lg:gap-4 group hover:shadow-sm px-4"
-                        >
-                            <img src="/google_logo.svg" alt="" className="w-5 h-5 lg:w-8 lg:h-8 flex-shrink-0" />
-                            <span className="font-medium text-sm lg:text-[1.25em] whitespace-nowrap overflow-hidden text-ellipsis font-['Roboto',sans-serif]">Sign in with Google</span>
-                        </button>
+                        <div className="w-full flex justify-center">
+                            <GoogleLogin
+                                onSuccess={handleGoogleSuccess}
+                                onError={() => toast.error("Google Login Failed")}
+                                useOneTap
+                                shape="pill"
+                                size="large"
+                                text="signin_with"
+                            />
+                        </div>
                     </div>
                 </div>
             </div>

@@ -4,8 +4,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { Toaster } from "sonner";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 import { router } from "@routes/index";
 import { useAuthStore } from "@store/auth.store";
+import { config } from "@config/env";
 
 // Create React Query client
 const queryClient = new QueryClient({
@@ -38,9 +40,10 @@ export function App() {
     }
 
     return (
-        <QueryClientProvider client={queryClient}>
-            <RouterProvider router={router} />
-            <Toaster
+        <GoogleOAuthProvider clientId={config.googleClientId}>
+            <QueryClientProvider client={queryClient}>
+                <RouterProvider router={router} />
+                <Toaster
                 position="top-right"
                 toastOptions={{
                     duration: 4000,
@@ -57,6 +60,7 @@ export function App() {
             />
             <SpeedInsights />
             {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
-        </QueryClientProvider>
+            </QueryClientProvider>
+        </GoogleOAuthProvider>
     );
 }

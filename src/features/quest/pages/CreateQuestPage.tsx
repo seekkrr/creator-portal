@@ -14,25 +14,61 @@ import { ReviewStep } from "../components/ReviewStep";
 import {
   type LocationStepData,
   type DetailsStepData,
-  type WaypointsStepData,
-  type WaypointDetailsStepData,
-  type NarrativeStepData,
+  type MarkerPlaylistStepData,
+  type MarkerPlaylistItemData,
+  type QuestTheme,
+  type CreateQuestFormData,
   defaultFormValues,
 } from "../schemas/quest.schema";
-import type { CreateQuestFormData, CreateQuestPayload, QuestStatus } from "@/types";
+import type {
+  CloudinaryAsset,
+  CreateQuestPayload,
+  PlaylistItemInput,
+  QuestStatus,
+  RegionType,
+  VoicePersona,
+} from "@/types";
 
+// Wizard: Location → Details → Markers → Marker Details → Narrative → Review.
 type Step = 1 | 2 | 3 | 4 | 5 | 6;
 
 const stepLabels: Record<Step, string> = {
   1: "Location",
   2: "Details",
-  3: "Waypoints",
-  4: "Waypoint Details",
+  3: "Markers",
+  4: "Marker Details",
   5: "Narrative",
   6: "Review",
 };
 
+const ALL_STEPS: Step[] = [1, 2, 3, 4, 5, 6];
+const LAST_STEP = 6;
+
 const SESSION_STORAGE_KEY = "quest_creation_form";
+
+// Valid lowercase theme enum values accepted by the create payload + schema.
+const VALID_THEMES: readonly QuestTheme[] = [
+  "adventure", "romance", "culture", "food", "history", "nature",
+  "spiritual", "photography", "archaeological", "offbeat", "finding_yourself", "other",
+];
+
+/** Normalize a backend theme string (Title-Case / spaced) to the lowercase enum. */
+function normalizeTheme(value: string): QuestTheme | null {
+  const slug = value.trim().toLowerCase().replace(/[\s-]+/g, "_") as QuestTheme;
+  return VALID_THEMES.includes(slug) ? slug : null;
+}
+
+// The wizard form holds the V2 quest fields plus the extra per-marker detail
+// the restored Marker-Details / Narrative steps collect. Those legacy-shaped
+// extras are carried as `unknown` here until they're wired into the V2 payload
+// in a later sequential step.
+type WizardFormData = Partial<CreateQuestFormData> & {
+  galleryImages?: CloudinaryAsset[];
+  // Optional quest-level narrative (Step 5). Posted to /narratives after the
+  // quest is created (its attach_id is the new quest id), never embedded in the
+  // quest payload.
+  questNarrative?: { title?: string; content?: string; voice_persona?: string };
+};
 
 export function CreateQuestPage() {
   const navigate = useNavigate();
@@ -40,9 +76,12 @@ export function CreateQuestPage() {
   const isEditing = !!id;
 
   const [currentStep, setCurrentStep] = useState<Step>(1);
-  const [formData, setFormData] = useState<Partial<CreateQuestFormData>>(defaultFormValues);
+  const [formData, setFormData] = useState<WizardFormData>(defaultFormValues);
   const [isQuestInitialized, setIsQuestInitialized] = useState(false);
-  const [isNarrativesInitialized, setIsNarrativesInitialized] = useState(false);
+  // Gates the sessionStorage SAVE until the initial restore has run, so the
+  // restore (or a remount under React StrictMode) can't be clobbered by a save
+  // of the default empty state. Without this the draft resets to step 1 on reload.
+  const [hydrated, setHydrated] = useState(false);
 
   // Fetch quest data if editing
   const { data: existingQuest, isLoading: isLoadingQuest } = useQuery({
@@ -51,233 +90,196 @@ export function CreateQuestPage() {
     enabled: isEditing,
   });
 
-  // Populate form data when quest is loaded (only once to prevent overwriting user changes on refetch)
+  // Prefill the wizard from the V2 QuestDetail (only once, so refetches don't
+  // clobber in-progress edits).
   useEffect(() => {
     if (existingQuest && !isQuestInitialized) {
-      // Prevent editing of Published quests by creators
+      // Creators cannot edit a Published quest.
       if (existingQuest.status === "Published") {
         toast.error("Published quests cannot be edited. Please contact an administrator.");
         navigate("/creator/quests");
         return;
       }
 
+      const themes = (existingQuest.theme ?? [])
+        .map(normalizeTheme)
+        .filter((t): t is QuestTheme => t !== null);
+
+      const regionSummary = existingQuest.region_summary;
+      const regionId =
+        regionSummary && "id" in regionSummary ? (regionSummary.id ?? undefined) : undefined;
+      const regionName =
+        regionSummary && "name" in regionSummary
+          ? (regionSummary.name ?? undefined)
+          : undefined;
+
+      // marker_summaries → playlist items (existing markers, with coords when unlocked).
+      const markerPlaylist: MarkerPlaylistItemData[] = (existingQuest.marker_summaries ?? []).map(
+        (m) => ({
+          marker_id: m.marker_id,
+          is_required: m.is_required ?? true,
+          thingsToDo: m.things_to_do_text ?? undefined,
+          thingsToDoImage: m.things_to_do_image_url
+            ? { public_id: "", secure_url: m.things_to_do_image_url }
+            : undefined,
+          _display:
+            m.coordinates && m.coordinates.lng != null && m.coordinates.lat != null
+              ? { title: m.name ?? "Marker", lng: m.coordinates.lng, lat: m.coordinates.lat }
+              : undefined,
+        })
+      );
+
+      const startPoint = existingQuest.start_point;
       const mappedData: Partial<CreateQuestFormData> = {
-        title: existingQuest.metadata?.title || "",
-        description: Array.isArray(existingQuest.metadata?.description)
-          ? existingQuest.metadata.description[0] || ""
-          : typeof existingQuest.metadata?.description === "string"
-            ? existingQuest.metadata.description
-            : "",
-        theme: existingQuest.metadata?.theme || "Culture",
-        difficulty: existingQuest.metadata?.difficulty || "Medium",
-        duration: existingQuest.metadata?.duration_minutes,
-        city: existingQuest.location?.region,
-        latitude: existingQuest.location?.start_location.coordinates[1] || 0,
-        longitude: existingQuest.location?.start_location.coordinates[0] || 0,
-        waypoints:
-          existingQuest.location?.route_waypoints?.map((rw) => ({
-            latitude: rw.location.coordinates[1] || 0,
-            longitude: rw.location.coordinates[0] || 0,
-            place_name: `Waypoint ${rw.order + 1}`,
-          })) || [],
-        waypointDetails:
-          existingQuest.steps?.map((step) => ({
-            description: step.description || "",
-            howToReach: step.how_to_reach || "",
-            images: step.cloudinary_assets || [],
-          })) || [],
-        galleryImages: existingQuest.media?.cloudinary_assets || [],
-        sourceUrl: existingQuest.media?.reel_url || "",
-        narratives: [], // Will be populated from separate API call
+        locationType: "city",
+        title: existingQuest.title ?? "",
+        description: existingQuest.description ?? "",
+        theme: themes.length > 0 ? themes : ["adventure"],
+        difficulty: existingQuest.difficulty ?? "moderate",
+        duration: existingQuest.duration_minutes ?? 60,
+        regionId,
+        regionName,
+        city: regionName,
+        latitude: startPoint?.lat ?? undefined,
+        longitude: startPoint?.lng ?? undefined,
+        sourceUrl: existingQuest.reel_urls?.[0] ?? "",
+        markerPlaylist,
+        galleryImages: existingQuest.cloudinary_assets ?? [],
       };
       setFormData(mappedData);
       setIsQuestInitialized(true);
     }
   }, [existingQuest, isQuestInitialized, navigate]);
 
-  // Fetch existing narratives when editing
-  const { data: existingNarratives } = useQuery({
-    queryKey: ["quest-narratives", id],
-    queryFn: () => narrativeService.getNarrativesByQuest(id!),
-    enabled: isEditing && !!existingQuest,
-  });
-
-  // Map existing narratives to form format when loaded
+  // Restore an in-progress draft (the fallback when the creator navigates away,
+  // closes the tab, or reloads). Runs once; sets `hydrated` so saving can begin.
   useEffect(() => {
-    // Only initialize narratives once and only if not already initialized
-    if (!isNarrativesInitialized && existingNarratives?.narratives && existingQuest?.steps) {
-      const steps = existingQuest.steps;
-      const mappedNarratives = existingNarratives.narratives.map((n) => {
-        // Match by order since QuestDetailsStep doesn't have _id in creator types
-        const fromIdx = Math.max(0, n.from_step_order);
-        const toIdx = Math.max(1, n.to_step_order);
-        return {
-          fromStepIndex: fromIdx < steps.length ? fromIdx : 0,
-          toStepIndex: toIdx < steps.length ? toIdx : Math.min(1, steps.length - 1),
-          title: n.title || "",
-          content: n.content,
-          triggerRadiusM: n.trigger_radius_m,
-          isMandatory: n.is_mandatory,
-        };
-      });
-      setFormData((prev) => ({ ...prev, narratives: mappedNarratives }));
-      setIsNarrativesInitialized(true);
+    if (isEditing) {
+      setHydrated(true);
+      return;
     }
-  }, [existingNarratives, existingQuest, isNarrativesInitialized]);
-
-  // Save/Load session storage only if NOT editing
-  useEffect(() => {
-    if (isEditing) return;
     const saved = sessionStorage.getItem(SESSION_STORAGE_KEY);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        setFormData((prev) => ({ ...prev, ...parsed.formData }));
-        setCurrentStep(parsed.currentStep || 1);
+        if (parsed.formData) setFormData((prev) => ({ ...prev, ...parsed.formData }));
+        if (parsed.currentStep) setCurrentStep(parsed.currentStep);
       } catch (e) {
         console.error(e);
       }
     }
+    setHydrated(true);
   }, [isEditing]);
 
+  // Persist the draft on every change — but ONLY after the restore above has run,
+  // so a remount can't overwrite the saved draft with the default empty state.
   useEffect(() => {
-    if (isEditing) return;
+    if (isEditing || !hydrated) return;
     sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ formData, currentStep }));
-  }, [formData, currentStep, isEditing]);
+  }, [formData, currentStep, isEditing, hydrated]);
 
   const clearSession = () => sessionStorage.removeItem(SESSION_STORAGE_KEY);
 
-  // Save/Update quest mutation
+  // Build a V2 CreateQuestPayload from the wizard form data.
+  const buildPayload = (data: CreateQuestFormData, submit: boolean): CreateQuestPayload => {
+    const marker_playlist: PlaylistItemInput[] = (data.markerPlaylist ?? []).map((item, index) => {
+      const base: PlaylistItemInput = {
+        // Backend requires suggested_order >= 1 (1-based), so offset the 0-based index.
+        suggested_order: index + 1,
+        is_required: item.is_required,
+        ...(item.custom_description ? { custom_description: item.custom_description } : {}),
+        // Step 4 per-quest fields (stored on the playlist item, nullable on V2).
+        ...(item.thingsToDo ? { things_to_do_text: item.thingsToDo } : {}),
+        ...(item.thingsToDoImage?.secure_url
+          ? { things_to_do_image_url: item.thingsToDoImage.secure_url }
+          : {}),
+      };
+      if (item.marker_id) {
+        return { ...base, marker_id: item.marker_id };
+      }
+      const nm = item.new_marker!;
+      return {
+        ...base,
+        new_marker: {
+          title: nm.title,
+          location: { type: "Point", coordinates: [nm.longitude, nm.latitude] },
+          ...(nm.category ? { category: nm.category } : {}),
+          ...(nm.description ? { description: nm.description } : {}),
+          ...(nm.address ? { address: nm.address } : {}),
+        },
+      };
+    });
+
+    const reelUrls = data.sourceUrl?.trim() ? [data.sourceUrl.trim()] : undefined;
+
+    // Quest-level gallery → cloudinary_assets (independent of any marker).
+    const gallery = (data.galleryImages ?? []).map((a) => ({
+      public_id: a.public_id,
+      secure_url: a.secure_url,
+    }));
+
+    return {
+      title: data.title,
+      description: data.description,
+      theme: data.theme,
+      difficulty: data.difficulty,
+      duration_minutes: data.duration,
+      region_id: data.regionId!,
+      marker_playlist,
+      ...(reelUrls ? { reel_urls: reelUrls } : {}),
+      ...(gallery.length ? { cloudinary_assets: gallery } : {}),
+      ...(submit ? { submit: true } : {}),
+    };
+  };
+
+  // Save/Update quest mutation.
   const questMutation = useMutation({
     mutationFn: async ({ data, status }: { data: CreateQuestFormData; status: QuestStatus }) => {
-      const startWaypoint = data.waypoints[0];
-      const endWaypoint = data.waypoints[data.waypoints.length - 1];
-
-      const payload: CreateQuestPayload = {
-        metadata: {
-          title: data.title,
-          description: [data.description],
-          theme: data.theme,
-          difficulty: data.difficulty,
-          duration_minutes: data.duration ?? 60,
-        },
-        location: {
-          region: data.city ?? "Unknown",
-          start_location: {
-            type: "Point",
-            coordinates: [startWaypoint!.longitude, startWaypoint!.latitude],
-          },
-          end_location: {
-            type: "Point",
-            coordinates: [endWaypoint!.longitude, endWaypoint!.latitude],
-          },
-          route_waypoints: data.waypoints.map((wp, index) => ({
-            order: index,
-            location: { type: "Point", coordinates: [wp.longitude, wp.latitude] },
-          })),
-          route_geometry: {
-            type: "LineString",
-            coordinates: data.waypoints.map((wp) => [wp.longitude, wp.latitude]),
-          },
-          map_data: { zoom_level: 14, map_style: "standard" },
-        },
-        media: {
-          cloudinary_assets: data.galleryImages || [],
-          mapbox_reference: { style_id: "mapbox/standard" },
-          reel_url: data.sourceUrl,
-        },
-        steps: data.waypoints.map((wp, index) => {
-          const details = data.waypointDetails?.[index];
-          return {
-            order: index,
-            title: wp.place_name ?? `Step ${index + 1}`,
-            description:
-              details?.description ?? `Visit ${wp.place_name ?? `location ${index + 1}`}`,
-            how_to_reach: details?.howToReach,
-            waypoint_order: index,
-            cloudinary_assets: details?.images || [],
-          };
-        }),
-        status,
-        price: 0,
-        currency: "INR",
-        booking_enabled: false,
-      };
+      const submit = status === "Under Review";
 
       if (isEditing) {
-        return questService.updateQuest(id!, payload);
-      } else {
-        return questService.createQuest(payload);
-      }
-    },
-    onSuccess: async (result) => {
-      try {
-        const narrativesToCreate = formData.narratives || [];
-        const isCreateResult = !isEditing && result && "_id" in result && "steps" in result;
-
-        if (isCreateResult) {
-          // Handle new quest: create narratives in parallel with robust error handling
-          if (narrativesToCreate.length > 0) {
-            const createResult = result as import("@services/quest.service").CreateQuestResponse;
-            const questId = createResult._id;
-            const createdSteps = createResult.steps;
-            const wps = formData.waypoints || [];
-
-            const narrativePromises = narrativesToCreate.map(async (narrative) => {
-              const fromStep = createdSteps[narrative.fromStepIndex];
-              const toStep = createdSteps[narrative.toStepIndex];
-              if (!fromStep?._id || !toStep?._id) {
-                throw new Error(
-                  `Invalid step references for narrative between steps ${narrative.fromStepIndex} and ${narrative.toStepIndex}`
-                );
-              }
-
-              // Auto-calculate trigger location as midpoint between waypoints
-              // TODO: Future enhancement — allow creators to manually set trigger location
-              const fromWp = wps[narrative.fromStepIndex];
-              const toWp = wps[narrative.toStepIndex];
-              const midLat = fromWp && toWp ? (fromWp.latitude + toWp.latitude) / 2 : null;
-              const midLng = fromWp && toWp ? (fromWp.longitude + toWp.longitude) / 2 : null;
-
-              return narrativeService.createNarrative({
-                quest_id: questId,
-                from_step_id: fromStep._id,
-                to_step_id: toStep._id,
-                title: narrative.title || undefined,
-                content: narrative.content,
-                trigger_location:
-                  midLat !== null && midLng !== null
-                    ? { type: "Point", coordinates: [midLng, midLat] }
-                    : undefined,
-                trigger_radius_m: narrative.triggerRadiusM,
-                is_mandatory: narrative.isMandatory,
-              });
-            });
-
-            const results = await Promise.allSettled(narrativePromises);
-            const successful = results.filter((r) => r.status === "fulfilled").length;
-            const failed = results.filter((r) => r.status === "rejected");
-
-            if (successful > 0) {
-              toast.success(`${successful} of ${narrativesToCreate.length} narrative(s) added to quest`);
-            }
-            if (failed.length > 0) {
-              console.error("Failed narratives:", failed);
-              toast.warning(
-                `${failed.length} narrative(s) could not be created. Check console for details.`
-              );
-            }
-          }
-        } else if (isEditing) {
-          // Handle quest update: narratives are read-only in edit mode
-          // Narrative updates must be managed separately via narrative service endpoints
-          // This is intentional to prevent accidental narrative overwrites
+        // region_id / submit are not part of the update payload; PUT then submit.
+        const payload = buildPayload(data, false);
+        const { region_id: _region, submit: _submit, ...updatePayload } = payload;
+        void _region;
+        void _submit;
+        const updated = await questService.updateQuest(id!, updatePayload);
+        if (submit) {
+          await questService.submitQuest(updated.id);
         }
-      } catch (err) {
-        console.error("Error managing narratives:", err);
-        toast.warning("Quest saved but some narratives could not be created.");
+        return updated;
       }
 
+      // Create. `submit: true` creates directly in "Under Review", so no
+      // separate submit call is needed for new quests.
+      const payload = buildPayload(data, submit);
+      const quest = await questService.createQuest(payload);
+
+      // Optional quest-level narrative (attach_type: "quest"). Created ONLY here on
+      // create (editing/managing narratives is the Narratives page's job), and only
+      // AFTER the quest exists since the narrative's attach_id is the quest id. A
+      // narrative failure must not fail the create — the quest is already saved.
+      const qn = (data as WizardFormData).questNarrative;
+      if (qn?.title?.trim()) {
+        try {
+          await narrativeService.createNarrative({
+            title: qn.title.trim(),
+            attach_type: "quest",
+            attach_id: quest.id,
+            ...(qn.content?.trim() ? { content: qn.content.trim() } : {}),
+            ...(qn.voice_persona ? { voice_persona: qn.voice_persona as VoicePersona } : {}),
+            status: "draft",
+          });
+        } catch (err) {
+          console.error("Quest narrative create failed:", err);
+          toast.warning(
+            "Quest saved, but the narrative couldn't be saved — you can add it later from the Narratives page."
+          );
+        }
+      }
+      return quest;
+    },
+    onSuccess: () => {
       clearSession();
       toast.success(isEditing ? "Quest updated successfully!" : "Quest created successfully!");
       navigate("/creator/quest/success");
@@ -295,25 +297,55 @@ export function CreateQuestPage() {
     setFormData((prev) => ({ ...prev, ...data }));
     setCurrentStep(3);
   };
-  const handleStep3Next = (data: WaypointsStepData) => {
+  const handleStep3Next = (data: MarkerPlaylistStepData) => {
     setFormData((prev) => ({ ...prev, ...data }));
     setCurrentStep(4);
   };
-  const handleStep4Next = (data: WaypointDetailsStepData) => {
-    setFormData((prev) => ({ ...prev, ...data }));
+  // Step 4 (Marker Details) returns the per-quest things-to-do fields merged onto
+  // the playlist items, plus the quest-level gallery images. Both are merged into
+  // formData and folded into the V2 payload by buildPayload.
+  const handleStep4Next = (data: {
+    markerPlaylist: MarkerPlaylistItemData[];
+    galleryImages: CloudinaryAsset[];
+  }) => {
+    setFormData((prev) => ({
+      ...prev,
+      markerPlaylist: data.markerPlaylist,
+      galleryImages: data.galleryImages,
+    }));
     setCurrentStep(5);
   };
-  const handleStep5Next = (data: NarrativeStepData) => {
+  const handleStep5Next = (data: Partial<WizardFormData>) => {
     setFormData((prev) => ({ ...prev, ...data }));
     setCurrentStep(6);
   };
-  const handleBack = (data?: any) => {
+  const handleBack = (data?: Partial<WizardFormData>) => {
     if (data) setFormData((prev) => ({ ...prev, ...data }));
     setCurrentStep((prev) => (prev > 1 ? ((prev - 1) as Step) : prev));
   };
+  // Lets the Markers step expand the quest's region to the parent city.
+  const handleRegionChange = (region: {
+    regionId: string;
+    regionName: string;
+    regionType: RegionType;
+  }) => {
+    setFormData((prev) => ({
+      ...prev,
+      regionId: region.regionId,
+      regionName: region.regionName,
+      regionType: region.regionType,
+      city: region.regionName,
+    }));
+  };
   const handleSubmit = (status: QuestStatus) => {
-    if (!formData.waypoints || formData.waypoints.length < 2) {
-      toast.error("Quest must have at least two locations (Start and End)");
+    if (!formData.regionId) {
+      toast.error("Pick a region in step 1 before saving.");
+      setCurrentStep(1);
+      return;
+    }
+    if (!formData.markerPlaylist || formData.markerPlaylist.length < 2) {
+      toast.error("Add at least two markers before saving.");
+      setCurrentStep(3);
       return;
     }
     questMutation.mutate({ data: formData as CreateQuestFormData, status });
@@ -335,8 +367,8 @@ export function CreateQuestPage() {
       {/* Progress Steps */}
       <div className="mb-8">
         <div className="flex items-center justify-between">
-          {([1, 2, 3, 4, 5, 6] as const).map((step) => (
-            <div key={step} className={`flex items-center ${step < 6 ? "flex-1" : ""}`}>
+          {ALL_STEPS.map((step) => (
+            <div key={step} className={`flex items-center ${step < LAST_STEP ? "flex-1" : ""}`}>
               <div className="flex flex-col items-center">
                 <div
                   className={`w-10 h-10 rounded-full flex items-center justify-center font-medium transition-colors ${step === currentStep ? "bg-indigo-600 text-white" : step < currentStep ? "bg-green-500 text-white" : "bg-neutral-200 text-neutral-500"}`}
@@ -349,7 +381,7 @@ export function CreateQuestPage() {
                   {stepLabels[step]}
                 </span>
               </div>
-              {step < 6 && (
+              {step < LAST_STEP && (
                 <div
                   className={`flex-1 h-1 mx-4 rounded ${step < currentStep ? "bg-green-500" : "bg-neutral-200"}`}
                 />
@@ -368,41 +400,27 @@ export function CreateQuestPage() {
         {currentStep === 3 && (
           <WaypointsStep
             defaultValues={formData}
-            initialCenter={
-              formData.latitude && formData.longitude
-                ? { lat: formData.latitude, lng: formData.longitude }
-                : undefined
-            }
             onNext={handleStep3Next}
             onBack={handleBack}
+            onRegionChange={handleRegionChange}
           />
         )}
         {currentStep === 4 && (
           <WaypointDetailsStep
-            defaultValues={formData}
+            defaultValues={{
+              markerPlaylist: formData.markerPlaylist ?? [],
+              galleryImages: formData.galleryImages ?? [],
+            }}
             onNext={handleStep4Next}
-            onBack={handleBack as any}
+            onBack={handleBack}
           />
         )}
-        {currentStep === 5 && !isEditing && (
-          <NarrativeStep defaultValues={formData} onNext={handleStep5Next} onBack={handleBack} />
-        )}
-        {currentStep === 5 && isEditing && (
-          <div className="space-y-4 p-6">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm text-blue-900 font-medium">ℹ️ Narrative Management</p>
-              <p className="text-sm text-blue-700 mt-2">
-                Narratives cannot be edited in this view. To manage narratives for this quest, please use the narrative 
-                management interface or delete and recreate the quest with updated narratives.
-              </p>
-            </div>
-            <button
-              onClick={() => handleBack()}
-              className="px-4 py-2 bg-slate-200 text-slate-900 rounded-lg font-medium hover:bg-slate-300 transition-colors"
-            >
-              Back to Waypoint Details
-            </button>
-          </div>
+        {currentStep === 5 && (
+          <NarrativeStep
+            defaultValues={{ questNarrative: formData.questNarrative }}
+            onNext={handleStep5Next}
+            onBack={handleBack}
+          />
         )}
         {currentStep === 6 && (
           <ReviewStep
