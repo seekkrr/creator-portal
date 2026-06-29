@@ -16,19 +16,9 @@ import {
 import { Card, Button } from "@components/ui";
 import { markerService } from "@services/marker.service";
 import { MapComponent } from "@features/map/components/MapComponent";
-import type { MarkerStatus } from "@/types";
 import { MarkerFormModal } from "../components/MarkerFormModal";
+import { getMarkerStatusColor } from "../utils/status";
 import type { Marker } from "@/types";
-
-const getStatusColor = (status: MarkerStatus): string => {
-    switch (status) {
-        case "approved": return "bg-emerald-100 text-emerald-700 border border-emerald-200";
-        case "pending": return "bg-amber-100 text-amber-700 border border-amber-200";
-        case "rejected": return "bg-red-100 text-red-700 border border-red-200";
-        case "hidden": return "bg-neutral-100 text-neutral-500 border border-neutral-200";
-        default: return "bg-slate-100 text-slate-700 border border-slate-200";
-    }
-};
 
 function InfoRow({
     icon,
@@ -124,7 +114,7 @@ export function MarkerDetailPage() {
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-1">
                             <span
-                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider ${getStatusColor(marker.status)}`}
+                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider ${getMarkerStatusColor(marker.status)}`}
                             >
                                 {marker.status}
                             </span>
@@ -175,6 +165,7 @@ export function MarkerDetailPage() {
                     </div>
                 </Card>
             ) : (
+                // Defensive guard: is_locked is unreachable for owner views; retained for teaser shape.
                 <Card className="p-6 text-center text-slate-400">
                     <Lock className="w-6 h-6 mx-auto mb-2" />
                     <p className="text-sm">Location is locked for this marker.</p>

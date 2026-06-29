@@ -9,6 +9,7 @@ import type { MarkerStatus } from "@/types";
 import type { Marker } from "@/types";
 import { toast } from "sonner";
 import { MarkerFormModal } from "../components/MarkerFormModal";
+import { getMarkerStatusColor } from "../utils/status";
 
 type StatusFilter = MarkerStatus | "all";
 
@@ -19,16 +20,6 @@ const STATUS_FILTERS: { label: string; value: StatusFilter }[] = [
     { label: "Rejected", value: "rejected" },
     { label: "Hidden", value: "hidden" },
 ];
-
-const getStatusColor = (status: MarkerStatus): string => {
-    switch (status) {
-        case "approved": return "bg-emerald-100 text-emerald-700 border border-emerald-200";
-        case "pending": return "bg-amber-100 text-amber-700 border border-amber-200";
-        case "rejected": return "bg-red-100 text-red-700 border border-red-200";
-        case "hidden": return "bg-neutral-100 text-neutral-500 border border-neutral-200";
-        default: return "bg-slate-100 text-slate-700 border border-slate-200";
-    }
-};
 
 export function MarkersPage() {
     const { user } = useAuthStore();
@@ -87,7 +78,8 @@ export function MarkersPage() {
         setIsFormModalOpen(true);
     };
 
-    const handleSaved = () => {
+    const handleSaved = (saved: Marker) => {
+        queryClient.setQueryData(["marker", saved.id], saved);
         queryClient.invalidateQueries({ queryKey: ["creator-markers"] });
         setIsFormModalOpen(false);
     };
@@ -293,7 +285,7 @@ export function MarkersPage() {
                                             </td>
                                             <td className="py-4 px-6 text-center">
                                                 <span
-                                                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wider ${getStatusColor(marker.status)}`}
+                                                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wider ${getMarkerStatusColor(marker.status)}`}
                                                 >
                                                     {marker.status}
                                                 </span>

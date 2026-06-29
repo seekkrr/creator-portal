@@ -36,8 +36,8 @@ function markerToFormData(m: Marker): Partial<MarkerFormData> {
         media: m.media ?? [],
         min_expense: m.min_expense ?? undefined,
         max_expense: m.max_expense ?? undefined,
-        opens_at: m.opens_at ?? "",
-        closes_at: m.closes_at ?? "",
+        opens_at: (m.opens_at ?? "").slice(0, 5),
+        closes_at: (m.closes_at ?? "").slice(0, 5),
         region_id: m.region_id ?? "",
         longitude: m.location?.coordinates?.[0],
         latitude: m.location?.coordinates?.[1],
@@ -104,37 +104,39 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
             markerService.updateMarker(id, payload),
     });
 
-    const onSubmit = (data: MarkerFormData) => {
+    const onSubmit = async (data: MarkerFormData) => {
         if (mode === "create") {
-            const promise = createMutation.mutateAsync(toCreatePayload(data));
-            toast.promise(promise, {
-                loading: "Creating marker…",
-                success: "Marker created!",
-                error: "Failed to create marker",
-            });
-            promise.then((marker) => {
+            try {
+                const promise = createMutation.mutateAsync(toCreatePayload(data));
+                toast.promise(promise, {
+                    loading: "Creating marker…",
+                    success: "Marker created!",
+                    error: "Failed to create marker",
+                });
+                const marker = await promise;
                 onSaved(marker);
                 onClose();
-            }).catch(() => {
-                // error handled by toast
-            });
+            } catch {
+                // error handled by toast; keep modal open
+            }
         } else {
             if (!initial?.id) return;
-            const promise = updateMutation.mutateAsync({
-                id: initial.id,
-                payload: toUpdatePayload(data),
-            });
-            toast.promise(promise, {
-                loading: "Saving marker…",
-                success: "Marker updated!",
-                error: "Failed to update marker",
-            });
-            promise.then((marker) => {
+            try {
+                const promise = updateMutation.mutateAsync({
+                    id: initial.id,
+                    payload: toUpdatePayload(data),
+                });
+                toast.promise(promise, {
+                    loading: "Saving marker…",
+                    success: "Marker updated!",
+                    error: "Failed to update marker",
+                });
+                const marker = await promise;
                 onSaved(marker);
                 onClose();
-            }).catch(() => {
-                // error handled by toast
-            });
+            } catch {
+                // error handled by toast; keep modal open
+            }
         }
     };
 
