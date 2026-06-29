@@ -79,7 +79,8 @@ const PayoutAccountsPage = lazyRetry(() =>
     }))
 );
 
-export const router = createBrowserRouter([
+export const router = createBrowserRouter(
+    [
     {
         element: <RootWrapper />,
         children: [
@@ -282,4 +283,10 @@ export const router = createBrowserRouter([
             },
         ],
     },
-]);
+    ],
+    {
+        future: {
+            v7_relativeSplatPath: true,
+        },
+    }
+);

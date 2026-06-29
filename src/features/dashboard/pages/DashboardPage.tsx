@@ -306,13 +306,13 @@ export function DashboardPage() {
                 {/* Video */}
                 <HowToVideoPlayer />
 
-                {/* Steps — horizontal scroll on mobile, 4-col on desktop */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                {/* Steps — 6-step flow mirroring the actual wizard */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                     {[
                         {
                             n: 1,
-                            title: "Add Destination or Content Link",
-                            desc: "Click Create Quest and enter the location, or paste a link to your content.",
+                            title: "Add Destination",
+                            desc: "Enter the location or region your quest takes place in.",
                         },
                         {
                             n: 2,
@@ -321,13 +321,23 @@ export function DashboardPage() {
                         },
                         {
                             n: 3,
-                            title: "Add Locations",
-                            desc: "Guide travelers by pinning waypoints on the map and adding navigation tips.",
+                            title: "Add Markers",
+                            desc: "Pin waypoints on the map — these are the stops explorers will visit.",
                         },
                         {
                             n: 4,
-                            title: "Earn Rewards",
-                            desc: "Get recognised and earn commission as explorers complete your quests.",
+                            title: "Add Marker Details",
+                            desc: "Fill in \"Things to do\" text and photos for each stop.",
+                        },
+                        {
+                            n: 5,
+                            title: "Add Narratives",
+                            desc: "Write audio-guided stories that play at each marker during the quest.",
+                        },
+                        {
+                            n: 6,
+                            title: "Review & Publish",
+                            desc: "Review your quest and submit it for approval to start earning.",
                         },
                     ].map(({ n, title, desc }) => (
                         <div
