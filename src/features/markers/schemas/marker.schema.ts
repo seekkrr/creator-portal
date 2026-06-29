@@ -61,7 +61,14 @@ export function toCreatePayload(d: MarkerFormData): CreateMarkerPayload {
 }
 
 export function toUpdatePayload(d: MarkerFormData): UpdateMarkerPayload {
-    // location & region_id are immutable on PUT (UpdateMarkerPayload omits them).
-    const { longitude: _lng, latitude: _lat, region_id: _r, ...rest } = d;
-    return { ...clean(rest), title: d.title, tags: d.tags, media: d.media } as UpdateMarkerPayload;
+    // location is immutable on PUT; region_id IS editable — always send it (the form
+    // is prefilled from the marker), where an empty string clears the region.
+    const { longitude: _lng, latitude: _lat, region_id, ...rest } = d;
+    return {
+        ...clean(rest),
+        title: d.title,
+        tags: d.tags,
+        media: d.media,
+        region_id: region_id ?? "",
+    } as UpdateMarkerPayload;
 }

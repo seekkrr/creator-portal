@@ -8,6 +8,7 @@ import { Card, Button, Input, Textarea } from "@components/ui";
 import { markerService } from "@services/marker.service";
 import { cloudinaryService } from "@services/cloudinary.service";
 import { MarkerMapPicker } from "./MarkerMapPicker";
+import { MarkerRegionSelect } from "./MarkerRegionSelect";
 import { markerFormSchema, toCreatePayload, toUpdatePayload, MARKER_CATEGORIES } from "../schemas/marker.schema";
 import type { MarkerFormData } from "../schemas/marker.schema";
 import type { Marker } from "@/types";
@@ -80,7 +81,9 @@ const DEFAULT_VALUES: Partial<MarkerFormData> = {
 export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: MarkerFormModalProps) {
     const [tagInput, setTagInput] = useState("");
     const [uploadingMedia, setUploadingMedia] = useState(false);
+    const [uploadingTtdImage, setUploadingTtdImage] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const ttdImageInputRef = useRef<HTMLInputElement>(null);
 
     const {
         register,
@@ -109,6 +112,8 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
     const latitude = watch("latitude");
     const tags = watch("tags");
     const media = watch("media");
+    const thingsToDoImage = watch("things_to_do_image_url");
+    const regionId = watch("region_id");
 
     const createMutation = useMutation({
         mutationFn: (payload: ReturnType<typeof toCreatePayload>) =>
@@ -179,6 +184,21 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
         setValue("media", (media ?? []).filter((u) => u !== url));
     };
 
+    const handleThingsToDoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setUploadingTtdImage(true);
+        try {
+            const result = await cloudinaryService.uploadImage(file, { folder: "markers/things-to-do" });
+            setValue("things_to_do_image_url", result.secure_url, { shouldValidate: true });
+        } catch {
+            toast.error("Failed to upload image");
+        } finally {
+            setUploadingTtdImage(false);
+            if (ttdImageInputRef.current) ttdImageInputRef.current.value = "";
+        }
+    };
+
     const addTag = () => {
         const raw = tagInput.trim();
         if (!raw) return;
@@ -225,10 +245,10 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
                 </div>
 
                 <form onSubmit={handleSubmit(onSubmit)} noValidate>
-                    <div className="p-6 space-y-6">
+                    <div className="p-6 space-y-5 bg-slate-50">
 
                         {/* ── Section: Basic Info ── */}
-                        <section>
+                        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
                             <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">
                                 Basic Info
                             </h3>
@@ -278,7 +298,7 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
                         </section>
 
                         {/* ── Section: Location ── */}
-                        <section>
+                        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
                             <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">
                                 Location {mode === "create" && <span className="text-red-500">*</span>}
                             </h3>
@@ -309,10 +329,23 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
                                     <AlertTriangle className="w-3 h-3" /> {errors.latitude.message}
                                 </p>
                             )}
+
+                            <div className="mt-4">
+                                <label className="block text-sm font-medium text-slate-700 mb-1">
+                                    Region
+                                </label>
+                                <MarkerRegionSelect
+                                    value={regionId ?? ""}
+                                    onChange={(id) => setValue("region_id", id, { shouldValidate: true })}
+                                />
+                                <p className="mt-1 text-xs text-slate-400">
+                                    Attach this marker to an existing SeekKrr region (optional).
+                                </p>
+                            </div>
                         </section>
 
                         {/* ── Section: Contact & URLs ── */}
-                        <section>
+                        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
                             <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">
                                 Contact &amp; Links
                             </h3>
@@ -359,7 +392,7 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
                         </section>
 
                         {/* ── Section: Things To Do ── */}
-                        <section>
+                        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
                             <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">
                                 Things To Do
                             </h3>
@@ -376,18 +409,52 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">
-                                        Image URL
+                                        Image
                                     </label>
-                                    <Input
-                                        {...register("things_to_do_image_url")}
-                                        placeholder="https://…"
+                                    <input
+                                        ref={ttdImageInputRef}
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        onChange={handleThingsToDoUpload}
                                     />
+                                    {thingsToDoImage ? (
+                                        <div className="relative inline-block rounded-lg overflow-hidden border border-slate-200">
+                                            <img
+                                                src={thingsToDoImage}
+                                                alt="Things to do"
+                                                className="h-32 w-auto object-cover"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setValue("things_to_do_image_url", "", { shouldValidate: true })
+                                                }
+                                                className="absolute top-1 right-1 p-1 bg-black/60 text-white rounded-full hover:bg-black/80"
+                                                aria-label="Remove image"
+                                            >
+                                                <X className="w-3 h-3" />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => ttdImageInputRef.current?.click()}
+                                            isLoading={uploadingTtdImage}
+                                            leftIcon={<Upload className="w-4 h-4" />}
+                                            disabled={uploadingTtdImage}
+                                        >
+                                            {uploadingTtdImage ? "Uploading…" : "Upload Image"}
+                                        </Button>
+                                    )}
                                 </div>
                             </div>
                         </section>
 
                         {/* ── Section: Expenses & Hours ── */}
-                        <section>
+                        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
                             <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">
                                 Expenses &amp; Hours
                             </h3>
@@ -444,7 +511,7 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
                         </section>
 
                         {/* ── Section: Tags ── */}
-                        <section>
+                        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
                             <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">
                                 Tags
                             </h3>
@@ -485,7 +552,7 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
                         </section>
 
                         {/* ── Section: Media ── */}
-                        <section>
+                        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
                             <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">
                                 Media
                             </h3>

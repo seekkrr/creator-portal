@@ -551,8 +551,9 @@ export interface CreateMarkerPayload {
     properties?: Record<string, unknown>;
 }
 
-/** Body for `PUT /markers/{id}` (UpdateMarkerBody) — location is immutable. */
-export type UpdateMarkerPayload = Partial<Omit<CreateMarkerPayload, "location" | "region_id">> & {
+/** Body for `PUT /markers/{id}` (UpdateMarkerBody) — location is immutable; region_id
+ * is editable (empty string clears it on the backend). */
+export type UpdateMarkerPayload = Partial<Omit<CreateMarkerPayload, "location">> & {
     status?: MarkerStatus;
 };
 
