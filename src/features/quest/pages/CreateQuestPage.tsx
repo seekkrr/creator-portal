@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Card } from "@components/ui";
 import { questService } from "@services/quest.service";
+import { narrativeService } from "@services/narrative.service";
 import { LocationStep } from "../components/LocationStep";
 import { DetailsStep } from "../components/DetailsStep";
 import { WaypointsStep } from "../components/WaypointsStep";
@@ -25,6 +26,7 @@ import type {
   PlaylistItemInput,
   QuestStatus,
   RegionType,
+  VoicePersona,
 } from "@/types";
 
 // Wizard: Location → Details → Markers → Marker Details → Narrative → Review.
@@ -61,10 +63,11 @@ function normalizeTheme(value: string): QuestTheme | null {
 // extras are carried as `unknown` here until they're wired into the V2 payload
 // in a later sequential step.
 type WizardFormData = Partial<CreateQuestFormData> & {
-  waypoints?: unknown;
-  waypointDetails?: unknown;
   galleryImages?: CloudinaryAsset[];
-  narratives?: unknown;
+  // Optional quest-level narrative (Step 5). Posted to /narratives after the
+  // quest is created (its attach_id is the new quest id), never embedded in the
+  // quest payload.
+  questNarrative?: { title?: string; content?: string; voice_persona?: string };
 };
 
 export function CreateQuestPage() {
@@ -75,6 +78,10 @@ export function CreateQuestPage() {
   const [currentStep, setCurrentStep] = useState<Step>(1);
   const [formData, setFormData] = useState<WizardFormData>(defaultFormValues);
   const [isQuestInitialized, setIsQuestInitialized] = useState(false);
+  // Gates the sessionStorage SAVE until the initial restore has run, so the
+  // restore (or a remount under React StrictMode) can't be clobbered by a save
+  // of the default empty state. Without this the draft resets to step 1 on reload.
+  const [hydrated, setHydrated] = useState(false);
 
   // Fetch quest data if editing
   const { data: existingQuest, isLoading: isLoadingQuest } = useQuery({
@@ -144,25 +151,32 @@ export function CreateQuestPage() {
     }
   }, [existingQuest, isQuestInitialized, navigate]);
 
-  // Save/Load session storage only if NOT editing
+  // Restore an in-progress draft (the fallback when the creator navigates away,
+  // closes the tab, or reloads). Runs once; sets `hydrated` so saving can begin.
   useEffect(() => {
-    if (isEditing) return;
+    if (isEditing) {
+      setHydrated(true);
+      return;
+    }
     const saved = sessionStorage.getItem(SESSION_STORAGE_KEY);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        setFormData((prev) => ({ ...prev, ...parsed.formData }));
-        setCurrentStep(parsed.currentStep || 1);
+        if (parsed.formData) setFormData((prev) => ({ ...prev, ...parsed.formData }));
+        if (parsed.currentStep) setCurrentStep(parsed.currentStep);
       } catch (e) {
         console.error(e);
       }
     }
+    setHydrated(true);
   }, [isEditing]);
 
+  // Persist the draft on every change — but ONLY after the restore above has run,
+  // so a remount can't overwrite the saved draft with the default empty state.
   useEffect(() => {
-    if (isEditing) return;
+    if (isEditing || !hydrated) return;
     sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ formData, currentStep }));
-  }, [formData, currentStep, isEditing]);
+  }, [formData, currentStep, isEditing, hydrated]);
 
   const clearSession = () => sessionStorage.removeItem(SESSION_STORAGE_KEY);
 
@@ -238,7 +252,31 @@ export function CreateQuestPage() {
       // Create. `submit: true` creates directly in "Under Review", so no
       // separate submit call is needed for new quests.
       const payload = buildPayload(data, submit);
-      return questService.createQuest(payload);
+      const quest = await questService.createQuest(payload);
+
+      // Optional quest-level narrative (attach_type: "quest"). Created ONLY here on
+      // create (editing/managing narratives is the Narratives page's job), and only
+      // AFTER the quest exists since the narrative's attach_id is the quest id. A
+      // narrative failure must not fail the create — the quest is already saved.
+      const qn = (data as WizardFormData).questNarrative;
+      if (qn?.title?.trim()) {
+        try {
+          await narrativeService.createNarrative({
+            title: qn.title.trim(),
+            attach_type: "quest",
+            attach_id: quest.id,
+            ...(qn.content?.trim() ? { content: qn.content.trim() } : {}),
+            ...(qn.voice_persona ? { voice_persona: qn.voice_persona as VoicePersona } : {}),
+            status: "draft",
+          });
+        } catch (err) {
+          console.error("Quest narrative create failed:", err);
+          toast.warning(
+            "Quest saved, but the narrative couldn't be saved — you can add it later from the Narratives page."
+          );
+        }
+      }
+      return quest;
     },
     onSuccess: () => {
       clearSession();
@@ -312,18 +350,6 @@ export function CreateQuestPage() {
     questMutation.mutate({ data: formData as CreateQuestFormData, status });
   };
 
-  // The restored Marker-Details (step 4) and Narrative (step 5) components are
-  // keyed on a legacy `waypoints[]` shape. Derive it from the marker playlist so
-  // those steps render against the chosen markers without changing their code.
-  const derivedWaypoints = (formData.markerPlaylist ?? [])
-    .filter((it) => it._display)
-    .map((it) => ({
-      latitude: it._display!.lat,
-      longitude: it._display!.lng,
-      place_name: it._display!.title,
-    }));
-  const stepWaypointDefaults = { ...formData, waypoints: derivedWaypoints } as never;
-
   if (isEditing && isLoadingQuest) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -390,7 +416,7 @@ export function CreateQuestPage() {
         )}
         {currentStep === 5 && (
           <NarrativeStep
-            defaultValues={stepWaypointDefaults}
+            defaultValues={{ questNarrative: formData.questNarrative }}
             onNext={handleStep5Next}
             onBack={handleBack}
           />
