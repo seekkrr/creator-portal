@@ -184,7 +184,8 @@ export function CreateQuestPage() {
   const buildPayload = (data: CreateQuestFormData, submit: boolean): CreateQuestPayload => {
     const marker_playlist: PlaylistItemInput[] = (data.markerPlaylist ?? []).map((item, index) => {
       const base: PlaylistItemInput = {
-        suggested_order: index,
+        // Backend requires suggested_order >= 1 (1-based), so offset the 0-based index.
+        suggested_order: index + 1,
         is_required: item.is_required,
         ...(item.custom_description ? { custom_description: item.custom_description } : {}),
         // Step 4 per-quest fields (stored on the playlist item, nullable on V2).

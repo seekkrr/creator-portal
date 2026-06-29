@@ -44,21 +44,17 @@ export function QuestsPage() {
 
     const { data, isLoading, refetch } = useQuery({
         queryKey: ["creator-quests", activeTab],
-        queryFn: () => questService.listQuests({
-            status: activeTab,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            created_by: user?._id
-        }),
+        queryFn: () => questService.getMyQuests({ status: activeTab }),
         enabled: !!user,
     });
 
-    const handleUpdateStatus = async (questId: string, status: QuestStatus) => {
-        const promise = questService.updateQuest(questId, { status });
+    const handleSubmitForReview = async (questId: string) => {
+        const promise = questService.submitQuest(questId);
 
         toast.promise(promise, {
-            loading: 'Updating status...',
-            success: `Quest status updated seamlessly!`,
-            error: 'Failed to update status',
+            loading: 'Submitting for review...',
+            success: `Quest submitted for review!`,
+            error: 'Failed to submit quest',
         });
 
         try {
@@ -67,7 +63,7 @@ export function QuestsPage() {
             await queryClient.invalidateQueries({ queryKey: ["creator-quests"] });
             refetch();
         } catch (error) {
-            console.error("Error updating quest status:", error);
+            console.error("Error submitting quest:", error);
         }
     };
 
@@ -105,7 +101,6 @@ export function QuestsPage() {
     const getStatusColor = (status: QuestStatus) => {
         switch (status) {
             case "Published": return "bg-emerald-100 text-emerald-700 border border-emerald-200";
-            case "Approved": return "bg-blue-100 text-blue-700 border border-blue-200";
             case "Under Review": return "bg-amber-100 text-amber-700 border border-amber-200";
             case "Changes Requested": return "bg-orange-100 text-orange-700 border border-orange-200";
             case "Rejected": return "bg-red-100 text-red-700 border border-red-200";
@@ -246,16 +241,14 @@ export function QuestsPage() {
                                     </tr>
                                 ) : (
                                     quests.map((quest) => {
-                                        const latestComment = quest.review_history && quest.review_history.length > 0
-                                            ? quest.review_history[quest.review_history.length - 1]?.comment
-                                            : null;
+                                        const title = quest.title || "Untitled Quest";
 
                                         return (
-                                            <React.Fragment key={quest._id}>
+                                            <React.Fragment key={quest.id}>
                                                 {/* Desktop View */}
                                                 <tr className="hidden md:table-row hover:bg-slate-50/50 transition-colors group">
-                                                    <td className="py-4 px-6 font-medium text-slate-900 truncate max-w-[200px]" title={quest.quest_title || quest.metadata_id}>
-                                                        {quest.quest_title || quest.metadata_id}
+                                                    <td className="py-4 px-6 font-medium text-slate-900 truncate max-w-[200px]" title={title}>
+                                                        {title}
                                                     </td>
                                                     <td className="py-4 px-6 text-center">
                                                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wider ${getStatusColor(quest.status as QuestStatus)}`}>
@@ -263,18 +256,18 @@ export function QuestsPage() {
                                                         </span>
                                                     </td>
                                                     <td className="py-4 px-6 text-sm text-slate-500 whitespace-nowrap text-center">
-                                                        {new Date(quest.created_at).toLocaleDateString()}
+                                                        {quest.created_at ? new Date(quest.created_at).toLocaleDateString() : "—"}
                                                     </td>
                                                     <td className="py-4 px-6 text-sm text-slate-500 whitespace-nowrap text-center">
                                                         {quest.view_count || 0}
                                                     </td>
                                                     <td className="py-4 px-6 text-right relative">
                                                         <div className="flex items-center justify-end whitespace-nowrap">
-                                                            {['Draft', 'Changes Requested', 'Approved'].includes(quest.status as string) && (
+                                                            {['Draft', 'Changes Requested'].includes(quest.status as string) && (
                                                                 <Button
                                                                     variant="primary"
                                                                     size="sm"
-                                                                    onClick={() => navigate(`/creator/quest/edit/${quest._id}`)}
+                                                                    onClick={() => navigate(`/creator/quest/edit/${quest.id}`)}
                                                                     className="h-9 px-4 bg-indigo-50 text-indigo-700 border border-indigo-100 hover:bg-indigo-600 hover:text-white rounded-lg font-medium shadow-none transition-colors mr-3 flex items-center whitespace-nowrap flex-shrink-0"
                                                                 >
                                                                     <div className="flex items-center gap-1.5 px-0.5 min-w-max">
@@ -294,29 +287,29 @@ export function QuestsPage() {
                                                                         } else {
                                                                             setDropdownPosition('bottom');
                                                                         }
-                                                                        setOpenDropdownId(openDropdownId === quest._id ? null : quest._id);
+                                                                        setOpenDropdownId(openDropdownId === quest.id ? null : quest.id);
                                                                     }}
                                                                     className={`p-2 h-9 w-9 border border-transparent rounded-lg flex items-center justify-center transition-colors
-                                                                        ${openDropdownId === quest._id ? 'bg-neutral-100 text-neutral-900' : 'text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100'}`}
+                                                                        ${openDropdownId === quest.id ? 'bg-neutral-100 text-neutral-900' : 'text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100'}`}
                                                                 >
                                                                     <MoreVertical className="w-4 h-4" />
                                                                 </Button>
 
-                                                                {openDropdownId === quest._id && (
+                                                                {openDropdownId === quest.id && (
                                                                     <div
                                                                         className={`absolute right-0 w-48 bg-white border border-neutral-200 rounded-xl shadow-xl z-[100] py-1.5 animate-fade-in ${dropdownPosition === 'top' ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
                                                                             }`}
                                                                         onClick={(e) => e.stopPropagation()}
                                                                     >
                                                                         <button
-                                                                            onClick={() => { navigate(`/creator/quest/view/${quest._id}`); setOpenDropdownId(null); }}
+                                                                            onClick={() => { navigate(`/creator/quest/view/${quest.id}`); setOpenDropdownId(null); }}
                                                                             className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-slate-50 flex items-center gap-2 font-medium"
                                                                         >
                                                                             View Details
                                                                         </button>
                                                                         {['Draft', 'Changes Requested'].includes(quest.status as string) && (
                                                                             <button
-                                                                                onClick={() => { handleUpdateStatus(quest._id, 'Under Review'); setOpenDropdownId(null); }}
+                                                                                onClick={() => { handleSubmitForReview(quest.id); setOpenDropdownId(null); }}
                                                                                 className="w-full text-left px-4 py-2 text-sm text-indigo-600 hover:bg-indigo-50 flex items-center gap-2 font-medium"
                                                                             >
                                                                                 Submit for Review
@@ -324,7 +317,7 @@ export function QuestsPage() {
                                                                         )}
                                                                         {quest.status !== 'Published' && (
                                                                             <button
-                                                                                onClick={() => { handleQuestDelete(quest._id); setOpenDropdownId(null); }}
+                                                                                onClick={() => { handleQuestDelete(quest.id); setOpenDropdownId(null); }}
                                                                                 className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 font-medium"
                                                                             >
                                                                                 Delete Quest
@@ -341,32 +334,32 @@ export function QuestsPage() {
                                                 <div className="md:hidden p-5 border-b border-slate-100 hover:bg-slate-50 transition-colors">
                                                     <div className="flex justify-between items-start mb-3">
                                                         <div className="font-semibold text-slate-900 pr-8 text-base">
-                                                            {quest.quest_title || quest.metadata_id}
+                                                            {title}
                                                         </div>
                                                         <div className="relative">
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    setOpenDropdownId(openDropdownId === quest._id ? null : quest._id);
+                                                                    setOpenDropdownId(openDropdownId === quest.id ? null : quest.id);
                                                                 }}
-                                                                className={`p-2 rounded-lg transition-colors ${openDropdownId === quest._id ? 'bg-neutral-100' : 'hover:bg-neutral-100'}`}
+                                                                className={`p-2 rounded-lg transition-colors ${openDropdownId === quest.id ? 'bg-neutral-100' : 'hover:bg-neutral-100'}`}
                                                             >
                                                                 <MoreVertical className="w-5 h-5 text-neutral-500" />
                                                             </button>
 
-                                                            {openDropdownId === quest._id && (
+                                                            {openDropdownId === quest.id && (
                                                                 <div
                                                                     className="absolute right-0 top-full mt-1 w-44 bg-white border border-neutral-200 rounded-xl shadow-xl z-50 py-1.5 animate-fade-in"
                                                                     onClick={(e) => e.stopPropagation()}
                                                                 >
-                                                                    <button onClick={() => { navigate(`/creator/quest/view/${quest._id}`); setOpenDropdownId(null); }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-neutral-700 hover:bg-slate-50">View Details</button>
+                                                                    <button onClick={() => { navigate(`/creator/quest/view/${quest.id}`); setOpenDropdownId(null); }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-neutral-700 hover:bg-slate-50">View Details</button>
                                                                     {['Draft', 'Changes Requested'].includes(quest.status as string) && (
-                                                                        <button onClick={() => { handleUpdateStatus(quest._id, 'Under Review'); setOpenDropdownId(null); }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-indigo-600 hover:bg-indigo-50">Submit Review</button>
+                                                                        <button onClick={() => { handleSubmitForReview(quest.id); setOpenDropdownId(null); }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-indigo-600 hover:bg-indigo-50">Submit Review</button>
                                                                     )}
 {quest.status !== 'Published' && (
     <>
-        <button onClick={() => { navigate(`/creator/quest/edit/${quest._id}`); setOpenDropdownId(null); }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-neutral-700 hover:bg-slate-50">Edit Quest</button>
-        <button onClick={() => { handleQuestDelete(quest._id); setOpenDropdownId(null); }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50">Delete</button>
+        <button onClick={() => { navigate(`/creator/quest/edit/${quest.id}`); setOpenDropdownId(null); }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-neutral-700 hover:bg-slate-50">Edit Quest</button>
+        <button onClick={() => { handleQuestDelete(quest.id); setOpenDropdownId(null); }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50">Delete</button>
     </>
 )}
                                                                 </div>
@@ -377,47 +370,21 @@ export function QuestsPage() {
                                                         <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${getStatusColor(quest.status as QuestStatus)}`}>
                                                             {quest.status}
                                                         </span>
-                                                        <span className="text-xs font-medium text-slate-500">{new Date(quest.created_at).toLocaleDateString()}</span>
+                                                        <span className="text-xs font-medium text-slate-500">{quest.created_at ? new Date(quest.created_at).toLocaleDateString() : "—"}</span>
                                                         <span className="text-xs font-medium text-slate-500 text-right ms-auto">{quest.view_count || 0} views</span>
                                                     </div>
-                                                    {['Draft', 'Changes Requested', 'Approved'].includes(quest.status as string) && (
+                                                    {['Draft', 'Changes Requested'].includes(quest.status as string) && (
                                                         <Button
                                                             variant="primary"
                                                             fullWidth
                                                             size="sm"
-                                                            onClick={() => navigate(`/creator/quest/edit/${quest._id}`)}
+                                                            onClick={() => navigate(`/creator/quest/edit/${quest.id}`)}
                                                             className="text-sm h-10 font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100 hover:bg-indigo-600 hover:text-white mb-2 shadow-none rounded-xl"
                                                         >
                                                             Edit Quest
                                                         </Button>
                                                     )}
                                                 </div>
-
-                                                {((quest.status as string) === 'Changes Requested') && latestComment && (
-                                                    <tr className="bg-orange-50/40 hidden md:table-row">
-                                                        <td colSpan={5} className="py-4 pl-5 pr-6 border-l-4 border-orange-500 align-top">
-                                                            <div className="flex items-start gap-3">
-                                                                <AlertTriangle className="w-5 h-5 mt-0.5 flex-shrink-0 text-orange-600" />
-                                                                <div className="max-w-[800px]">
-                                                                    <span className="font-semibold text-orange-900 mb-1 block">Admin Feedback</span>
-                                                                    <p className="text-orange-800 text-sm leading-relaxed whitespace-pre-wrap">{latestComment}</p>
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                                {/* Mobile admin feedback */}
-                                                {((quest.status as string) === 'Changes Requested') && latestComment && (
-                                                    <div className="md:hidden bg-orange-50/40 p-4 border-l-4 border-orange-500 mb-2 rounded-r-lg">
-                                                        <div className="flex items-start gap-3">
-                                                            <AlertTriangle className="w-5 h-5 flex-shrink-0 text-orange-600" />
-                                                            <div>
-                                                                <span className="font-semibold text-orange-900 block mb-1">Admin Feedback</span>
-                                                                <p className="text-orange-800 text-sm leading-relaxed whitespace-pre-wrap">{latestComment}</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )}
                                             </React.Fragment>
                                         );
                                     })
