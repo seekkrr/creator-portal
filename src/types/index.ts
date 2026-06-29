@@ -112,6 +112,8 @@ export interface Creator {
     user_id: string;
     status: "active" | "suspended" | "rejected";
     is_verified: boolean;
+    verified_at?: string | null;
+    verification_source?: "auto" | "manual" | null;
     tagline?: string | null;
     creator_bio?: string | null;
     creator_badge?: CreatorBadge | null;
@@ -119,9 +121,11 @@ export interface Creator {
     total_earnings?: number;
     pending_payouts?: number;
     travelers_served?: number;
-    rating?: number;
+    rating?: number | null;
+    top_themes?: string[] | null;
     review_count?: number;
     quest_ids?: string[];
+    stats_last_updated?: string | null;
     payout_account_id?: string | null;
     source_application_id?: string | null;
     verification_documents?: string[];
@@ -185,278 +189,691 @@ export interface CloudinaryUploadResponse {
     created_at: string;
 }
 
-// Quest Types
-export type QuestDifficulty = "Easy" | "Medium" | "Hard" | "Expert";
-export type QuestStatus = "Draft" | "Under Review" | "Changes Requested" | "Approved" | "Published" | "Rejected" | "Paused" | "Archived";
-export type QuestTheme = "Adventure" | "Romance" | "Culture" | "Food" | "History" | "Nature" | "Custom";
+// ─────────────────────────────────────────────────────────────────────────────
+// GeoJSON helpers (V2 stores GeoJSON-shaped location data)
+// ─────────────────────────────────────────────────────────────────────────────
 
-export interface QuestLocation {
-    _id?: string;
-    country?: string;
-    region?: string;
-    city?: string;
-    latitude: number;
-    longitude: number;
-    address?: string;
-    place_name?: string;
+/** GeoJSON Point — coordinates are [lng, lat]. */
+export interface GeoPoint {
+    type: "Point";
+    coordinates: [number, number];
 }
 
-export interface QuestMetadata {
-    _id?: string;
-    title: string;
-    description: string;
-    difficulty: QuestDifficulty;
-    duration_minutes?: number;
-    theme?: string;
-    tags?: string[];
+export interface GeoPolygon {
+    type: "Polygon";
+    coordinates: number[][][];
 }
 
-export interface QuestMedia {
-    _id?: string;
+export interface GeoLineString {
+    type: "LineString";
+    coordinates: number[][];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Pagination (V2 returns FLAT pagination on every list endpoint:
+//   { success, <key>: [...], total, page, page_size, total_pages }
+// There is no nested `pagination` object and no has_next/has_prev.)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface Pagination {
+    total: number;
+    page: number;
+    page_size: number;
+    total_pages: number;
+}
+
+/** Normalized list result produced at the service boundary. */
+export interface Paginated<T> extends Pagination {
+    items: T[];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Quest Types (V2)
+//
+// A quest has THREE distinct serialized shapes depending on the endpoint:
+//   - QuestListItem : list endpoints (Quest.to_list_dict + region_name)
+//   - Quest         : create/update/submit/retract result (Quest.to_public_dict)
+//   - QuestDetail   : GET /quests/{id} enriched detail (Quest.to_detail_response)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** lowercase, as stored/validated by the backend (VALID_DIFFICULTIES). */
+export type QuestDifficulty = "easy" | "moderate" | "hard" | "expert";
+
+/** Title-Case, as stored/validated by the backend (VALID_QUEST_STATUSES). */
+export type QuestStatus =
+    | "Draft"
+    | "Under Review"
+    | "Changes Requested"
+    | "Published"
+    | "Rejected"
+    | "Paused"
+    | "Archived";
+
+/**
+ * Theme enum values accepted by the create/update payload. The backend
+ * normalizes any case/spacing to a lowercase underscore form on write and
+ * returns Title-Case strings on read, so response `theme` is typed `string[]`.
+ */
+export type QuestTheme =
+    | "adventure"
+    | "romance"
+    | "culture"
+    | "food"
+    | "history"
+    | "nature"
+    | "spiritual"
+    | "photography"
+    | "archaeological"
+    | "offbeat"
+    | "finding_yourself"
+    | "other";
+
+/** A marker reference inside a quest's playlist (Quest.to_public_dict). */
+export interface QuestPlaylistItem {
+    marker_id: string | null;
+    suggested_order: number | null;
+    is_required: boolean | null;
+    custom_description: string | null;
+}
+
+/** Stripped list view — `Quest.to_list_dict()` plus `region_name`. */
+export interface QuestListItem {
+    id: string;
+    title: string | null;
+    description: string | null;
+    theme: string[] | null;
+    difficulty: QuestDifficulty | null;
+    price: number;
+    currency: string;
+    points: number;
+    duration_minutes: number | null;
+    region_id: string | null;
+    region_name?: string | null;
+    status: QuestStatus;
+    view_count: number;
+    average_rating: number | null;
+    total_markers: number;
+    completion_count: number;
+    review_count: number;
+    cloudinary_assets: CloudinaryAsset[] | null;
+    created_at: string | null;
+}
+
+/**
+ * Full owner/admin view — `Quest.to_public_dict()`. This is the shape returned
+ * by create/update/submit/retract and is the one to prefill the edit wizard
+ * (it carries the raw `marker_playlist` and `region_id`).
+ */
+export interface Quest {
+    id: string;
+    title: string | null;
+    description: string | null;
+    theme: string[] | null;
+    keywords: string[] | null;
+    difficulty: QuestDifficulty | null;
+    price: number;
+    currency: string;
+    points: number;
+    duration_minutes: number | null;
+    hints_allowed: number | null;
+    min_expense: number | null;
+    max_expense: number | null;
+    best_month_start: string | null;
+    best_month_end: string | null;
+    marker_playlist: QuestPlaylistItem[];
+    suggested_route_geometry: GeoLineString | null;
+    cloudinary_assets: CloudinaryAsset[] | null;
+    reel_urls: string[] | null;
+    region_id: string | null;
+    review_id: string | null;
+    status: QuestStatus;
+    view_count: number;
+    average_rating: number | null;
+    total_markers: number;
+    completion_count: number;
+    review_count: number;
+    start_time: string | null;
+    linked_achievement_id: string | null;
+    created_at: string | null;
+    updated_at: string | null;
+}
+
+export interface QuestCreatorSummary {
+    id: string;
+    name: string | null;
+    avatar_url: string | null;
+    tagline: string | null;
+    creator_badge: CreatorBadge | null;
+}
+
+export interface QuestRegionSummary {
+    id: string;
+    name: string | null;
+    crowd_meter: Record<string, number> | null;
+}
+
+export interface QuestStartPoint {
+    marker_id: string;
+    name: string | null;
+    lat: number | null;
+    lng: number | null;
+}
+
+/**
+ * Marker as it appears inside an enriched quest detail. When the caller has not
+ * booked the quest this is the *teaser* shape: `coordinates` is null,
+ * `images_blurred` is true, `is_unlocked` is false. Booked/staff callers get the
+ * full shape with real `coordinates` and `map_url`.
+ */
+export interface QuestMarkerSummary {
+    marker_id: string;
+    name: string | null;
+    category: string | null;
+    tags: string[];
+    images: string[];
+    images_blurred?: boolean;
+    things_to_do_text: string | null;
+    things_to_do_image_url: string | null;
+    order: number | null;
+    is_required: boolean | null;
+    is_unlocked: boolean;
+    map_url?: string | null;
+    coordinates: { lat: number | null; lng: number | null } | null;
+}
+
+export interface QuestLinkedAchievement {
+    id: string;
+    name: string | null;
+    icon_url: string | null;
+    xp_reward: number | null;
+}
+
+export type QuestBookingStatus = "not_booked" | "active" | "completed" | string;
+
+/** Enriched detail — `Quest.to_detail_response()` (GET /quests/{id}). */
+export interface QuestDetail {
+    id: string;
+    title: string | null;
+    description: string | null;
+    theme: string[] | null;
+    keywords: string[] | null;
+    difficulty: QuestDifficulty | null;
+    price: number;
+    currency: string;
+    points: number;
+    duration_minutes: number | null;
+    hints_allowed: number | null;
+    min_expense: number | null;
+    max_expense: number | null;
+    best_month_start: string | null;
+    best_month_end: string | null;
+    start_time: string | null;
+    status: QuestStatus;
+    view_count: number;
+    average_rating: number | null;
+    review_count: number;
+    completion_count: number;
+    total_markers: number;
     cloudinary_assets: CloudinaryAsset[];
-    video_url?: string;
-    source_url?: string;
+    reel_urls: string[];
+    creator_summary: QuestCreatorSummary | Record<string, never>;
+    region_summary: QuestRegionSummary | Record<string, never>;
+    start_point: QuestStartPoint | null;
+    marker_summaries: QuestMarkerSummary[];
+    linked_achievement: QuestLinkedAchievement | null;
+    user_booking_status: QuestBookingStatus;
+    location: { route_waypoints: unknown[] };
+    created_at: string | null;
+    updated_at: string | null;
 }
 
-export interface QuestStep {
-    _id?: string;
-    quest_id?: string;
-    order: number;
+/** Cloudinary asset as accepted by the create payload (backend: List[Dict[str,str]]). */
+export type QuestAssetInput = Record<string, string>;
+
+/** Inline new-marker definition used inside a playlist item on create/update. */
+export interface InlineMarkerInput {
+    title: string;
+    location: GeoPoint;
+    category?: string;
+    description?: string;
+    address?: string;
+}
+
+/** One entry of the create/update `marker_playlist`: existing OR inline-new. */
+export interface PlaylistItemInput {
+    marker_id?: string;
+    new_marker?: InlineMarkerInput;
+    suggested_order?: number;
+    is_required?: boolean;
+    custom_description?: string;
+}
+
+/** Body for `POST /quests` (CreateQuestBody). */
+export interface CreateQuestPayload {
     title: string;
     description?: string;
-    location: QuestLocation;
-    points_reward?: number;
-}
-
-export interface Quest {
-    _id: string;
-    metadata_id: string;
-    location_id: string;
-    media_id: string;
-    created_by: string;
-    status: QuestStatus;
+    theme?: QuestTheme[];
+    keywords?: string[];
+    difficulty?: QuestDifficulty;
     price?: number;
     currency?: string;
-    booking_enabled: boolean;
-    review_history?: Array<{ admin_id: string; comment: string; timestamp: string }>;
-    quest_title?: string;
-    quest_region?: string;
-    quest_image?: string;
-    view_count?: number;
-    created_at: string;
-    updated_at: string;
-}
-
-export interface QuestDetailsMetadata {
-    title: string;
-    description: string[] | string;
-    keywords?: string[];
-    theme: QuestTheme;
-    difficulty: QuestDifficulty;
-    price?: number;
-    max_points?: number;
+    points?: number;
     duration_minutes?: number;
     hints_allowed?: number;
+    min_expense?: number;
+    max_expense?: number;
+    best_month_start?: string;
+    best_month_end?: string;
+    marker_playlist?: PlaylistItemInput[];
+    cloudinary_assets?: QuestAssetInput[];
+    reel_urls?: string[];
+    region_id: string;
+    /** when true the quest is created directly in "Under Review". */
+    submit?: boolean;
 }
 
-export interface QuestDetailsLocation {
-    region: string;
-    start_location: {
-        type: "Point";
-        coordinates: number[];
-        mapbox_feature_id?: string;
-    };
-    end_location: {
-        type: "Point";
-        coordinates: number[];
-        mapbox_feature_id?: string;
-    };
-    route_waypoints?: Array<{
-        order: number;
-        location: {
-            type: "Point";
-            coordinates: number[];
-            mapbox_waypoint_id?: string;
-        };
-        estimated_time_minutes?: number;
-        distance_from_previous_km?: number | null;
-    }>;
-    route_geometry?: {
-        type: "LineString";
-        coordinates: number[][];
-    };
-    map_data?: {
-        zoom_level: number;
-        map_style: string;
-    };
+/** Body for `PUT /quests/{id}` (UpdateQuestBody) — region_id/submit are not editable. */
+export type UpdateQuestPayload = Partial<Omit<CreateQuestPayload, "region_id" | "submit">>;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Marker Types (V2)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type MarkerStatus = "approved" | "pending" | "hidden" | "rejected";
+export type MarkerSource = "creator_created" | "user_submitted" | "admin_created" | "imported";
+
+export interface MarkerCenterDistance {
+    region_id: string | null;
+    center: number[] | null;
+    walk_distance_m: number | null;
+    walk_duration_s: number | null;
+    drive_distance_m: number | null;
+    drive_duration_s: number | null;
+    computed_at: string | null;
 }
 
-export interface QuestDetailsMedia {
-    cloudinary_assets?: CloudinaryAsset[];
-    reel_url?: string;
-}
-
-export interface QuestDetailsStep {
-    _id?: string;
-    order: number;
+/** `Marker.to_public_dict()`. Note: `media` is a list of URL strings. */
+export interface Marker {
+    id: string;
+    location: GeoPoint;
     title: string;
-    description: string;
-    how_to_reach?: string;
-    waypoint_order?: number;
-    cloudinary_assets?: CloudinaryAsset[];
+    category: string | null;
+    description: string | null;
+    media: string[] | null;
+    tags: string[] | null;
+    opens_at: string | null;
+    closes_at: string | null;
+    address: string | null;
+    map_url: string | null;
+    min_expense: number | null;
+    max_expense: number | null;
+    website_url: string | null;
+    contact: string | null;
+    things_to_do_text: string | null;
+    things_to_do_image_url: string | null;
+    region_id: string | null;
+    status: MarkerStatus;
+    source: MarkerSource | null;
+    created_by: string | null;
+    usage_count: number;
+    center_distance: MarkerCenterDistance | null;
+    /** present only on the teaser shape returned by the booking-gated detail. */
+    is_locked?: boolean;
+    created_at: string | null;
+    updated_at: string | null;
 }
 
-export interface QuestWithDetails extends Quest {
-    metadata?: QuestDetailsMetadata;
-    location?: QuestDetailsLocation;
-    media?: QuestDetailsMedia;
-    steps?: QuestDetailsStep[];
-}
-
-// Form Types for Quest Creation
-export interface CreateQuestFormData {
-    // Step 1: Location/URL
-    locationType: "city" | "url";
-    city?: string;
-    sourceUrl?: string;
-    latitude?: number;
-    longitude?: number;
-
-    // Step 2: Details
+/** Body for `POST /markers` (CreateMarkerBody). */
+export interface CreateMarkerPayload {
     title: string;
-    description: string;
-    theme: QuestTheme;
-    difficulty: QuestDifficulty;
-    duration?: number;
-    // coverImage removed as per user request
-
-    // Step 3: Waypoints
-    waypoints: QuestLocation[];
-
-    // Step 4: Waypoint Details
-    waypointDetails: Array<{
-        howToReach: string;
-        description: string;
-        images?: CloudinaryAsset[];
-    }>;
-    galleryImages: CloudinaryAsset[];
-
-    // Step 5: Narratives (optional)
-    narratives?: NarrativeFormItem[];
+    location: GeoPoint;
+    category?: string;
+    description?: string;
+    address?: string;
+    map_url?: string;
+    website_url?: string;
+    contact?: string;
+    things_to_do_text?: string;
+    things_to_do_image_url?: string;
+    tags?: string[];
+    media?: string[];
+    min_expense?: number;
+    max_expense?: number;
+    region_id?: string;
+    properties?: Record<string, unknown>;
 }
 
-// Narrative form item for quest creation flow
-export interface NarrativeFormItem {
-    fromStepIndex: number;
-    toStepIndex: number;
+/** Body for `PUT /markers/{id}` (UpdateMarkerBody) — location is immutable. */
+export type UpdateMarkerPayload = Partial<Omit<CreateMarkerPayload, "location" | "region_id">> & {
+    status?: MarkerStatus;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Task Config Types (V2) — serialized via to_dict(): the raw doc uses `_id`,
+// normalized to `id` at the service boundary.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type TaskType = "photo_challenge" | "qr_scan" | "quiz" | "collection" | "social" | "checkin";
+
+export interface TaskConfig {
+    id: string;
+    task_type: TaskType;
     title: string;
-    content: string;
-    triggerRadiusM: number;
-    isMandatory: boolean;
+    description: string | null;
+    marker_id: string;
+    quest_id: string | null;
+    photo_requirements: Record<string, unknown> | null;
+    qr_data: Record<string, unknown> | null;
+    quiz_data: Record<string, unknown> | null;
+    game_config: Record<string, unknown> | null;
+    collection_items: unknown[] | null;
+    social_task: Record<string, unknown> | null;
+    hints: Array<Record<string, unknown>> | null;
+    base_points: number;
+    is_active: boolean;
+    created_by: string | null;
+    created_at: string | null;
+    updated_at: string | null;
 }
 
-// Backend narrative response
-export interface NarrativeResponse {
-    _id: string;
-    quest_id: string;
-    from_step_id: string;
-    to_step_id: string;
-    from_step_order: number;
-    to_step_order: number;
-    title?: string;
-    content: string;
-    trigger_location?: { type: "Point"; coordinates: [number, number] };
-    trigger_radius_m: number;
-    media?: any[];
+/** Body for `POST /tasks` (CreateTaskBody). */
+export interface CreateTaskConfigPayload {
+    task_type: TaskType;
+    title: string;
+    description?: string;
+    marker_id: string;
+    quest_id?: string;
+    photo_requirements?: Record<string, unknown>;
+    qr_data?: Record<string, unknown>;
+    quiz_data?: Record<string, unknown>;
+    game_config?: Record<string, unknown>;
+    collection_items?: unknown[];
+    social_task?: Record<string, unknown>;
+    hints?: Array<Record<string, unknown>>;
+    base_points?: number;
+    is_active?: boolean;
+}
+
+/** Body for `PUT /tasks/{id}` (UpdateTaskBody) — task_type/marker_id immutable. */
+export type UpdateTaskConfigPayload = Partial<
+    Omit<CreateTaskConfigPayload, "task_type" | "marker_id" | "quest_id">
+>;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Step Reward Types (V2) — serialized via to_dict(): raw doc uses `_id`,
+// normalized to `id` at the service boundary.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type RewardContextType =
+    | "quest_completion"
+    | "marker_visit"
+    | "task_completion"
+    | "streak_bonus";
+
+export type BonusOperator = "gte" | "lte" | "eq" | "in";
+
+export interface BonusCondition {
+    field: string;
+    operator: BonusOperator;
+    value: unknown;
+    bonus_points: number;
+}
+
+export interface StepReward {
+    id: string;
+    context_type: RewardContextType;
+    context_id: string;
+    base_points: number;
+    bonus_conditions: BonusCondition[] | null;
+    unlocked_badges: string[] | null;
+    unlocked_content: string[] | null;
+    created_by: string | null;
+    created_at: string | null;
+    updated_at: string | null;
+}
+
+/** Body for `POST /rewards` (CreateRewardBody). */
+export interface CreateStepRewardPayload {
+    context_type: RewardContextType;
+    context_id: string;
+    base_points: number;
+    bonus_conditions?: BonusCondition[];
+    unlocked_badges?: string[];
+    unlocked_content?: string[];
+}
+
+/** Body for `PUT /rewards/{id}` (UpdateRewardBody). */
+export type UpdateStepRewardPayload = Partial<
+    Omit<CreateStepRewardPayload, "context_type" | "context_id">
+>;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Region Types (V2)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type RegionType = "city" | "hotspot";
+
+/** `Region.to_public_dict()` (GET /regions/{id}). */
+export interface Region {
+    id: string;
+    name: string;
+    slug: string;
+    type: RegionType;
+    parent_id: string | null;
+    description: string | null;
+    bbox: GeoPolygon | null;
+    center_point: GeoPoint | null;
+    mapbox_place_id: string | null;
+    quest_ids: string[];
+    marker_count: number;
+    admin_weight: number;
+    crowd_meter: Record<string, number>;
+    is_active: boolean;
+    created_at: string | null;
+    updated_at: string | null;
+}
+
+/** `Region.to_list_dict()` (GET /regions, GET /regions/search). */
+export interface RegionListItem {
+    id: string;
+    name: string;
+    slug: string;
+    type: RegionType;
+    parent_id: string | null;
+    marker_count: number;
+    admin_weight: number;
+    is_active: boolean;
+}
+
+/**
+ * Body for `POST /regions/resolve-or-create` (ResolveOrCreateBody). Creators use
+ * this during quest building to resolve a Mapbox feature into a region they can
+ * attach a quest to (no direct region edit/delete).
+ */
+export interface ResolveOrCreateRegionPayload {
+    mapbox_id: string;
+    name: string;
+    feature_type: string;
+    full_address?: string;
+    bbox?: unknown;
+    center?: unknown;
+    context?: Record<string, unknown>;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Narrative Types (V2 attach model) — serialized via to_dict(): raw doc uses
+// `_id`, normalized to `id` at the service boundary.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type NarrativeAttachType = "marker" | "quest" | "region";
+export type NarrativeStatus = "draft" | "under_review" | "approved" | "rejected" | "archived";
+export type NarrativeAudioStatus =
+    | "pending"
+    | "generating"
+    | "ready"
+    | "failed"
+    | "quota_exceeded";
+export type VoicePersona =
+    | "historian_warm"
+    | "mystery_whisper"
+    | "energetic_guide"
+    | "elder_storyteller";
+
+export interface Narrative {
+    id: string;
+    title: string;
+    attach_type: NarrativeAttachType;
+    attach_id: string;
+    content: string | null;
+    subtitle: string | null;
+    trigger_location: GeoPoint | null;
+    trigger_radius_m: number | null;
+    voice_persona: VoicePersona | null;
+    media: string[];
     is_mandatory: boolean;
+    is_unlocked: boolean;
+    chain_id: string | null;
+    sequence_order: number | null;
+    status: NarrativeStatus;
+    audio_url: string | null;
+    audio_status: NarrativeAudioStatus;
+    audio_duration_s?: number | null;
+    reviewed_by: string | null;
+    reviewed_at: string | null;
+    review_note: string | null;
     view_count: number;
     created_by: string;
-    created_at: string;
-    updated_at: string;
+    created_at: string | null;
+    updated_at: string | null;
+    is_deleted?: boolean;
 }
 
-// Backend expects this specific structure
-export interface CreateQuestPayload {
-    metadata: {
-        title: string;
-        description: string[];
-        keywords?: string[]; // Added based on sample
-        theme: QuestTheme;
-        difficulty: QuestDifficulty;
-        price?: number; // Added based on sample
-        max_points?: number; // Added based on sample
-        duration_minutes?: number;
-        hints_allowed?: number; // Added based on sample
-    };
-    location: {
-        region: string;
-        start_location: {
-            type: "Point";
-            coordinates: number[];
-            mapbox_feature_id?: string;
-        };
-        end_location: {
-            type: "Point";
-            coordinates: number[];
-            mapbox_feature_id?: string;
-        };
-        route_waypoints?: Array<{
-            order: number;
-            location: {
-                type: "Point";
-                coordinates: number[];
-                mapbox_waypoint_id?: string;
-            };
-            estimated_time_minutes?: number;
-            distance_from_previous_km?: number | null;
-        }>;
-        route_geometry?: {
-            type: "LineString";
-            coordinates: number[][];
-        };
-        map_data: {
-            zoom_level: number;
-            map_style: string;
-            custom_markers?: Array<{
-                location: {
-                    type: "Point";
-                    coordinates: number[];
-                };
-                icon_public_id: string;
-                label: string;
-            }>;
-            bounding_box?: {
-                northeast: { type: "Point"; coordinates: number[] };
-                southwest: { type: "Point"; coordinates: number[] };
-            };
-        };
-        tileset_id?: string; // Added based on sample
-    };
-    media: {
-        cloudinary_assets?: CloudinaryAsset[];
-        mapbox_reference?: {
-            style_id?: string;
-            route_id?: string;
-            tile_url?: string;
-            static_map_url?: string;
-        };
-        reel_url?: string;
-    };
-    steps: Array<{
-        order: number;
-        title: string;
-        description: string;
-        how_to_reach?: string;
-        waypoint_order?: number;
-        cloudinary_assets?: CloudinaryAsset[];
-    }>;
-    status?: QuestStatus;
-    price?: number;
-    currency?: string;
-    booking_enabled?: boolean;
+/** Body for `POST /narratives` (CreateNarrativeBody). */
+export interface CreateNarrativePayload {
+    title: string;
+    attach_type: NarrativeAttachType;
+    attach_id: string;
+    content?: string;
+    subtitle?: string;
+    trigger_location?: GeoPoint;
+    trigger_radius_m?: number;
+    voice_persona?: VoicePersona;
+    media?: string[];
+    is_mandatory?: boolean;
+    is_unlocked?: boolean;
+    chain_id?: string;
+    sequence_order?: number;
+    /** creators may only set draft/under_review; admins may set approved. */
+    status?: "draft" | "under_review" | "approved";
+    /** existing narrative id to chain the new one onto (resolves an attach conflict). */
+    chain_with?: string;
 }
 
-// API Response Types
+/** Body for `PUT /narratives/{id}` (UpdateNarrativeBody) — attachment is immutable. */
+export type UpdateNarrativePayload = Partial<
+    Omit<CreateNarrativePayload, "attach_type" | "attach_id" | "status" | "chain_with">
+>;
+
+/** Result of `GET /narratives/attach-summary` (drives the chain selector / conflict pre-check). */
+export interface NarrativeAttachSummary {
+    attach_type: NarrativeAttachType;
+    attach_id: string;
+    [key: string]: unknown;
+}
+
+/** Result of `GET /narratives/{id}/audio-status`. */
+export interface NarrativeAudioStatusResponse {
+    narrative_id: string;
+    audio_status: NarrativeAudioStatus | null;
+    audio_url: string | null;
+    audio_duration_s: number | null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Payout Account Types (V2) — `PayoutAccount.to_safe_dict()` (PII-stripped).
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type PayoutMethod = "bank_transfer" | "upi";
+export type PayoutAccountStatus = "pending_verification" | "verified" | "rejected" | "disabled";
+
+export interface PayoutBankDetailsSafe {
+    account_number_masked: string | null;
+    ifsc_code: string | null;
+    bank_name: string | null;
+}
+
+export interface PayoutAccount {
+    id: string;
+    creator_id: string;
+    method: PayoutMethod;
+    status: PayoutAccountStatus;
+    is_primary: boolean;
+    currency: string;
+    account_holder_name: string | null;
+    bank_details: PayoutBankDetailsSafe | null;
+    upi_id: string | null;
+    verified_by: string | null;
+    verified_at: string | null;
+    rejection_reason: string | null;
+    created_at: string | null;
+    updated_at: string | null;
+}
+
+/** Raw bank details accepted on create/update (account_number is write-only). */
+export interface PayoutBankDetailsInput {
+    account_number?: string;
+    ifsc_code?: string;
+    bank_name?: string;
+}
+
+/** Body for `POST /payout-accounts` (CreatePayoutAccountBody). */
+export interface CreatePayoutAccountPayload {
+    method: string;
+    currency: string;
+    account_holder_name?: string;
+    bank_details?: PayoutBankDetailsInput;
+    upi_id?: string;
+}
+
+/** Body for `PUT /payout-accounts/{id}` (UpdatePayoutAccountBody). */
+export type UpdatePayoutAccountPayload = Partial<Omit<CreatePayoutAccountPayload, "method">>;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Creator Analytics Types (V2) — `/creators/me/analytics/*`.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface CreatorAnalyticsSummary {
+    creator_id: string;
+    total_quests: number;
+    total_earnings: number;
+    pending_payouts: number;
+    rating: number | null;
+    review_count: number;
+    travelers_served: number;
+}
+
+export interface CreatorQuestBreakdownRow {
+    quest_id: string;
+    title: string | null;
+    status: QuestStatus | string;
+    average_rating: number | null;
+    review_count: number;
+    completions: number;
+    total_earnings: number;
+}
+
+export type EarningsInterval = "daily" | "weekly" | "monthly";
+
+export interface CreatorEarningsPoint {
+    period: string;
+    revenue: number;
+    count: number;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Generic API envelope types
+// ─────────────────────────────────────────────────────────────────────────────
+
 export interface ApiResponse<T> {
     data: T;
     status: number;
@@ -467,16 +884,4 @@ export interface ApiError {
     error: string;
     details?: string;
     status?: number;
-}
-
-export interface PaginatedResponse<T> {
-    items: T[];
-    pagination: {
-        page: number;
-        per_page: number;
-        total: number;
-        total_pages: number;
-        has_next: boolean;
-        has_prev: boolean;
-    };
 }

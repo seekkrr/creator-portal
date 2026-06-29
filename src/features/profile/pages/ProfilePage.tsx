@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
   BadgeCheck,
   Camera,
   CheckCircle2,
+  ChevronRight,
   Circle,
   Clock,
   Loader2,
@@ -18,6 +20,7 @@ import { creatorService } from "@services/creator.service";
 import { userService } from "@services/user.service";
 import { cloudinaryService } from "@services/cloudinary.service";
 import { useAuthStore } from "@store/auth.store";
+import { useCreatorStats } from "@hooks/useCreatorStats";
 import type { CreatorOnboarding } from "@/types";
 
 /** The signature element: a seal that makes verification status legible at a glance. */
@@ -35,7 +38,21 @@ function VerificationSeal({ verified }: { verified: boolean }) {
   );
 }
 
-function OnboardingChecklist({ onboarding }: { onboarding: CreatorOnboarding | undefined }) {
+type OnboardingKey = keyof CreatorOnboarding;
+
+interface OnboardingAction {
+  onClick?: () => void;
+  /** When set, the row is shown disabled with this tooltip instead of a link. */
+  disabledHint?: string;
+}
+
+function OnboardingChecklist({
+  onboarding,
+  actions,
+}: {
+  onboarding: CreatorOnboarding | undefined;
+  actions: Partial<Record<OnboardingKey, OnboardingAction>>;
+}) {
   const items = [
     { key: "profile_complete", label: "Complete your profile", hint: "Add a tagline and bio" },
     {
@@ -71,17 +88,20 @@ function OnboardingChecklist({ onboarding }: { onboarding: CreatorOnboarding | u
           style={{ width: `${pct}%` }}
         />
       </div>
-      <ul className="space-y-3">
+      <ul className="space-y-1">
         {items.map((item) => {
           const complete = !!onboarding?.[item.key];
-          return (
-            <li key={item.key} className="flex items-start gap-3">
+          const action = actions[item.key];
+          const clickable = !complete && !!action?.onClick && !action?.disabledHint;
+
+          const content = (
+            <>
               {complete ? (
                 <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
               ) : (
                 <Circle className="w-5 h-5 text-neutral-300 flex-shrink-0 mt-0.5" />
               )}
-              <div>
+              <div className="min-w-0">
                 <p
                   className={`text-sm font-medium ${complete ? "text-neutral-400 line-through" : "text-neutral-900"}`}
                 >
@@ -89,6 +109,33 @@ function OnboardingChecklist({ onboarding }: { onboarding: CreatorOnboarding | u
                 </p>
                 {!complete && <p className="text-xs text-neutral-500">{item.hint}</p>}
               </div>
+              {clickable && (
+                <ChevronRight className="w-4 h-4 text-neutral-300 flex-shrink-0 ml-auto self-center" />
+              )}
+            </>
+          );
+
+          if (clickable) {
+            return (
+              <li key={item.key}>
+                <button
+                  type="button"
+                  onClick={action!.onClick}
+                  className="w-full flex items-start gap-3 rounded-xl p-2 -mx-2 text-left hover:bg-neutral-50 transition-colors cursor-pointer"
+                >
+                  {content}
+                </button>
+              </li>
+            );
+          }
+
+          return (
+            <li
+              key={item.key}
+              className="flex items-start gap-3 p-2 -mx-2"
+              title={!complete ? action?.disabledHint : undefined}
+            >
+              {content}
             </li>
           );
         })}
@@ -112,10 +159,12 @@ function StatTile({ icon, label, value }: { icon: React.ReactNode; label: string
 }
 
 export function ProfilePage() {
+  const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const creator = useAuthStore((s) => s.creator);
+  const stats = useCreatorStats();
 
-  // Editable fields. Identity (name/avatar) lives on the user; tagline/bio on the creator.
+  // Editable fields. Identity (name/avatar) lives on the user; tagline/bio/badge on the creator.
   const [firstName, setFirstName] = useState(user?.first_name ?? "");
   const [lastName, setLastName] = useState(user?.last_name ?? "");
   const [tagline, setTagline] = useState(creator?.tagline ?? "");
@@ -201,6 +250,10 @@ export function ProfilePage() {
     setTagline(creator?.tagline ?? "");
     setBio(creator?.creator_bio ?? "");
     setPendingImage(null);
+  };
+
+  const scrollToEditForm = () => {
+    document.getElementById("edit-profile")?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
   const handleSave = async () => {
@@ -325,7 +378,7 @@ export function ProfilePage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {/* Edit form */}
-        <Card padding="lg" className="lg:col-span-2 rounded-2xl">
+        <Card id="edit-profile" padding="lg" className="lg:col-span-2 rounded-2xl scroll-mt-24">
           <h2 className="text-lg font-semibold text-neutral-900 mb-1">Edit profile</h2>
           <p className="text-sm text-neutral-500 mb-6">
             Your name and photo appear across SeekKrr. Tagline and bio introduce you on your public
@@ -387,7 +440,14 @@ export function ProfilePage() {
 
         {/* Side column */}
         <div className="space-y-6">
-          <OnboardingChecklist onboarding={onboarding} />
+          <OnboardingChecklist
+            onboarding={onboarding}
+            actions={{
+              profile_complete: { onClick: scrollToEditForm },
+              first_quest_created: { onClick: () => navigate("/creator/quest/create") },
+              payout_account_set: { disabledHint: "Payout accounts are coming soon" },
+            }}
+          />
 
           <Card padding="md" className="rounded-2xl">
             <h2 className="text-base font-semibold text-neutral-900 mb-4">Your impact</h2>
@@ -395,24 +455,24 @@ export function ProfilePage() {
               <StatTile
                 icon={<MapPin className="w-5 h-5" />}
                 label="Quests"
-                value={`${creator?.total_quests ?? 0}`}
+                value={`${stats.total_quests}`}
               />
               <StatTile
                 icon={<Users className="w-5 h-5" />}
                 label="Travelers served"
-                value={`${creator?.travelers_served ?? 0}`}
+                value={`${stats.travelers_served}`}
               />
               <StatTile
                 icon={<Wallet className="w-5 h-5" />}
                 label="Earnings"
-                value={`₹${(creator?.total_earnings ?? 0).toLocaleString()}`}
+                value={`₹${stats.total_earnings.toLocaleString()}`}
               />
               <StatTile
                 icon={<Star className="w-5 h-5" />}
                 label="Rating"
                 value={
-                  creator?.rating != null
-                    ? `${creator.rating.toFixed(1)} (${creator.review_count ?? 0})`
+                  stats.rating != null
+                    ? `${stats.rating.toFixed(1)} (${stats.review_count})`
                     : "—"
                 }
               />

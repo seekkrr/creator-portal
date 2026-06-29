@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useAuthStore } from "@store/auth.store";
+import { useCreatorStats } from "@hooks/useCreatorStats";
 import { MapPin, Compass, Trophy, Clock, Play, BadgeCheck, AlertTriangle } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { WALKTHROUGH_VIDEOS } from "@config/walkthroughVideos";
@@ -149,7 +150,9 @@ function HowToVideoPlayer() {
 export function DashboardPage() {
     const { user, creator } = useAuthStore();
 
-    // Stats come from the creator profile loaded at login (GET /creators/me).
+    // Headline stats are pulled live from /creators/me/analytics/summary on mount,
+    // falling back to the creator profile cached at login.
+    const stats = useCreatorStats();
     const isVerified = !!creator?.is_verified;
     // Operational lifecycle. The portal login gate (evaluateCreatorAccess) only lets
     // ACTIVE creators (or staff, where creator is null) in, so the suspended/rejected
@@ -258,7 +261,7 @@ export function DashboardPage() {
                         </div>
                         <div>
                             <p className="text-sm font-medium text-neutral-500 uppercase tracking-wider">Quests Published</p>
-                            <p className="text-3xl font-bold text-neutral-900">{creator?.total_quests ?? 0}</p>
+                            <p className="text-3xl font-bold text-neutral-900">{stats.total_quests}</p>
                         </div>
                     </div>
                 </div>
@@ -270,7 +273,7 @@ export function DashboardPage() {
                         </div>
                         <div>
                             <p className="text-sm font-medium text-neutral-500 uppercase tracking-wider">Travelers Served</p>
-                            <p className="text-3xl font-bold text-neutral-900">{creator?.travelers_served ?? 0}</p>
+                            <p className="text-3xl font-bold text-neutral-900">{stats.travelers_served}</p>
                         </div>
                     </div>
                 </div>
@@ -282,7 +285,7 @@ export function DashboardPage() {
                         </div>
                         <div>
                             <p className="text-sm font-medium text-neutral-500 uppercase tracking-wider">Total Earnings</p>
-                            <p className="text-3xl font-bold text-neutral-900">₹{creator?.total_earnings?.toLocaleString() ?? 0}</p>
+                            <p className="text-3xl font-bold text-neutral-900">₹{stats.total_earnings.toLocaleString()}</p>
                         </div>
                     </div>
                 </div>
