@@ -1,6 +1,6 @@
 import path from "path";
 import { fileURLToPath } from "url";
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
@@ -72,5 +72,9 @@ export default defineConfig({
     },
     optimizeDeps: {
         include: ["react", "react-dom", "react-router-dom", "@tanstack/react-query"],
+    },
+    test: {
+        environment: "node",
+        include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
     },
 });
