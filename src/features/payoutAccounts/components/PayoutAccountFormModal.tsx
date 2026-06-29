@@ -75,8 +75,10 @@ export function PayoutAccountFormModal({ open, mode, initial, onClose, onSaved }
             payoutAccountService.createAccount(toCreatePayload(d)),
     });
     const updateMutation = useMutation({
-        mutationFn: (d: PayoutAccountFormData) =>
-            payoutAccountService.updateAccount((initial as PayoutAccount).id, toUpdatePayload(d)),
+        mutationFn: (d: PayoutAccountFormData) => {
+            if (!initial) throw new Error("initial is required for edit mode");
+            return payoutAccountService.updateAccount(initial.id, toUpdatePayload(d));
+        },
     });
 
     const onSubmit = async (d: PayoutAccountFormData) => {
