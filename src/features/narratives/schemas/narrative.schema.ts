@@ -23,7 +23,10 @@ export const narrativeFormSchema = z.object({
 
 export type NarrativeFormData = z.infer<typeof narrativeFormSchema>;
 
-export function toCreatePayload(d: NarrativeFormData): CreateNarrativePayload {
+export function toCreatePayload(
+    d: NarrativeFormData,
+    status: "draft" | "under_review" = "draft"
+): CreateNarrativePayload {
     return {
         title: d.title,
         attach_type: d.attach_type,
@@ -35,7 +38,7 @@ export function toCreatePayload(d: NarrativeFormData): CreateNarrativePayload {
         is_mandatory: d.is_mandatory,
         is_unlocked: d.is_unlocked,
         ...(d.sequence_order !== undefined && d.sequence_order !== null ? { sequence_order: d.sequence_order } : {}),
-        status: "draft",
+        status,
     };
 }
 

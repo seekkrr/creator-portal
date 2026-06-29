@@ -49,6 +49,8 @@ export function NarrativeFormModal({
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [uploadingMedia, setUploadingMedia] = useState(false);
     const [uploadError, setUploadError] = useState<string | null>(null);
+    // Tracks which submit action the user clicked so onSubmit knows the intent.
+    const [pendingStatus, setPendingStatus] = useState<"draft" | "under_review">("under_review");
 
     const {
         register,
@@ -189,7 +191,10 @@ export function NarrativeFormModal({
     const onSubmit = async (data: NarrativeFormData) => {
         if (mode === "create") {
             const chainFields = attachSummary ? chainFieldsFromSummary(attachSummary) : {};
-            const payload: CreateNarrativePayload = { ...toCreatePayload(data), ...chainFields };
+            const payload: CreateNarrativePayload = {
+                ...toCreatePayload(data, pendingStatus),
+                ...chainFields,
+            };
             const promise = createMutation.mutateAsync(payload);
 
             toast.promise(promise, {
@@ -610,14 +615,39 @@ export function NarrativeFormModal({
                         >
                             Cancel
                         </Button>
-                        <Button
-                            type="submit"
-                            variant="primary"
-                            fullWidth
-                            isLoading={isSubmitting}
-                        >
-                            {mode === "create" ? "Create Narrative" : "Save Changes"}
-                        </Button>
+                        {mode === "create" ? (
+                            <>
+                                <Button
+                                    type="submit"
+                                    variant="secondary"
+                                    fullWidth
+                                    isLoading={isSubmitting && pendingStatus === "draft"}
+                                    disabled={isSubmitting}
+                                    onClick={() => setPendingStatus("draft")}
+                                >
+                                    Save as Draft
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    variant="primary"
+                                    fullWidth
+                                    isLoading={isSubmitting && pendingStatus === "under_review"}
+                                    disabled={isSubmitting}
+                                    onClick={() => setPendingStatus("under_review")}
+                                >
+                                    Submit for Review
+                                </Button>
+                            </>
+                        ) : (
+                            <Button
+                                type="submit"
+                                variant="primary"
+                                fullWidth
+                                isLoading={isSubmitting}
+                            >
+                                Save Changes
+                            </Button>
+                        )}
                     </div>
                 </form>
             </Card>
