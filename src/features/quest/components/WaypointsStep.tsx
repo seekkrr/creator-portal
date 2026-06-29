@@ -105,6 +105,7 @@ export function WaypointsStep({ defaultValues, onNext, onBack, onRegionChange }:
     // ─── Region (bbox / center / parent) ─────────────────────────────────────
     const { data: region } = useQuery({
         queryKey: ["region", regionId],
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         queryFn: () => regionService.getRegion(regionId!),
         enabled: !!regionId,
         staleTime: 5 * 60 * 1000,
@@ -116,7 +117,7 @@ export function WaypointsStep({ defaultValues, onNext, onBack, onRegionChange }:
     const regionCenter = region?.center_point?.coordinates;
     const defaultCenter = useMemo(() => {
         if (regionCenter) return { lng: regionCenter[0], lat: regionCenter[1] };
-        if (defaultValues.latitude != null && defaultValues.longitude != null) {
+        if (defaultValues.latitude !== null && defaultValues.latitude !== undefined && defaultValues.longitude !== null && defaultValues.longitude !== undefined) {
             return { lng: defaultValues.longitude, lat: defaultValues.latitude };
         }
         return { lng: 77.5946, lat: 12.9716 };
@@ -128,9 +129,13 @@ export function WaypointsStep({ defaultValues, onNext, onBack, onRegionChange }:
         queryFn: () =>
             markerService.listMarkers({
                 status: "approved",
+                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                 min_lon: bbox!.min_lon,
+                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                 min_lat: bbox!.min_lat,
+                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                 max_lon: bbox!.max_lon,
+                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                 max_lat: bbox!.max_lat,
                 page_size: 100,
             }),
@@ -229,6 +234,7 @@ export function WaypointsStep({ defaultValues, onNext, onBack, onRegionChange }:
             }
 
             if (nearest) {
+                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                 if (current.some((it) => it.marker_id === nearest!.marker.id)) {
                     flashReuseNote("That spot is already in your playlist.");
                     return;
@@ -379,6 +385,7 @@ export function WaypointsStep({ defaultValues, onNext, onBack, onRegionChange }:
 
     const { data: parentCity } = useQuery({
         queryKey: ["region", region?.parent_id],
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         queryFn: () => regionService.getRegion(region!.parent_id!),
         enabled: canExpand,
         staleTime: 5 * 60 * 1000,

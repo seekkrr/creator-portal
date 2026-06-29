@@ -543,6 +543,10 @@ export interface CreateMarkerPayload {
     media?: string[];
     min_expense?: number;
     max_expense?: number;
+    /** ISO-8601 time string — e.g. "09:00" or "09:00:00". */
+    opens_at?: string;
+    /** ISO-8601 time string — e.g. "21:00" or "21:00:00". */
+    closes_at?: string;
     region_id?: string;
     properties?: Record<string, unknown>;
 }

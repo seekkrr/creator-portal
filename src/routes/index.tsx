@@ -1,9 +1,7 @@
-import { createBrowserRouter, Navigate, Outlet, Link } from "react-router-dom";
-import { Analytics } from "@vercel/analytics/react";
-import { RouteTracker } from "@components/RouteTracker";
+import { createBrowserRouter, Navigate, Link } from "react-router-dom";
 import { AuthLayout, DashboardLayout, PublicLayout } from "@layouts/index";
 import { ProtectedRoute } from "./ProtectedRoute";
-import { SuspenseWrapper } from "@components/index";
+import { SuspenseWrapper, RootWrapper } from "@components/index";
 import { lazyRetry } from "@utils/lazyRetry";
 
 // Lazy load pages with retry mechanism
@@ -51,12 +49,28 @@ const ContactUsPage = lazyRetry(() =>
     import("@features/contact/pages/ContactUsPage").then((m) => ({ default: m.ContactUsPage }))
 );
 
-const RootWrapper = () => (
-    <>
-        <RouteTracker />
-        <Analytics />
-        <Outlet />
-    </>
+const MarkersPage = lazyRetry(() =>
+    import("@features/markers/pages/MarkersPage").then((m) => ({ default: m.MarkersPage }))
+);
+
+const MarkerDetailPage = lazyRetry(() =>
+    import("@features/markers/pages/MarkerDetailPage").then((m) => ({ default: m.MarkerDetailPage }))
+);
+
+const NarrativesPage = lazyRetry(() =>
+    import("@features/narratives/pages/NarrativesPage").then((m) => ({ default: m.NarrativesPage }))
+);
+
+const NarrativeDetailPage = lazyRetry(() =>
+    import("@features/narratives/pages/NarrativeDetailPage").then((m) => ({ default: m.NarrativeDetailPage }))
+);
+
+const TasksPage = lazyRetry(() =>
+    import("@features/tasks/pages/TasksPage").then((m) => ({ default: m.TasksPage }))
+);
+
+const TaskDetailPage = lazyRetry(() =>
+    import("@features/tasks/pages/TaskDetailPage").then((m) => ({ default: m.TaskDetailPage }))
 );
 
 export const router = createBrowserRouter([
@@ -180,6 +194,54 @@ export const router = createBrowserRouter([
                                 element: (
                                     <SuspenseWrapper>
                                         <QuestSuccessPage />
+                                    </SuspenseWrapper>
+                                ),
+                            },
+                            {
+                                path: "markers",
+                                element: (
+                                    <SuspenseWrapper>
+                                        <MarkersPage />
+                                    </SuspenseWrapper>
+                                ),
+                            },
+                            {
+                                path: "markers/view/:id",
+                                element: (
+                                    <SuspenseWrapper>
+                                        <MarkerDetailPage />
+                                    </SuspenseWrapper>
+                                ),
+                            },
+                            {
+                                path: "narratives",
+                                element: (
+                                    <SuspenseWrapper>
+                                        <NarrativesPage />
+                                    </SuspenseWrapper>
+                                ),
+                            },
+                            {
+                                path: "narratives/view/:id",
+                                element: (
+                                    <SuspenseWrapper>
+                                        <NarrativeDetailPage />
+                                    </SuspenseWrapper>
+                                ),
+                            },
+                            {
+                                path: "tasks",
+                                element: (
+                                    <SuspenseWrapper>
+                                        <TasksPage />
+                                    </SuspenseWrapper>
+                                ),
+                            },
+                            {
+                                path: "tasks/view/:id",
+                                element: (
+                                    <SuspenseWrapper>
+                                        <TaskDetailPage />
                                     </SuspenseWrapper>
                                 ),
                             },

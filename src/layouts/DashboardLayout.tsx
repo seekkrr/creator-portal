@@ -34,6 +34,24 @@ export function DashboardLayout() {
                                 My Quests
                             </Link>
                             <Link
+                                to="/creator/markers"
+                                className="text-base font-normal text-neutral-600 hover:text-neutral-900 transition-colors"
+                            >
+                                My Markers
+                            </Link>
+                            <Link
+                                to="/creator/narratives"
+                                className="text-base font-normal text-neutral-600 hover:text-neutral-900 transition-colors"
+                            >
+                                My Narratives
+                            </Link>
+                            <Link
+                                to="/creator/tasks"
+                                className="text-base font-normal text-neutral-600 hover:text-neutral-900 transition-colors"
+                            >
+                                My Tasks
+                            </Link>
+                            <Link
                                 to="/creator/profile"
                                 className="text-base font-normal text-neutral-600 hover:text-neutral-900 transition-colors"
                             >
@@ -77,6 +95,27 @@ export function DashboardLayout() {
                                 onClick={() => setIsMobileMenuOpen(false)}
                             >
                                 My Quests
+                            </Link>
+                            <Link
+                                to="/creator/markers"
+                                className="block text-base font-normal text-neutral-600 hover:text-neutral-900"
+                                onClick={() => setIsMobileMenuOpen(false)}
+                            >
+                                My Markers
+                            </Link>
+                            <Link
+                                to="/creator/narratives"
+                                className="block text-base font-normal text-neutral-600 hover:text-neutral-900"
+                                onClick={() => setIsMobileMenuOpen(false)}
+                            >
+                                My Narratives
+                            </Link>
+                            <Link
+                                to="/creator/tasks"
+                                className="block text-base font-normal text-neutral-600 hover:text-neutral-900"
+                                onClick={() => setIsMobileMenuOpen(false)}
+                            >
+                                My Tasks
                             </Link>
                             <Link
                                 to="/creator/profile"

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode, type ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -116,11 +116,13 @@ function OnboardingChecklist({
           );
 
           if (clickable) {
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            const handleClick = action!.onClick;
             return (
               <li key={item.key}>
                 <button
                   type="button"
-                  onClick={action!.onClick}
+                  onClick={handleClick}
                   className="w-full flex items-start gap-3 rounded-xl p-2 -mx-2 text-left hover:bg-neutral-50 transition-colors cursor-pointer"
                 >
                   {content}
@@ -144,7 +146,7 @@ function OnboardingChecklist({
   );
 }
 
-function StatTile({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+function StatTile({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
   return (
     <div className="flex items-center gap-3">
       <div className="w-10 h-10 rounded-xl bg-neutral-50 border border-neutral-100 flex items-center justify-center text-neutral-500 flex-shrink-0">
@@ -221,7 +223,7 @@ export function ProfilePage() {
     bio !== (creator?.creator_bio ?? "") ||
     pendingImage !== null;
 
-  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
@@ -471,7 +473,7 @@ export function ProfilePage() {
                 icon={<Star className="w-5 h-5" />}
                 label="Rating"
                 value={
-                  stats.rating != null
+                  stats.rating !== null && stats.rating !== undefined
                     ? `${stats.rating.toFixed(1)} (${stats.review_count})`
                     : "—"
                 }

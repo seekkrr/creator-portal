@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from "react";
+import type { Feature, GeoJSON, Polygon } from "geojson";
 import mapboxgl from "mapbox-gl";
 import { config } from "@config/env";
 import { escapeHtml } from "@/utils/security";
@@ -119,16 +120,16 @@ export function MapComponent({
     // Draw (or update) the region boundary polygon and fit the view to it.
     const drawRegionBbox = useCallback(
         (map: mapboxgl.Map, polygon: GeoPolygon) => {
-            const data: GeoJSON.Feature = {
+            const data: Feature = {
                 type: "Feature",
-                geometry: polygon as GeoJSON.Polygon,
+                geometry: polygon as Polygon,
                 properties: {},
             };
             const existing = map.getSource("region-bbox") as mapboxgl.GeoJSONSource | undefined;
             if (existing) {
-                existing.setData(data as GeoJSON.GeoJSON);
+                existing.setData(data as GeoJSON);
             } else {
-                map.addSource("region-bbox", { type: "geojson", data: data as GeoJSON.GeoJSON });
+                map.addSource("region-bbox", { type: "geojson", data: data as GeoJSON });
                 // On the Mapbox Standard style, custom layers MUST declare a `slot`
                 // or they get occluded by the basemap (and never appear). Fill sits
                 // in `middle` (under labels); the outline in `top` so it's always
@@ -195,6 +196,7 @@ export function MapComponent({
 
             const marker = new mapboxgl.Marker({ element: el, anchor: "bottom" })
                 .setLngLat([location.longitude, location.latitude])
+                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                 .addTo(mapRef.current!);
 
             const popup = new mapboxgl.Popup({ offset: 25, closeButton: false }).setHTML(`

@@ -131,6 +131,7 @@ export async function getCachedMultiRoute(
 
   const segmentPromises: Promise<CachedRoute | null>[] = [];
   for (let i = 0; i < waypoints.length - 1; i++) {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     segmentPromises.push(getCachedDirections(waypoints[i]!, waypoints[i + 1]!, signal));
   }
 

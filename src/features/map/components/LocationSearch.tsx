@@ -381,7 +381,7 @@ export function LocationSearch({
                                 </div>
 
                                 {/* Distance badge */}
-                                {suggestion.distance != null && (
+                                {suggestion.distance !== null && suggestion.distance !== undefined && (
                                     <div className="flex items-center gap-1 text-xs text-neutral-400 flex-shrink-0 mt-0.5">
                                         <Navigation className="w-3 h-3" />
                                         <span>{formatDistance(suggestion.distance)}</span>

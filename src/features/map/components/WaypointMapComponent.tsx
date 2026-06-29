@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback, memo } from "react";
+import type { FeatureCollection, Feature, GeoJSON, Polygon } from "geojson";
 import mapboxgl from "mapbox-gl";
 import { config } from "@config/env";
 import { escapeHtml } from "@/utils/security";
@@ -90,7 +91,7 @@ function getPointsCenter(points: PlaylistPoint[]): { lng: number; lat: number } 
     return { lng: sum.lng / points.length, lat: sum.lat / points.length };
 }
 
-function emptyFeatureCollection(): GeoJSON.FeatureCollection {
+function emptyFeatureCollection(): FeatureCollection {
     return { type: "FeatureCollection", features: [] };
 }
 
@@ -160,6 +161,7 @@ export const WaypointMapComponent = memo(function WaypointMapComponent({
         const pts = playlistPointsRef.current;
         if (!map || pts.length === 0) return;
         if (pts.length === 1) {
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             const p = pts[0]!;
             map.flyTo({ center: [p.lng, p.lat], zoom: 16, pitch: 55, bearing: -17.6, duration: 1000, essential: true });
             return;
@@ -188,9 +190,9 @@ export const WaypointMapComponent = memo(function WaypointMapComponent({
     }, []);
 
     // ─── Existing markers (pin + label) ──────────────────────────────────────
-    const buildExistingFeatures = useCallback((): GeoJSON.FeatureCollection => {
+    const buildExistingFeatures = useCallback((): FeatureCollection => {
         const selected = new Set(selectedMarkerIdsRef.current);
-        const features: GeoJSON.Feature[] = existingMarkersRef.current
+        const features: Feature[] = existingMarkersRef.current
             .filter((m) => m.location?.coordinates && !selected.has(m.id))
             .map((m) => ({
                 type: "Feature",
@@ -209,8 +211,8 @@ export const WaypointMapComponent = memo(function WaypointMapComponent({
     const drawRegionBbox = useCallback((polygon: GeoPolygon | null) => {
         const map = mapRef.current;
         if (!map) return;
-        const data: GeoJSON.GeoJSON = polygon
-            ? ({ type: "Feature", geometry: polygon as GeoJSON.Polygon, properties: {} } as GeoJSON.Feature)
+        const data: GeoJSON = polygon
+            ? ({ type: "Feature", geometry: polygon as Polygon, properties: {} } as Feature)
             : emptyFeatureCollection();
         const src = map.getSource(REGION_SRC) as mapboxgl.GeoJSONSource | undefined;
         if (src) {
@@ -246,7 +248,7 @@ export const WaypointMapComponent = memo(function WaypointMapComponent({
         // Guard against a stale async result after the points changed again.
         if (abortControllerRef.current !== ctrl) return;
         const stillThere = map.getSource(ROUTE_SRC) as mapboxgl.GeoJSONSource | undefined;
-        stillThere?.setData({ type: "Feature", geometry: { type: "LineString", coordinates: line }, properties: {} } as GeoJSON.Feature);
+        stillThere?.setData({ type: "Feature", geometry: { type: "LineString", coordinates: line }, properties: {} } as Feature);
     }, []);
 
     const renderPlaylistPins = useCallback(() => {
