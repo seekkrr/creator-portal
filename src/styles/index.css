@@ -17,6 +17,16 @@
   --color-highlight: #fecd36;
   --color-info: #8398ff;
   --color-app: #fffff3;
+  --color-neutral-50:  #faf9f7;
+  --color-neutral-100: #f4f2ee;
+  --color-neutral-200: #e7e3dd;
+  --color-neutral-300: #d4cfc6;
+  --color-neutral-400: #a8a199;
+  --color-neutral-500: #78726a;
+  --color-neutral-600: #57524b;
+  --color-neutral-700: #423e38;
+  --color-neutral-800: #292621;
+  --color-neutral-900: #1a1714;
 }
 
 /* Custom Design Tokens */
@@ -39,7 +49,6 @@
   --color-accent-600: #e64a17;
 
   --color-highlight: #fecd36;   /* yellow: rewards, verified, earnings */
-  --color-info-accent: #8398ff; /* blue: info chips/links */
 
   /* Surface */
   --bg-app: #fffff3;            /* warm beige */
@@ -60,7 +69,6 @@
   --color-success: #22c55e;
   --color-warning: #f59e0b;
   --color-error: #ef4444;
-  --color-info: #3b82f6;
 
   /* Background */
   --bg-primary: #ffffff;
