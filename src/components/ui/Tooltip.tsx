@@ -74,7 +74,7 @@ export function InfoHint({
             <button
                 type="button"
                 aria-label={label}
-                className={`inline-flex items-center justify-center text-slate-400 hover:text-slate-600 focus:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 rounded-full transition-colors ${className}`}
+                className={`inline-flex items-center justify-center text-neutral-400 hover:text-neutral-600 focus:text-neutral-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500 rounded-full transition-colors ${className}`}
             >
                 <HelpCircle className="w-4 h-4" />
             </button>
