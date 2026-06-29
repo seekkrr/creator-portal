@@ -483,11 +483,11 @@ export function WaypointsStep({ defaultValues, onNext, onBack, onRegionChange }:
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
                                     placeholder="Search existing markers…"
-                                    className="w-full pl-9 pr-9 py-2.5 bg-white border border-neutral-300 rounded-lg text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 transition-colors"
+                                    className="w-full pl-9 pr-9 py-2.5 bg-white border border-neutral-300 rounded-lg text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-500 transition-colors"
                                     aria-label="Search existing markers"
                                 />
                                 {isSearching && (
-                                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-500 animate-spin" />
+                                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-500 animate-spin" />
                                 )}
                             </div>
 
@@ -592,15 +592,15 @@ export function WaypointsStep({ defaultValues, onNext, onBack, onRegionChange }:
                                         >
                                             <Card
                                                 padding="sm"
-                                                className={`cursor-grab active:cursor-grabbing hover:shadow-md hover:border-indigo-200 transition-all duration-150 ${
-                                                    dragOverIndex === index ? "border-indigo-400 bg-indigo-50" : ""
+                                                className={`cursor-grab active:cursor-grabbing hover:shadow-md hover:border-primary-200 transition-all duration-150 ${
+                                                    dragOverIndex === index ? "border-primary-400 bg-primary-50" : ""
                                                 }`}
                                             >
                                                 <div className="flex items-start gap-2">
                                                     <div className="flex-shrink-0 text-neutral-300 group-hover:text-neutral-500 transition-colors pt-1">
                                                         <GripVertical className="w-4 h-4" />
                                                     </div>
-                                                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center text-sm font-bold flex-shrink-0 shadow-sm">
+                                                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 text-white flex items-center justify-center text-sm font-bold flex-shrink-0 shadow-sm">
                                                         {index + 1}
                                                     </div>
                                                     <div className="flex-1 min-w-0">
@@ -617,7 +617,7 @@ export function WaypointsStep({ defaultValues, onNext, onBack, onRegionChange }:
                                                                 onChange={(e) => setNewMarkerTitle(index, e.target.value)}
                                                                 onMouseDown={(e) => e.stopPropagation()}
                                                                 placeholder="Name this stop"
-                                                                className="w-full text-sm font-medium text-neutral-900 bg-transparent border-b border-dashed border-neutral-300 focus:border-indigo-500 focus:outline-none py-0.5"
+                                                                className="w-full text-sm font-medium text-neutral-900 bg-transparent border-b border-dashed border-neutral-300 focus:border-primary-500 focus:outline-none py-0.5"
                                                             />
                                                         )}
                                                         <div className="flex items-center gap-2 mt-0.5">
@@ -625,7 +625,7 @@ export function WaypointsStep({ defaultValues, onNext, onBack, onRegionChange }:
                                                                 className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 ${
                                                                     item.marker_id
                                                                         ? "bg-teal-100 text-teal-700"
-                                                                        : "bg-indigo-100 text-indigo-700"
+                                                                        : "bg-primary-100 text-primary-700"
                                                                 }`}
                                                             >
                                                                 {item.marker_id ? "Reused" : "New"}
@@ -661,7 +661,7 @@ export function WaypointsStep({ defaultValues, onNext, onBack, onRegionChange }:
                                                             type="checkbox"
                                                             checked={item.is_required}
                                                             onChange={() => toggleRequired(index)}
-                                                            className="w-3.5 h-3.5 rounded border-neutral-300 text-indigo-600 focus:ring-indigo-500"
+                                                            className="w-3.5 h-3.5 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
                                                         />
                                                         <span className="text-xs text-neutral-600">
                                                             Required stop

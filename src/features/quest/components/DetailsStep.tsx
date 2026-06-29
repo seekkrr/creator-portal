@@ -210,7 +210,7 @@ export function DetailsStep({ defaultValues, onNext, onBack }: DetailsStepProps)
                                             onClick={() => toggleTheme(opt.value)}
                                             className={`px-3 py-2 rounded-lg border-2 transition-all text-sm inline-flex items-center gap-1.5 ${
                                                 active
-                                                    ? "border-indigo-500 bg-indigo-50 text-indigo-900"
+                                                    ? "border-primary-500 bg-primary-50 text-primary-900"
                                                     : "border-neutral-200 hover:border-neutral-300"
                                             }`}
                                         >
@@ -218,7 +218,7 @@ export function DetailsStep({ defaultValues, onNext, onBack }: DetailsStepProps)
                                             {opt.label}
                                             {/* fixed-width check slot so chips don't reflow on toggle */}
                                             <span className="w-3.5 inline-flex justify-center">
-                                                {active && <Check className="w-3.5 h-3.5 text-indigo-600" />}
+                                                {active && <Check className="w-3.5 h-3.5 text-primary-600" />}
                                             </span>
                                         </button>
                                     );
@@ -247,7 +247,7 @@ export function DetailsStep({ defaultValues, onNext, onBack }: DetailsStepProps)
                                         onClick={() => setValue("difficulty", level.value)}
                                         className={`px-4 py-2 rounded-lg border-2 transition-all ${
                                             difficulty === level.value
-                                                ? "border-indigo-500 bg-indigo-50"
+                                                ? "border-primary-500 bg-primary-50"
                                                 : "border-neutral-200 hover:border-neutral-300"
                                         }`}
                                     >
@@ -291,9 +291,9 @@ export function DetailsStep({ defaultValues, onNext, onBack }: DetailsStepProps)
                         />
                         <p className="mt-2 text-sm text-neutral-500 flex items-center gap-1.5">
                             {regionKind === "hotspot" ? (
-                                <Tent className="w-4 h-4 text-indigo-500" />
+                                <Tent className="w-4 h-4 text-primary-500" />
                             ) : (
-                                <Building2 className="w-4 h-4 text-indigo-500" />
+                                <Building2 className="w-4 h-4 text-primary-500" />
                             )}
                             {regionLabel ? (
                                 <>

@@ -94,7 +94,7 @@ export function ReviewStep({ formData, onBack, onSubmit, isSubmitting }: ReviewS
             </div>
 
             {/* ── At-a-glance header band ────────────────────────────────────── */}
-            <Card padding="lg" className="bg-gradient-to-br from-indigo-50/70 to-white">
+            <Card padding="lg" className="bg-gradient-to-br from-primary-50/70 to-white">
                 <h3 className="text-2xl font-bold text-neutral-900">{title || "Untitled Quest"}</h3>
                 {description ? (
                     <p className="text-neutral-600 text-sm mt-1.5 max-w-3xl">{description}</p>
@@ -105,7 +105,7 @@ export function ReviewStep({ formData, onBack, onSubmit, isSubmitting }: ReviewS
                 <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-4 text-sm">
                     {regionLabel && (
                         <span className="inline-flex items-center gap-1.5 text-neutral-700">
-                            <Building2 className="w-4 h-4 text-indigo-500" />
+                            <Building2 className="w-4 h-4 text-primary-500" />
                             <span className="font-medium">{regionLabel}</span>
                         </span>
                     )}
@@ -121,18 +121,18 @@ export function ReviewStep({ formData, onBack, onSubmit, isSubmitting }: ReviewS
                         </span>
                     )}
                     <span className="inline-flex items-center gap-1.5 text-neutral-600">
-                        <MapPin className="w-4 h-4 text-indigo-500" />
+                        <MapPin className="w-4 h-4 text-primary-500" />
                         {markerPlaylist.length} stop{markerPlaylist.length === 1 ? "" : "s"}
                     </span>
                     {hasNarrative && (
                         <span className="inline-flex items-center gap-1.5 text-neutral-600">
-                            <BookOpen className="w-4 h-4 text-indigo-500" />
+                            <BookOpen className="w-4 h-4 text-primary-500" />
                             Narrative
                         </span>
                     )}
                     {galleryImages.length > 0 && (
                         <span className="inline-flex items-center gap-1.5 text-neutral-600">
-                            <Images className="w-4 h-4 text-indigo-500" />
+                            <Images className="w-4 h-4 text-primary-500" />
                             {galleryImages.length} photo{galleryImages.length === 1 ? "" : "s"}
                         </span>
                     )}
@@ -140,11 +140,11 @@ export function ReviewStep({ formData, onBack, onSubmit, isSubmitting }: ReviewS
 
                 {theme.length > 0 && (
                     <div className="flex flex-wrap items-center gap-1.5 mt-3">
-                        <Tag className="w-4 h-4 text-indigo-500" />
+                        <Tag className="w-4 h-4 text-primary-500" />
                         {theme.map((t) => (
                             <span
                                 key={t}
-                                className="inline-block px-2 py-0.5 bg-white border border-indigo-100 text-indigo-700 text-xs font-medium rounded-full"
+                                className="inline-block px-2 py-0.5 bg-white border border-primary-100 text-primary-700 text-xs font-medium rounded-full"
                             >
                                 {titleize(t)}
                             </span>
@@ -159,7 +159,7 @@ export function ReviewStep({ formData, onBack, onSubmit, isSubmitting }: ReviewS
                     <div>
                         <div className="flex items-center justify-between mb-2">
                             <h4 className="font-semibold text-neutral-900 flex items-center gap-2">
-                                <ListChecks className="w-4 h-4 text-indigo-500" />
+                                <ListChecks className="w-4 h-4 text-primary-500" />
                                 Stops
                             </h4>
                             <span className="text-xs text-neutral-500">
@@ -180,7 +180,7 @@ export function ReviewStep({ formData, onBack, onSubmit, isSubmitting }: ReviewS
                                         key={index}
                                         className="flex items-start gap-3 rounded-xl border border-neutral-200 bg-white p-3"
                                     >
-                                        <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-semibold flex-shrink-0">
+                                        <div className="w-6 h-6 rounded-full bg-primary-600 text-white flex items-center justify-center text-xs font-semibold flex-shrink-0">
                                             {index + 1}
                                         </div>
                                         <div className="min-w-0 flex-1">
@@ -195,7 +195,7 @@ export function ReviewStep({ formData, onBack, onSubmit, isSubmitting }: ReviewS
                                                     className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${
                                                         item.marker_id
                                                             ? "bg-teal-100 text-teal-700"
-                                                            : "bg-indigo-100 text-indigo-700"
+                                                            : "bg-primary-100 text-primary-700"
                                                     }`}
                                                 >
                                                     {item.marker_id ? "Reused" : "New"}
@@ -232,7 +232,7 @@ export function ReviewStep({ formData, onBack, onSubmit, isSubmitting }: ReviewS
                     {/* Quest narrative */}
                     <div>
                         <h4 className="font-semibold text-neutral-900 flex items-center gap-2 mb-2">
-                            <BookOpen className="w-4 h-4 text-indigo-500" />
+                            <BookOpen className="w-4 h-4 text-primary-500" />
                             Quest narrative
                         </h4>
                         {hasNarrative ? (
@@ -261,7 +261,7 @@ export function ReviewStep({ formData, onBack, onSubmit, isSubmitting }: ReviewS
                     {galleryImages.length > 0 && (
                         <div>
                             <h4 className="font-semibold text-neutral-900 flex items-center gap-2 mb-2">
-                                <Images className="w-4 h-4 text-indigo-500" />
+                                <Images className="w-4 h-4 text-primary-500" />
                                 Gallery
                                 <Badge variant="default">{galleryImages.length}</Badge>
                             </h4>

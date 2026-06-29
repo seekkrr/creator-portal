@@ -359,8 +359,8 @@ export function CreateQuestPage() {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p className="text-slate-500">Loading quest details...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-neutral-500">Loading quest details...</p>
         </div>
       </div>
     );
@@ -375,12 +375,12 @@ export function CreateQuestPage() {
             <div key={step} className={`flex items-center ${step < LAST_STEP ? "flex-1" : ""}`}>
               <div className="flex flex-col items-center">
                 <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center font-medium transition-colors ${step === currentStep ? "bg-indigo-600 text-white" : step < currentStep ? "bg-green-500 text-white" : "bg-neutral-200 text-neutral-500"}`}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center font-medium transition-colors ${step === currentStep ? "bg-primary-600 text-white" : step < currentStep ? "bg-green-500 text-white" : "bg-neutral-200 text-neutral-500"}`}
                 >
                   {step < currentStep ? "✓" : step}
                 </div>
                 <span
-                  className={`mt-2 text-xs font-medium ${step === currentStep ? "text-indigo-600" : step < currentStep ? "text-green-600" : "text-neutral-500"}`}
+                  className={`mt-2 text-xs font-medium ${step === currentStep ? "text-primary-600" : step < currentStep ? "text-green-600" : "text-neutral-500"}`}
                 >
                   {stepLabels[step]}
                 </span>

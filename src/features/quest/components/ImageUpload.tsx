@@ -138,10 +138,10 @@ export function ImageUpload({
           relative flex flex-col items-center justify-center
           w-full h-full rounded-xl cursor-pointer transition-all duration-200
           ${variant === "minimal"
-                        ? "border border-dashed border-slate-300 bg-slate-50 hover:bg-white hover:border-slate-800 hover:text-slate-900"
-                        : "border-2 border-dashed border-slate-300 bg-slate-50 hover:bg-slate-100 hover:border-slate-400"
+                        ? "border border-dashed border-neutral-300 bg-neutral-50 hover:bg-white hover:border-neutral-800 hover:text-neutral-900"
+                        : "border-2 border-dashed border-neutral-300 bg-neutral-50 hover:bg-neutral-100 hover:border-neutral-400"
                     }
-          ${dragActive ? "border-slate-900 bg-slate-100 ring-1 ring-slate-900" : ""}
+          ${dragActive ? "border-neutral-900 bg-neutral-100 ring-1 ring-neutral-900" : ""}
           ${isUploading ? "pointer-events-none opacity-80" : ""}
         `}
             >
@@ -158,11 +158,11 @@ export function ImageUpload({
                     <div className="flex flex-col items-center justify-center w-full h-full">
                         {variant !== "minimal" ? (
                             <div className="w-full px-4">
-                                <Loader2 className="w-10 h-10 text-slate-900 animate-spin mx-auto mb-3" />
-                                <p className="text-sm text-slate-600 text-center">Uploading... {progress}%</p>
-                                <div className="w-full max-w-[200px] h-1.5 bg-slate-100 rounded-full mt-3 overflow-hidden mx-auto">
+                                <Loader2 className="w-10 h-10 text-neutral-900 animate-spin mx-auto mb-3" />
+                                <p className="text-sm text-neutral-600 text-center">Uploading... {progress}%</p>
+                                <div className="w-full max-w-[200px] h-1.5 bg-neutral-100 rounded-full mt-3 overflow-hidden mx-auto">
                                     <div
-                                        className="h-full bg-slate-900 transition-all duration-300"
+                                        className="h-full bg-neutral-900 transition-all duration-300"
                                         style={{ width: `${progress}%` }}
                                     />
                                 </div>
@@ -171,7 +171,7 @@ export function ImageUpload({
                             <div className="relative flex items-center justify-center w-full h-full">
                                 <svg className="w-12 h-12 transform -rotate-90">
                                     <circle
-                                        className="text-slate-100"
+                                        className="text-neutral-100"
                                         strokeWidth="3"
                                         stroke="currentColor"
                                         fill="transparent"
@@ -180,7 +180,7 @@ export function ImageUpload({
                                         cy="24"
                                     />
                                     <circle
-                                        className="text-slate-900 transition-all duration-300 ease-linear"
+                                        className="text-neutral-900 transition-all duration-300 ease-linear"
                                         strokeWidth="3"
                                         strokeDasharray={113}
                                         strokeDashoffset={113 - (113 * progress) / 100}
@@ -192,15 +192,15 @@ export function ImageUpload({
                                         cy="24"
                                     />
                                 </svg>
-                                <span className="absolute text-[10px] font-bold text-slate-900">{progress}%</span>
+                                <span className="absolute text-[10px] font-bold text-neutral-900">{progress}%</span>
                             </div>
                         )}
                     </div>
                 ) : (
                     <div className="text-center">
                         {variant === "minimal" ? (
-                            <div className="flex flex-col items-center justify-center p-2 text-slate-400 group-hover:text-slate-900 transition-colors">
-                                <span className="bg-white border border-slate-200 p-1.5 rounded-full mb-1.5 group-hover:border-slate-400 transition-colors">
+                            <div className="flex flex-col items-center justify-center p-2 text-neutral-400 group-hover:text-neutral-900 transition-colors">
+                                <span className="bg-white border border-neutral-200 p-1.5 rounded-full mb-1.5 group-hover:border-neutral-400 transition-colors">
                                     <Upload className="w-3.5 h-3.5" />
                                 </span>
                                 <span className="text-[10px] font-semibold uppercase tracking-wider">Add</span>
@@ -208,14 +208,14 @@ export function ImageUpload({
                         ) : (
                             <>
                                 {dragActive ? (
-                                    <Upload className="w-10 h-10 text-slate-900 mx-auto mb-3" />
+                                    <Upload className="w-10 h-10 text-neutral-900 mx-auto mb-3" />
                                 ) : (
-                                    <ImageIcon className="w-10 h-10 text-slate-400 mx-auto mb-3" />
+                                    <ImageIcon className="w-10 h-10 text-neutral-400 mx-auto mb-3" />
                                 )}
-                                <p className="text-sm font-medium text-slate-700 mb-1">
+                                <p className="text-sm font-medium text-neutral-700 mb-1">
                                     {dragActive ? "Drop image here" : "Click or drag to upload"}
                                 </p>
-                                <p className="text-xs text-slate-500">PNG, JPG up to 10MB</p>
+                                <p className="text-xs text-neutral-500">PNG, JPG up to 10MB</p>
                             </>
                         )}
                     </div>

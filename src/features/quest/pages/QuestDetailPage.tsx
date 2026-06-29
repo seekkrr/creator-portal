@@ -119,8 +119,8 @@ export function QuestDetailPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-4">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-        <p className="text-slate-500 font-medium">Loading quest details...</p>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <p className="text-neutral-500 font-medium">Loading quest details...</p>
       </div>
     );
   }
@@ -132,8 +132,8 @@ export function QuestDetailPage() {
           <AlertCircle className="w-10 h-10 text-red-500" />
         </div>
         <div>
-          <h3 className="text-lg font-bold text-slate-900">Quest Not Found</h3>
-          <p className="text-slate-500 max-w-xs">
+          <h3 className="text-lg font-bold text-neutral-900">Quest Not Found</h3>
+          <p className="text-neutral-500 max-w-xs">
             The quest you're looking for might have been deleted or moved.
           </p>
         </div>
@@ -147,7 +147,7 @@ export function QuestDetailPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "Draft":
-        return "bg-slate-100 text-slate-700 border-slate-200";
+        return "bg-neutral-100 text-neutral-700 border-neutral-200";
       case "Under Review":
         return "bg-blue-50 text-blue-700 border-blue-200";
       case "Changes Requested":
@@ -155,11 +155,11 @@ export function QuestDetailPage() {
       case "Approved":
         return "bg-emerald-50 text-emerald-700 border-emerald-200";
       case "Published":
-        return "bg-indigo-50 text-indigo-700 border-indigo-200";
+        return "bg-primary-50 text-primary-700 border-primary-200";
       case "Rejected":
         return "bg-red-50 text-red-700 border-red-200";
       default:
-        return "bg-slate-50 text-slate-600 border-slate-100";
+        return "bg-neutral-50 text-neutral-600 border-neutral-100";
     }
   };
 
@@ -194,7 +194,7 @@ export function QuestDetailPage() {
   return (
     <div className="p-4 sm:p-6 md:p-8 max-w-[1100px] mx-auto space-y-6 sm:space-y-8 animate-fade-in pb-12 sm:pb-24">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center gap-4 justify-between bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-center gap-4 justify-between bg-white p-5 sm:p-6 rounded-2xl border border-neutral-200 shadow-sm">
         <div className="flex items-center gap-4">
           <Button
             variant="secondary"
@@ -205,7 +205,7 @@ export function QuestDetailPage() {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 leading-tight">
+            <h1 className="text-2xl font-bold text-neutral-900 leading-tight">
               {quest.title || "Untitled Quest"}
             </h1>
             <div className="flex flex-wrap items-center gap-2 mt-1">
@@ -214,18 +214,18 @@ export function QuestDetailPage() {
               >
                 {quest.status}
               </Badge>
-              <span className="text-sm text-slate-400 font-medium">ID: {quest.id.slice(-8)}</span>
+              <span className="text-sm text-neutral-400 font-medium">ID: {quest.id.slice(-8)}</span>
             </div>
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto mt-2 md:mt-0 pt-4 md:pt-0 border-t border-slate-100 md:border-0">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto mt-2 md:mt-0 pt-4 md:pt-0 border-t border-neutral-100 md:border-0">
           {["Draft", "Changes Requested"].includes(quest.status) && (
             <Button
               variant="primary"
               onClick={handleSubmitForReview}
               leftIcon={<Send className="w-4 h-4" />}
-              className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 w-full sm:w-auto justify-center"
+              className="bg-primary-600 hover:bg-primary-700 disabled:opacity-50 w-full sm:w-auto justify-center"
               disabled={!isActive}
             >
               Submit Review
@@ -236,7 +236,7 @@ export function QuestDetailPage() {
             <Button
               variant="secondary"
               onClick={() => navigate(`/creator/quest/edit/${quest.id}`)}
-              className="w-full sm:w-auto justify-center bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-indigo-600"
+              className="w-full sm:w-auto justify-center bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50 hover:text-primary-600"
             >
               Edit Quest
             </Button>
@@ -257,7 +257,7 @@ export function QuestDetailPage() {
 
       {/* Delete Confirmation Modal */}
       {isDeleteModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-sm animate-fade-in">
           <Card className="w-full max-w-md shadow-2xl border-red-100 overflow-hidden animate-scale-up">
             <div className="p-6">
               <div className="flex items-center gap-3 text-red-600 mb-4">
@@ -267,9 +267,9 @@ export function QuestDetailPage() {
                 <h3 className="text-xl font-bold">Delete Quest?</h3>
               </div>
 
-              <p className="text-slate-600 mb-6">
+              <p className="text-neutral-600 mb-6">
                 This action will delete your quest. To confirm, please type{" "}
-                <span className="font-bold text-slate-900 select-none">CONFIRM</span> below.
+                <span className="font-bold text-neutral-900 select-none">CONFIRM</span> below.
               </p>
 
               <div className="space-y-4">
@@ -320,7 +320,7 @@ export function QuestDetailPage() {
           value={`${quest.duration_minutes || 60} mins`}
         />
         <StatCard
-          icon={<Tag className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500" />}
+          icon={<Tag className="w-4 h-4 sm:w-5 sm:h-5 text-primary-500" />}
           label="Theme"
           value={quest.theme?.length ? quest.theme.join(", ") : "Culture"}
         />
@@ -334,21 +334,21 @@ export function QuestDetailPage() {
       <div className="flex flex-col space-y-6 sm:space-y-8">
         {/* Main Content Sections */}
         <div className="space-y-6 sm:space-y-8">
-          <Card className="rounded-2xl border-slate-200 shadow-sm overflow-hidden">
+          <Card className="rounded-2xl border-neutral-200 shadow-sm overflow-hidden">
             <div className="p-2">
-              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <Layers className="w-4 h-4 text-indigo-500" />
+              <h3 className="text-sm font-bold text-neutral-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <Layers className="w-4 h-4 text-primary-500" />
                 Description
               </h3>
-              <div className="prose prose-slate prose-sm max-w-none text-slate-600 leading-relaxed">
+              <div className="prose prose-neutral prose-sm max-w-none text-neutral-600 leading-relaxed">
                 <p>{quest.description || "No description provided."}</p>
               </div>
             </div>
           </Card>
 
-          <Card className="rounded-2xl border-slate-200 shadow-sm">
+          <Card className="rounded-2xl border-neutral-200 shadow-sm">
             <div className="p-2">
-              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-6">
+              <h3 className="text-sm font-bold text-neutral-500 uppercase tracking-widest mb-6">
                 Quest Info
               </h3>
               <div className="space-y-1">
@@ -366,16 +366,16 @@ export function QuestDetailPage() {
             </div>
           </Card>
 
-          <Card className="rounded-2xl border-slate-200 shadow-sm overflow-hidden">
+          <Card className="rounded-2xl border-neutral-200 shadow-sm overflow-hidden">
             <div className="p-2">
-              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-6 flex items-center gap-2">
+              <h3 className="text-sm font-bold text-neutral-500 uppercase tracking-widest mb-6 flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-red-500" />
                 Route & Markers
               </h3>
 
               {/* Map Preview */}
               {playlistPoints.length > 0 && (
-                <div className="h-[250px] sm:h-[320px] rounded-xl overflow-hidden border border-slate-200 mb-6 sm:mb-8 bg-slate-50 relative group shadow-inner">
+                <div className="h-[250px] sm:h-[320px] rounded-xl overflow-hidden border border-neutral-200 mb-6 sm:mb-8 bg-neutral-50 relative group shadow-inner">
                   <WaypointMapComponent
                     center={mapCenter}
                     playlistPoints={playlistPoints}
@@ -388,29 +388,29 @@ export function QuestDetailPage() {
               {/* Markers List */}
               <div className="space-y-3">
                 {markers.length === 0 ? (
-                  <div className="text-center py-6 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                    <p className="text-sm font-medium text-slate-500">No markers added yet</p>
+                  <div className="text-center py-6 bg-neutral-50 rounded-xl border border-dashed border-neutral-200">
+                    <p className="text-sm font-medium text-neutral-500">No markers added yet</p>
                   </div>
                 ) : (
                   markers.map((marker, i) => (
                     <div
                       key={marker.marker_id}
-                      className="border border-slate-100 rounded-xl overflow-hidden bg-white hover:border-indigo-200 transition-colors shadow-sm"
+                      className="border border-neutral-100 rounded-xl overflow-hidden bg-white hover:border-primary-200 transition-colors shadow-sm"
                     >
                       <button
                         onClick={() => toggleStep(i)}
                         className="w-full text-left p-4 sm:p-5 flex items-center justify-between group"
                       >
                         <div className="flex items-center gap-4">
-                          <div className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-sm shrink-0">
+                          <div className="w-8 h-8 rounded-full bg-primary-50 text-primary-600 flex items-center justify-center font-bold text-sm shrink-0">
                             {i + 1}
                           </div>
-                          <h4 className="font-bold text-slate-800 group-hover:text-indigo-600 transition-colors text-sm sm:text-base leading-snug pr-4">
+                          <h4 className="font-bold text-neutral-800 group-hover:text-primary-600 transition-colors text-sm sm:text-base leading-snug pr-4">
                             {marker.name || `Marker ${i + 1}`}
                           </h4>
                         </div>
                         <div
-                          className={`transition-transform duration-200 text-slate-400 shrink-0 ${expandedSteps.has(i) ? "rotate-180" : ""}`}
+                          className={`transition-transform duration-200 text-neutral-400 shrink-0 ${expandedSteps.has(i) ? "rotate-180" : ""}`}
                         >
                           <svg
                             className="w-5 h-5"
@@ -430,14 +430,14 @@ export function QuestDetailPage() {
 
                       {expandedSteps.has(i) && (
                         <div className="px-4 sm:px-5 pb-5 pt-0 sm:pl-16 animate-slide-down">
-                          <div className="hidden sm:block w-px h-full bg-slate-100 absolute left-[35px] top-[60px]" />
+                          <div className="hidden sm:block w-px h-full bg-neutral-100 absolute left-[35px] top-[60px]" />
                           {marker.category && (
-                            <div className="inline-flex items-center gap-1.5 mb-3 px-2 py-1 rounded bg-slate-50 text-slate-600 text-xs font-semibold">
-                              <Navigation className="w-3.5 h-3.5 text-indigo-400" /> {marker.category}
+                            <div className="inline-flex items-center gap-1.5 mb-3 px-2 py-1 rounded bg-neutral-50 text-neutral-600 text-xs font-semibold">
+                              <Navigation className="w-3.5 h-3.5 text-primary-400" /> {marker.category}
                             </div>
                           )}
                           {marker.things_to_do_text && (
-                            <p className="text-sm text-slate-600 mb-4 leading-relaxed">
+                            <p className="text-sm text-neutral-600 mb-4 leading-relaxed">
                               {marker.things_to_do_text}
                             </p>
                           )}
@@ -447,7 +447,7 @@ export function QuestDetailPage() {
                               {marker.images.map((img, idx) => (
                                 <div
                                   key={idx}
-                                  className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden border border-slate-200 flex-shrink-0 bg-slate-100 group-scope relative shadow-sm"
+                                  className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden border border-neutral-200 flex-shrink-0 bg-neutral-100 group-scope relative shadow-sm"
                                 >
                                   <img
                                     src={img}
@@ -468,9 +468,9 @@ export function QuestDetailPage() {
           </Card>
 
           {/* Narratives Section */}
-          <Card className="rounded-2xl border-slate-200 shadow-sm overflow-hidden">
+          <Card className="rounded-2xl border-neutral-200 shadow-sm overflow-hidden">
             <div className="p-2">
-              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-6 flex items-center gap-2">
+              <h3 className="text-sm font-bold text-neutral-500 uppercase tracking-widest mb-6 flex items-center gap-2">
                 <BookOpen className="w-4 h-4 text-emerald-500" />
                 Narratives
               </h3>
@@ -480,12 +480,12 @@ export function QuestDetailPage() {
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-500"></div>
                 </div>
               ) : narratives.length === 0 ? (
-                <div className="text-center py-6 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                  <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm border border-slate-100">
-                    <BookOpen className="w-4 h-4 text-slate-300" />
+                <div className="text-center py-6 bg-neutral-50 rounded-xl border border-dashed border-neutral-200">
+                  <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm border border-neutral-100">
+                    <BookOpen className="w-4 h-4 text-neutral-300" />
                   </div>
-                  <p className="text-sm font-medium text-slate-500">No narratives available</p>
-                  <p className="text-xs text-slate-400 mt-1">
+                  <p className="text-sm font-medium text-neutral-500">No narratives available</p>
+                  <p className="text-xs text-neutral-400 mt-1">
                     Narratives enrich the journey through this quest
                   </p>
                 </div>
@@ -497,7 +497,7 @@ export function QuestDetailPage() {
                     return (
                       <div
                         key={n.id}
-                        className="border border-slate-100 rounded-xl bg-white hover:border-emerald-200 transition-colors shadow-sm overflow-hidden"
+                        className="border border-neutral-100 rounded-xl bg-white hover:border-emerald-200 transition-colors shadow-sm overflow-hidden"
                       >
                         <button
                           onClick={() => toggleNarrative(n.id)}
@@ -505,22 +505,22 @@ export function QuestDetailPage() {
                         >
                           <div className="flex flex-col gap-1">
                             {n.subtitle && (
-                              <div className="flex items-center gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                              <div className="flex items-center gap-2 text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
                                 <span>{n.subtitle}</span>
                               </div>
                             )}
                             {n.title ? (
-                              <h4 className="font-bold text-slate-800 text-sm sm:text-base leading-snug group-hover:text-emerald-600 transition-colors">
+                              <h4 className="font-bold text-neutral-800 text-sm sm:text-base leading-snug group-hover:text-emerald-600 transition-colors">
                                 {n.title}
                               </h4>
                             ) : (
-                              <h4 className="font-bold text-slate-400 text-sm sm:text-base leading-snug italic">
+                              <h4 className="font-bold text-neutral-400 text-sm sm:text-base leading-snug italic">
                                 Untitled Narrative
                               </h4>
                             )}
                           </div>
                           <div
-                            className={`transition-transform duration-200 text-slate-400 shrink-0 ${isExpanded ? "rotate-180" : ""}`}
+                            className={`transition-transform duration-200 text-neutral-400 shrink-0 ${isExpanded ? "rotate-180" : ""}`}
                           >
                             <svg
                               className="w-5 h-5"
@@ -540,8 +540,8 @@ export function QuestDetailPage() {
 
                         {isExpanded && (
                           <div className="px-4 sm:px-5 pb-5 pt-0 animate-slide-down">
-                            <div className="w-full h-px bg-slate-100 mb-4" />
-                            <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">
+                            <div className="w-full h-px bg-neutral-100 mb-4" />
+                            <p className="text-sm text-neutral-600 leading-relaxed whitespace-pre-wrap">
                               {n.content}
                             </p>
                             {n.is_mandatory && (
@@ -562,10 +562,10 @@ export function QuestDetailPage() {
 
         {/* Right Column: Media Gallery & Additional Info */}
         <div className="space-y-6 sm:space-y-8">
-          <Card className="rounded-2xl border-slate-200 shadow-sm">
+          <Card className="rounded-2xl border-neutral-200 shadow-sm">
             <div className="p-2">
-              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-6 flex items-center gap-2">
-                <Eye className="w-4 h-4 text-indigo-500" />
+              <h3 className="text-sm font-bold text-neutral-500 uppercase tracking-widest mb-6 flex items-center gap-2">
+                <Eye className="w-4 h-4 text-primary-500" />
                 Media Gallery
               </h3>
               {quest.cloudinary_assets && quest.cloudinary_assets.length > 0 ? (
@@ -573,7 +573,7 @@ export function QuestDetailPage() {
                   {quest.cloudinary_assets.map((asset, i) => (
                     <div
                       key={i}
-                      className="aspect-square rounded-xl overflow-hidden border border-slate-200 shadow-sm group cursor-pointer relative bg-slate-100"
+                      className="aspect-square rounded-xl overflow-hidden border border-neutral-200 shadow-sm group cursor-pointer relative bg-neutral-100"
                     >
                       <img
                         src={asset.secure_url}
@@ -585,25 +585,25 @@ export function QuestDetailPage() {
                   ))}
                 </div>
               ) : (
-                <div className="py-10 px-4 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                  <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm border border-slate-100">
-                    <Eye className="w-5 h-5 text-slate-300" />
+                <div className="py-10 px-4 text-center bg-neutral-50 rounded-2xl border border-dashed border-neutral-200">
+                  <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm border border-neutral-100">
+                    <Eye className="w-5 h-5 text-neutral-300" />
                   </div>
-                  <p className="text-sm font-medium text-slate-500">No media uploaded</p>
-                  <p className="text-xs text-slate-400 mt-1">Images will appear here</p>
+                  <p className="text-sm font-medium text-neutral-500">No media uploaded</p>
+                  <p className="text-xs text-neutral-400 mt-1">Images will appear here</p>
                 </div>
               )}
 
               {quest.reel_urls && quest.reel_urls.length > 0 && (
-                <div className="mt-6 bg-indigo-50/50 p-4 rounded-xl border border-indigo-100/50">
-                  <h4 className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider mb-2">
+                <div className="mt-6 bg-primary-50/50 p-4 rounded-xl border border-primary-100/50">
+                  <h4 className="text-[10px] font-bold text-primary-400 uppercase tracking-wider mb-2">
                     Source Reel
                   </h4>
                   <a
                     href={quest.reel_urls[0]}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center w-full px-4 py-2.5 bg-white text-indigo-600 text-sm font-bold rounded-lg border border-indigo-100 shadow-sm hover:bg-indigo-50 hover:border-indigo-200 transition-all gap-2"
+                    className="inline-flex items-center justify-center w-full px-4 py-2.5 bg-white text-primary-600 text-sm font-bold rounded-lg border border-primary-100 shadow-sm hover:bg-primary-50 hover:border-primary-200 transition-all gap-2"
                   >
                     Watch Video
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -629,13 +629,13 @@ function StatCard({ icon, label, value }: { icon: ReactNode; label: string; valu
   return (
     <Card className="bg-white border-none shadow-sm hover:shadow-md transition-all rounded-2xl group cursor-default h-full">
       <div className="p-3 sm:p-4 flex flex-col items-center justify-center text-center h-full">
-        <div className="p-2 sm:p-2.5 bg-slate-50 group-hover:bg-indigo-50 transition-colors rounded-2xl mb-2 sm:mb-3">
+        <div className="p-2 sm:p-2.5 bg-neutral-50 group-hover:bg-primary-50 transition-colors rounded-2xl mb-2 sm:mb-3">
           {icon}
         </div>
-        <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+        <span className="text-[10px] sm:text-[11px] font-bold text-neutral-400 uppercase tracking-widest">
           {label}
         </span>
-        <span className="text-sm sm:text-base font-extrabold text-slate-800 mt-1">{value}</span>
+        <span className="text-sm sm:text-base font-extrabold text-neutral-800 mt-1">{value}</span>
       </div>
     </Card>
   );
@@ -643,9 +643,9 @@ function StatCard({ icon, label, value }: { icon: ReactNode; label: string; valu
 
 function DetailItem({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between items-center py-2.5 sm:py-3 border-b border-slate-100 last:border-0">
-      <span className="text-sm text-slate-500 font-medium">{label}</span>
-      <span className="text-sm text-slate-800 font-bold max-w-[50%] text-right truncate">
+    <div className="flex justify-between items-center py-2.5 sm:py-3 border-b border-neutral-100 last:border-0">
+      <span className="text-sm text-neutral-500 font-medium">{label}</span>
+      <span className="text-sm text-neutral-800 font-bold max-w-[50%] text-right truncate">
         {value}
       </span>
     </div>

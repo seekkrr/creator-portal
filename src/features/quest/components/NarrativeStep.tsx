@@ -67,16 +67,16 @@ export function NarrativeStep({ defaultValues, onNext, onBack }: NarrativeStepPr
                 <h2 className="text-xl font-semibold text-neutral-900">Quest Narrative</h2>
                 <p className="text-sm text-neutral-500 mt-0.5">
                     Set the scene for the whole quest.
-                    <span className="ml-1 font-medium text-indigo-600">This step is optional.</span>
+                    <span className="ml-1 font-medium text-primary-600">This step is optional.</span>
                 </p>
             </div>
 
             {/* Per-marker narratives live elsewhere — make that explicit. */}
-            <div className="flex items-start gap-3 rounded-xl border border-indigo-100 bg-indigo-50/60 px-4 py-3">
-                <BookOpen className="w-5 h-5 text-indigo-500 flex-shrink-0 mt-0.5" />
+            <div className="flex items-start gap-3 rounded-xl border border-primary-100 bg-primary-50/60 px-4 py-3">
+                <BookOpen className="w-5 h-5 text-primary-500 flex-shrink-0 mt-0.5" />
                 <div className="text-sm">
-                    <p className="font-medium text-indigo-900">Need narratives for specific stops?</p>
-                    <p className="text-indigo-700 mt-0.5">
+                    <p className="font-medium text-primary-900">Need narratives for specific stops?</p>
+                    <p className="text-primary-700 mt-0.5">
                         Per-marker narratives are managed on the dedicated{" "}
                         <strong>Narratives page</strong> (coming soon). Here you add just one
                         narrative for the whole quest.
@@ -100,7 +100,7 @@ export function NarrativeStep({ defaultValues, onNext, onBack }: NarrativeStepPr
                     type="text"
                     placeholder="e.g. The Ghats Awaken"
                     {...register("title")}
-                    className="w-full bg-white text-sm border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
+                    className="w-full bg-white text-sm border border-neutral-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
                 />
                 {errors.title && <p className="text-xs text-red-600">{errors.title.message}</p>}
             </div>
@@ -120,7 +120,7 @@ export function NarrativeStep({ defaultValues, onNext, onBack }: NarrativeStepPr
                     id="qn-content"
                     placeholder="e.g. As dawn breaks over Varanasi, the ancient city stirs to life along the sacred Ganga…"
                     {...register("content")}
-                    className="bg-white text-sm border-slate-300 focus:border-slate-900 focus:ring-slate-900 min-h-[140px]"
+                    className="bg-white text-sm border-neutral-300 focus:border-neutral-900 focus:ring-neutral-900 min-h-[140px]"
                 />
             </div>
 
@@ -139,7 +139,7 @@ export function NarrativeStep({ defaultValues, onNext, onBack }: NarrativeStepPr
                 <select
                     id="qn-voice"
                     {...register("voice_persona")}
-                    className="w-full bg-white text-sm border border-slate-300 rounded-xl px-3 py-2.5 focus:outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
+                    className="w-full bg-white text-sm border border-neutral-300 rounded-xl px-3 py-2.5 focus:outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
                 >
                     {VOICE_OPTIONS.map((o) => (
                         <option key={o.value} value={o.value}>
@@ -154,7 +154,7 @@ export function NarrativeStep({ defaultValues, onNext, onBack }: NarrativeStepPr
             </p>
 
             {/* Navigation — Skip and Next both proceed (the narrative is optional). */}
-            <div className="flex justify-between pt-6 border-t border-slate-200">
+            <div className="flex justify-between pt-6 border-t border-neutral-200">
                 <Button
                     type="button"
                     variant="outline"
