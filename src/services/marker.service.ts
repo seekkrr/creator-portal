@@ -6,6 +6,8 @@ import type { Marker, CreateMarkerPayload, UpdateMarkerPayload, Paginated } from
 export interface ListMarkersParams {
     /** Defaults to "approved" on the backend. */
     status?: string;
+    /** Only the caller's own markers (all statuses). */
+    mine?: boolean;
     category?: string;
     /** Comma-separated tag list. */
     tags?: string;

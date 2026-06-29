@@ -16,6 +16,8 @@ export interface ListNarrativesParams {
     attach_id?: string;
     status?: string;
     chain_id?: string;
+    /** Only the caller's own narratives (all statuses). */
+    mine?: boolean;
     search?: string;
     sort_by?: string;
     sort_order?: number;
