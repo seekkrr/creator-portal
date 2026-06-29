@@ -13,9 +13,14 @@ const optionalAmount = z.preprocess(
     z.number().min(0).optional()
 );
 
+/** Canonical marker categories — must mirror VALID_MARKER_CATEGORIES in the V2 backend. */
+export const MARKER_CATEGORIES = [
+    "Restaurants", "Cafes", "Activities", "Shops", "Stays", "Touristy", "Quest", "Others",
+] as const;
+
 export const markerFormSchema = z.object({
     title: z.string().min(1, "Title is required").max(300),
-    category: z.string().max(100).optional().or(z.literal("")),
+    category: z.enum(MARKER_CATEGORIES).optional().or(z.literal("")),
     description: z.string().max(2000).optional().or(z.literal("")),
     address: z.string().max(500).optional().or(z.literal("")),
     contact: z.string().max(100).optional().or(z.literal("")),

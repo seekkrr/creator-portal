@@ -8,7 +8,7 @@ import { Card, Button, Input, Textarea } from "@components/ui";
 import { markerService } from "@services/marker.service";
 import { cloudinaryService } from "@services/cloudinary.service";
 import { MarkerMapPicker } from "./MarkerMapPicker";
-import { markerFormSchema, toCreatePayload, toUpdatePayload } from "../schemas/marker.schema";
+import { markerFormSchema, toCreatePayload, toUpdatePayload, MARKER_CATEGORIES } from "../schemas/marker.schema";
 import type { MarkerFormData } from "../schemas/marker.schema";
 import type { Marker } from "@/types";
 
@@ -36,7 +36,11 @@ interface MarkerFormModalProps {
 function markerToFormData(m: Marker): Partial<MarkerFormData> {
     return {
         title: m.title,
-        category: m.category ?? "",
+        // Legacy/unknown categories aren't in the canonical list — drop to empty so
+        // the creator picks a valid one from the dropdown before saving.
+        category: (MARKER_CATEGORIES as readonly string[]).includes(m.category ?? "")
+            ? (m.category as MarkerFormData["category"])
+            : "",
         description: m.description ?? "",
         address: m.address ?? "",
         contact: m.contact ?? "",
@@ -249,10 +253,15 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
                                     <label className="block text-sm font-medium text-slate-700 mb-1">
                                         Category
                                     </label>
-                                    <Input
+                                    <select
                                         {...register("category")}
-                                        placeholder="e.g. Landmark, Cafe, Museum"
-                                    />
+                                        className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500"
+                                    >
+                                        <option value="">Select a category…</option>
+                                        {MARKER_CATEGORIES.map((c) => (
+                                            <option key={c} value={c}>{c}</option>
+                                        ))}
+                                    </select>
                                 </div>
 
                                 <div>
