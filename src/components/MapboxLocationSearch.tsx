@@ -151,10 +151,10 @@ export function MapboxLocationSearch({
                 className={`
                     relative rounded-xl border transition-all duration-200 bg-white
                     ${highlightOnFocus && isFocused
-                        ? "border-slate-900 shadow-sm"
+                        ? "border-neutral-900 shadow-sm"
                         : error
                             ? "border-red-400"
-                            : "border-slate-300 hover:border-slate-400"
+                            : "border-neutral-300 hover:border-neutral-400"
                     }
                 `}
             >
@@ -164,13 +164,13 @@ export function MapboxLocationSearch({
                         absolute left-11 transition-all duration-200 pointer-events-none z-10 px-1 bg-white
                         ${isActive
                             ? "-top-2.5 text-xs font-medium"
-                            : "top-1/2 -translate-y-1/2 text-sm"
+                            : "top-1/2 -tranneutral-y-1/2 text-sm"
                         }
                         ${isFocused
-                            ? "text-slate-900"
+                            ? "text-neutral-900"
                             : error
                                 ? "text-red-500"
-                                : "text-slate-500"
+                                : "text-neutral-500"
                         }
                     `}
                 >
@@ -179,7 +179,7 @@ export function MapboxLocationSearch({
 
                 <div className="relative flex items-center">
                     {/* Icon - positioned at left */}
-                    <div className={`absolute left-3.5 flex items-center pointer-events-none transition-colors ${isFocused ? "text-slate-800" : "text-slate-400"}`}>
+                    <div className={`absolute left-3.5 flex items-center pointer-events-none transition-colors ${isFocused ? "text-neutral-800" : "text-neutral-400"}`}>
                         <MapPin className="w-5 h-5" />
                     </div>
 
@@ -192,18 +192,18 @@ export function MapboxLocationSearch({
                             if (suggestions.length > 0) setShowDropdown(true);
                         }}
                         placeholder={isActive ? placeholder : ""}
-                        className="w-full pl-11 pr-11 py-3 bg-transparent text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none rounded-xl"
+                        className="w-full pl-11 pr-11 py-3 bg-transparent text-neutral-900 text-sm placeholder:text-neutral-400 focus:outline-none rounded-xl"
                     />
 
                     <div className="absolute right-3.5 flex items-center gap-2">
-                        {isLoading && <Loader2 className="w-4 h-4 animate-spin text-slate-500" />}
+                        {isLoading && <Loader2 className="w-4 h-4 animate-spin text-neutral-500" />}
                         {query && !isLoading && (
                             <button
                                 type="button"
                                 onClick={handleClear}
-                                className="p-0.5 hover:bg-slate-100 rounded-full transition-colors"
+                                className="p-0.5 hover:bg-neutral-100 rounded-full transition-colors"
                             >
-                                <X className="w-4 h-4 text-slate-400" />
+                                <X className="w-4 h-4 text-neutral-400" />
                             </button>
                         )}
                     </div>
@@ -212,20 +212,20 @@ export function MapboxLocationSearch({
 
             {/* Dropdown */}
             {showDropdown && suggestions.length > 0 && (
-                <div className="absolute z-50 w-full mt-1.5 bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden">
+                <div className="absolute z-50 w-full mt-1.5 bg-white rounded-xl border border-neutral-200 shadow-lg overflow-hidden">
                     {suggestions.map((feature) => (
                         <button
                             key={feature.id}
                             type="button"
                             onClick={() => handleSelect(feature)}
-                            className="w-full px-4 py-2.5 text-left hover:bg-slate-50 transition-colors flex items-start gap-3 border-b border-slate-100 last:border-0"
+                            className="w-full px-4 py-2.5 text-left hover:bg-neutral-50 transition-colors flex items-start gap-3 border-b border-neutral-100 last:border-0"
                         >
-                            <MapPin className="w-4 h-4 text-slate-500 mt-0.5 shrink-0" />
+                            <MapPin className="w-4 h-4 text-neutral-500 mt-0.5 shrink-0" />
                             <div className="flex-1 min-w-0">
-                                <p className="text-slate-900 text-sm truncate">
+                                <p className="text-neutral-900 text-sm truncate">
                                     {feature.place_name.split(",")[0]}
                                 </p>
-                                <p className="text-slate-500 text-xs truncate">
+                                <p className="text-neutral-500 text-xs truncate">
                                     {feature.place_name.split(",").slice(1).join(",").trim()}
                                 </p>
                             </div>

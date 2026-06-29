@@ -296,7 +296,7 @@ export function LocationSearch({
                     onFocus={() => suggestions.length > 0 && setIsOpen(true)}
                     placeholder={placeholder}
                     disabled={isRetrieving}
-                    className="w-full pl-10 pr-10 py-2.5 bg-white border border-neutral-300 rounded-lg text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 transition-colors disabled:opacity-60"
+                    className="w-full pl-10 pr-10 py-2.5 bg-white border border-neutral-300 rounded-lg text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-500 transition-colors disabled:opacity-60"
                     aria-label="Search location"
                     aria-autocomplete="list"
                     aria-expanded={isOpen}
@@ -315,8 +315,8 @@ export function LocationSearch({
             {/* Retrieving indicator */}
             {isRetrieving && (
                 <div className="absolute z-50 w-full mt-1 bg-white border border-neutral-200 rounded-lg shadow-lg p-4 text-center">
-                    <div className="flex items-center justify-center gap-2 text-indigo-600">
-                        <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                    <div className="flex items-center justify-center gap-2 text-primary-600">
+                        <div className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
                         <span className="text-sm">Loading location details...</span>
                     </div>
                 </div>
@@ -351,7 +351,7 @@ export function LocationSearch({
                                             {getMakiIcon(suggestion.maki)}
                                         </span>
                                     ) : (
-                                        <MapPin className="w-5 h-5 text-indigo-600" />
+                                        <MapPin className="w-5 h-5 text-primary-600" />
                                     )}
                                 </div>
 
@@ -371,7 +371,7 @@ export function LocationSearch({
                                             {suggestion.poi_category.slice(0, 3).map((cat) => (
                                                 <span
                                                     key={cat}
-                                                    className="inline-block px-1.5 py-0.5 bg-indigo-50 text-indigo-600 text-[10px] font-medium rounded-full capitalize"
+                                                    className="inline-block px-1.5 py-0.5 bg-primary-50 text-primary-600 text-[10px] font-medium rounded-full capitalize"
                                                 >
                                                     {cat}
                                                 </span>
