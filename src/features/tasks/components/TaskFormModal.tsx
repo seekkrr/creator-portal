@@ -10,6 +10,7 @@ import { taskFormSchema, toCreatePayload, toUpdatePayload, TASK_TYPES, TASK_TYPE
 import type { TaskFormData } from "../schemas/task.schema";
 import type { TaskConfig } from "@/types";
 import { MarkerSelect } from "./MarkerSelect";
+import { QuestSelect } from "./QuestSelect";
 import { QuizFields } from "./task-type-fields/QuizFields";
 import { QrFields } from "./task-type-fields/QrFields";
 import { PhotoFields } from "./task-type-fields/PhotoFields";
@@ -21,7 +22,7 @@ interface TaskFormModalProps {
     mode: "create" | "edit";
     initial?: TaskConfig;
     onClose: () => void;
-    onSaved: () => void;
+    onSaved: (task: TaskConfig) => void;
 }
 
 function buildDefaultValues(initial?: TaskConfig): Partial<TaskFormData> {
@@ -102,7 +103,6 @@ export function TaskFormModal({ open, mode, initial, onClose, onSaved }: TaskFor
         mutationFn: (data: TaskFormData) => taskService.createTaskConfig(toCreatePayload(data)),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["creator-tasks"] });
-            onSaved();
         },
     });
 
@@ -116,21 +116,27 @@ export function TaskFormModal({ open, mode, initial, onClose, onSaved }: TaskFor
             if (initial) {
                 queryClient.invalidateQueries({ queryKey: ["task", initial.id] });
             }
-            onSaved();
         },
     });
 
-    const onSubmit = (data: TaskFormData) => {
+    const onSubmit = async (data: TaskFormData) => {
         const mutation = isEdit ? updateMutation : createMutation;
-        const promise = mutation.mutateAsync(data);
-        toast.promise(promise, {
-            loading: isEdit ? "Updating task..." : "Creating task...",
-            success: isEdit ? "Task updated!" : "Task created!",
-            error: (err: unknown) => {
-                if (err instanceof Error) return err.message;
-                return isEdit ? "Failed to update task" : "Failed to create task";
-            },
-        });
+        try {
+            const promise = mutation.mutateAsync(data);
+            toast.promise(promise, {
+                loading: isEdit ? "Updating task..." : "Creating task...",
+                success: isEdit ? "Task updated!" : "Task created!",
+                error: (err: unknown) => {
+                    if (err instanceof Error) return err.message;
+                    return isEdit ? "Failed to update task" : "Failed to create task";
+                },
+            });
+            const task = await promise;
+            onSaved(task);
+            onClose();
+        } catch {
+            // error handled by toast; keep modal open
+        }
     };
 
     if (!open) return null;
@@ -184,13 +190,12 @@ export function TaskFormModal({ open, mode, initial, onClose, onSaved }: TaskFor
                             error={markerIdError}
                         />
 
-                        {/* Quest ID (optional) */}
-                        <Input
-                            label="Quest ID (optional)"
-                            placeholder="Link to a quest..."
-                            error={errors.quest_id?.message}
+                        {/* Quest picker (optional, immutable on edit) */}
+                        <QuestSelect
+                            value={watch("quest_id") ?? ""}
+                            onChange={(id) => setValue("quest_id", id, { shouldValidate: true })}
                             disabled={isEdit}
-                            {...register("quest_id")}
+                            error={errors.quest_id?.message}
                         />
 
                         {/* Title */}
