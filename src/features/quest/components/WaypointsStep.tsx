@@ -201,6 +201,11 @@ export function WaypointsStep({ defaultValues, onNext, onBack, onRegionChange }:
             const item: MarkerPlaylistItemData = {
                 marker_id: marker.id,
                 is_required: true,
+                // Seed Step 4 fields from the marker so Marker Details shows them prefilled.
+                thingsToDo: marker.things_to_do_text ?? undefined,
+                thingsToDoImage: marker.things_to_do_image_url
+                    ? { public_id: "", secure_url: marker.things_to_do_image_url }
+                    : undefined,
                 _display: { title: marker.title ?? "Marker", lng, lat },
             };
             setValue("markerPlaylist", [...current, item], { shouldValidate: true });

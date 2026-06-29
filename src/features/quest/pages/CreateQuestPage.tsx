@@ -20,6 +20,7 @@ import {
   defaultFormValues,
 } from "../schemas/quest.schema";
 import type {
+  CloudinaryAsset,
   CreateQuestPayload,
   PlaylistItemInput,
   QuestStatus,
@@ -62,7 +63,7 @@ function normalizeTheme(value: string): QuestTheme | null {
 type WizardFormData = Partial<CreateQuestFormData> & {
   waypoints?: unknown;
   waypointDetails?: unknown;
-  galleryImages?: unknown;
+  galleryImages?: CloudinaryAsset[];
   narratives?: unknown;
 };
 
@@ -110,7 +111,10 @@ export function CreateQuestPage() {
         (m) => ({
           marker_id: m.marker_id,
           is_required: m.is_required ?? true,
-          custom_description: m.things_to_do_text ?? undefined,
+          thingsToDo: m.things_to_do_text ?? undefined,
+          thingsToDoImage: m.things_to_do_image_url
+            ? { public_id: "", secure_url: m.things_to_do_image_url }
+            : undefined,
           _display:
             m.coordinates && m.coordinates.lng != null && m.coordinates.lat != null
               ? { title: m.name ?? "Marker", lng: m.coordinates.lng, lat: m.coordinates.lat }
@@ -133,6 +137,7 @@ export function CreateQuestPage() {
         longitude: startPoint?.lng ?? undefined,
         sourceUrl: existingQuest.reel_urls?.[0] ?? "",
         markerPlaylist,
+        galleryImages: existingQuest.cloudinary_assets ?? [],
       };
       setFormData(mappedData);
       setIsQuestInitialized(true);
@@ -168,6 +173,11 @@ export function CreateQuestPage() {
         suggested_order: index,
         is_required: item.is_required,
         ...(item.custom_description ? { custom_description: item.custom_description } : {}),
+        // Step 4 per-quest fields (stored on the playlist item, nullable on V2).
+        ...(item.thingsToDo ? { things_to_do_text: item.thingsToDo } : {}),
+        ...(item.thingsToDoImage?.secure_url
+          ? { things_to_do_image_url: item.thingsToDoImage.secure_url }
+          : {}),
       };
       if (item.marker_id) {
         return { ...base, marker_id: item.marker_id };
@@ -187,6 +197,12 @@ export function CreateQuestPage() {
 
     const reelUrls = data.sourceUrl?.trim() ? [data.sourceUrl.trim()] : undefined;
 
+    // Quest-level gallery → cloudinary_assets (independent of any marker).
+    const gallery = (data.galleryImages ?? []).map((a) => ({
+      public_id: a.public_id,
+      secure_url: a.secure_url,
+    }));
+
     return {
       title: data.title,
       description: data.description,
@@ -196,6 +212,7 @@ export function CreateQuestPage() {
       region_id: data.regionId!,
       marker_playlist,
       ...(reelUrls ? { reel_urls: reelUrls } : {}),
+      ...(gallery.length ? { cloudinary_assets: gallery } : {}),
       ...(submit ? { submit: true } : {}),
     };
   };
@@ -245,11 +262,18 @@ export function CreateQuestPage() {
     setFormData((prev) => ({ ...prev, ...data }));
     setCurrentStep(4);
   };
-  // Steps 4 (per-marker "things to do") and 5 (narratives) collect extra detail.
-  // Their data rides along on formData; wiring it into the V2 payload is the
-  // next sequential migration step, so for now we just persist it here.
-  const handleStep4Next = (data: Partial<WizardFormData>) => {
-    setFormData((prev) => ({ ...prev, ...data }));
+  // Step 4 (Marker Details) returns the per-quest things-to-do fields merged onto
+  // the playlist items, plus the quest-level gallery images. Both are merged into
+  // formData and folded into the V2 payload by buildPayload.
+  const handleStep4Next = (data: {
+    markerPlaylist: MarkerPlaylistItemData[];
+    galleryImages: CloudinaryAsset[];
+  }) => {
+    setFormData((prev) => ({
+      ...prev,
+      markerPlaylist: data.markerPlaylist,
+      galleryImages: data.galleryImages,
+    }));
     setCurrentStep(5);
   };
   const handleStep5Next = (data: Partial<WizardFormData>) => {
@@ -356,7 +380,10 @@ export function CreateQuestPage() {
         )}
         {currentStep === 4 && (
           <WaypointDetailsStep
-            defaultValues={stepWaypointDefaults}
+            defaultValues={{
+              markerPlaylist: formData.markerPlaylist ?? [],
+              galleryImages: formData.galleryImages ?? [],
+            }}
             onNext={handleStep4Next}
             onBack={handleBack}
           />

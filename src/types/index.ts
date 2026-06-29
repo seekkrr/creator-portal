@@ -274,6 +274,8 @@ export interface QuestPlaylistItem {
     suggested_order: number | null;
     is_required: boolean | null;
     custom_description: string | null;
+    things_to_do_text?: string | null;
+    things_to_do_image_url?: string | null;
 }
 
 /** Stripped list view — `Quest.to_list_dict()` plus `region_name`. */
@@ -446,6 +448,8 @@ export interface PlaylistItemInput {
     suggested_order?: number;
     is_required?: boolean;
     custom_description?: string;
+    things_to_do_text?: string;
+    things_to_do_image_url?: string;
 }
 
 /** Body for `POST /quests` (CreateQuestBody). */

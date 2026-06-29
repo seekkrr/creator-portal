@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { QuestDifficulty } from "@/types";
+import type { CloudinaryAsset, QuestDifficulty } from "@/types";
 
 // Base location step schema (without refinement for spreading).
 // region* fields hold the V2 region resolved via the region search dropdown.
@@ -86,12 +86,27 @@ export const inlineNewMarkerSchema = z.object({
 
 export type InlineNewMarkerData = z.infer<typeof inlineNewMarkerSchema>;
 
+/**
+ * A Cloudinary asset as kept in the form (Step 4 things-to-do + gallery images).
+ * Annotated as `ZodType<CloudinaryAsset>` so `z.infer` yields the closed
+ * `CloudinaryAsset` interface (not zod's open passthrough index-signature type),
+ * which keeps the form/prop types assignable to `CloudinaryAsset`.
+ */
+export const cloudinaryAssetSchema: z.ZodType<CloudinaryAsset> = z
+    .object({ public_id: z.string(), secure_url: z.string() })
+    .passthrough();
+
 export const markerPlaylistItemSchema = z
     .object({
         marker_id: z.string().optional(),
         new_marker: inlineNewMarkerSchema.optional(),
         is_required: z.boolean().default(true),
         custom_description: z.string().optional(),
+        // Step 4 (Marker Details) per-quest fields. Optional here so Step 3 and the
+        // merged createQuestSchema still validate; required-ness is enforced only in
+        // WaypointDetailsStep's own resolver.
+        thingsToDo: z.string().optional(),
+        thingsToDoImage: cloudinaryAssetSchema.optional(),
         // View-model for rendering the list / map pins (always populated on add).
         _display: z
             .object({
@@ -115,10 +130,17 @@ export const markerPlaylistStepSchema = z.object({
 
 export type MarkerPlaylistStepData = z.infer<typeof markerPlaylistStepSchema>;
 
-// Combined form data schema using merge (Location + Details + Markers).
+// Step 4 (Marker Details) quest-level gallery images. Optional in the merged
+// schema; the min-1 requirement is enforced only in WaypointDetailsStep.
+const galleryStepSchema = z.object({
+    galleryImages: z.array(cloudinaryAssetSchema).optional(),
+});
+
+// Combined form data schema using merge (Location + Details + Markers + Gallery).
 export const createQuestSchema = locationStepBaseSchema
     .merge(detailsStepSchema)
-    .merge(markerPlaylistStepSchema);
+    .merge(markerPlaylistStepSchema)
+    .merge(galleryStepSchema);
 
 export type CreateQuestFormData = z.infer<typeof createQuestSchema>;
 
@@ -133,4 +155,5 @@ export const defaultFormValues: Partial<CreateQuestFormData> = {
     difficulty: "moderate",
     duration: 60,
     markerPlaylist: [],
+    galleryImages: [],
 };
