@@ -12,6 +12,18 @@ import { markerFormSchema, toCreatePayload, toUpdatePayload } from "../schemas/m
 import type { MarkerFormData } from "../schemas/marker.schema";
 import type { Marker } from "@/types";
 
+/**
+ * Normalize a stored time value to the `HH:MM` the form expects. The backend
+ * persists opening/closing times as a full ISO datetime on the epoch date
+ * (e.g. "1970-01-01T09:30:00"), but may also return a bare "09:30:00"/"09:30".
+ * Extract just the time-of-day so edit-prefill matches the HH:MM field/regex.
+ */
+function toHHMM(v: string | null | undefined): string {
+    if (!v) return "";
+    const time = v.includes("T") ? (v.split("T")[1] ?? "") : v;
+    return time.slice(0, 5);
+}
+
 interface MarkerFormModalProps {
     open: boolean;
     mode: "create" | "edit";
@@ -36,8 +48,8 @@ function markerToFormData(m: Marker): Partial<MarkerFormData> {
         media: m.media ?? [],
         min_expense: m.min_expense ?? undefined,
         max_expense: m.max_expense ?? undefined,
-        opens_at: (m.opens_at ?? "").slice(0, 5),
-        closes_at: (m.closes_at ?? "").slice(0, 5),
+        opens_at: toHHMM(m.opens_at),
+        closes_at: toHHMM(m.closes_at),
         region_id: m.region_id ?? "",
         longitude: m.location?.coordinates?.[0],
         latitude: m.location?.coordinates?.[1],

@@ -3,6 +3,16 @@ import type { CreateMarkerPayload, UpdateMarkerPayload } from "@/types";
 
 const TIME_RE = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
 
+/**
+ * Optional ₹ amount. A `type=number` input registered with `valueAsNumber`
+ * yields `NaN` when left blank, which `z.number()` rejects and would silently
+ * block submit. Coerce blank/NaN to `undefined` so empty stays optional.
+ */
+const optionalAmount = z.preprocess(
+    (v) => (v === "" || v === null || (typeof v === "number" && Number.isNaN(v)) ? undefined : v),
+    z.number().min(0).optional()
+);
+
 export const markerFormSchema = z.object({
     title: z.string().min(1, "Title is required").max(300),
     category: z.string().max(100).optional().or(z.literal("")),
@@ -15,8 +25,8 @@ export const markerFormSchema = z.object({
     things_to_do_image_url: z.string().optional().or(z.literal("")),
     tags: z.array(z.string().max(100)).max(20).default([]),
     media: z.array(z.string()).default([]),
-    min_expense: z.number().min(0).optional(),
-    max_expense: z.number().min(0).optional(),
+    min_expense: optionalAmount,
+    max_expense: optionalAmount,
     opens_at: z.string().regex(TIME_RE, "Use HH:MM (24h)").optional().or(z.literal("")),
     closes_at: z.string().regex(TIME_RE, "Use HH:MM (24h)").optional().or(z.literal("")),
     region_id: z.string().optional().or(z.literal("")),
