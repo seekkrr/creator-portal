@@ -86,6 +86,7 @@ export function CreateQuestPage() {
   // Fetch quest data if editing
   const { data: existingQuest, isLoading: isLoadingQuest } = useQuery({
     queryKey: ["quest", id],
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     queryFn: () => questService.getQuestById(id!),
     enabled: isEditing,
   });
@@ -123,7 +124,7 @@ export function CreateQuestPage() {
             ? { public_id: "", secure_url: m.things_to_do_image_url }
             : undefined,
           _display:
-            m.coordinates && m.coordinates.lng != null && m.coordinates.lat != null
+            m.coordinates && m.coordinates.lng !== null && m.coordinates.lng !== undefined && m.coordinates.lat !== null && m.coordinates.lat !== undefined
               ? { title: m.name ?? "Marker", lng: m.coordinates.lng, lat: m.coordinates.lat }
               : undefined,
         })
@@ -197,6 +198,7 @@ export function CreateQuestPage() {
       if (item.marker_id) {
         return { ...base, marker_id: item.marker_id };
       }
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const nm = item.new_marker!;
       return {
         ...base,
@@ -224,6 +226,7 @@ export function CreateQuestPage() {
       theme: data.theme,
       difficulty: data.difficulty,
       duration_minutes: data.duration,
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       region_id: data.regionId!,
       marker_playlist,
       ...(reelUrls ? { reel_urls: reelUrls } : {}),
@@ -243,6 +246,7 @@ export function CreateQuestPage() {
         const { region_id: _region, submit: _submit, ...updatePayload } = payload;
         void _region;
         void _submit;
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         const updated = await questService.updateQuest(id!, updatePayload);
         if (submit) {
           await questService.submitQuest(updated.id);

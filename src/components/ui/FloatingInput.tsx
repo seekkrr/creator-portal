@@ -1,4 +1,4 @@
-import { forwardRef, useState, type InputHTMLAttributes, type ReactNode } from "react";
+import { forwardRef, useState, type InputHTMLAttributes, type ReactNode, type FocusEvent } from "react";
 
 interface FloatingInputProps extends InputHTMLAttributes<HTMLInputElement> {
     label: string;
@@ -17,12 +17,12 @@ export const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
         const hasValue = value !== undefined && value !== "" && value !== null;
         const isActive = isFocused || hasValue;
 
-        const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+        const handleFocus = (e: FocusEvent<HTMLInputElement>) => {
             setIsFocused(true);
             onFocus?.(e);
         };
 
-        const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+        const handleBlur = (e: FocusEvent<HTMLInputElement>) => {
             setIsFocused(false);
             onBlur?.(e);
         };

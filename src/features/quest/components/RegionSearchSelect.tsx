@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, type ChangeEvent } from "react";
 import { MapPin, X, Loader2, CheckCircle2, Building2, Tent } from "lucide-react";
 import { regionService } from "@services/region.service";
 import type { MapboxRegionCandidate, ResolvedRegion } from "@/types";
@@ -109,7 +109,7 @@ export function RegionSearchSelect({
         };
     }, []);
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
         const next = e.target.value;
         setQuery(next);
         setResolveError(null);

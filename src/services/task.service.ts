@@ -12,6 +12,8 @@ export interface ListTaskConfigsParams {
     marker_id?: string;
     quest_id?: string;
     task_type?: string;
+    /** Only the caller's own task configs (all statuses). */
+    mine?: boolean;
     page?: number;
     page_size?: number;
 }

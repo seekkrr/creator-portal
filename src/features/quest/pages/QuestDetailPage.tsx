@@ -42,12 +42,14 @@ export function QuestDetailPage() {
     refetch,
   } = useQuery({
     queryKey: ["quest", id],
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     queryFn: () => questService.getQuestById(id!),
     enabled: !!id,
   });
 
   const { data: narrativesData, isLoading: isLoadingNarratives } = useQuery({
     queryKey: ["quest-narratives", id],
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     queryFn: () => narrativeService.getByAttachment("quest", id!),
     enabled: !!id,
   });

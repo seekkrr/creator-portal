@@ -23,7 +23,7 @@ export function MarkdownPolicyViewer({ cdnUrl }: MarkdownPolicyViewerProps) {
                 }
                 const text = await response.text();
                 setContent(text);
-            } catch (err) {
+            } catch {
                 setError("Failed to load policy. Please try again later.");
             } finally {
                 setIsLoading(false);
@@ -60,13 +60,13 @@ export function MarkdownPolicyViewer({ cdnUrl }: MarkdownPolicyViewerProps) {
             <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={{
-                    h1: ({ node, ...props }) => <h1 className="text-4xl font-extrabold text-brand-purple mb-6 mt-8" {...props} />,
-                    h2: ({ node, ...props }) => <h2 className="text-2xl font-bold text-indigo-900 mt-10 mb-4 border-b border-indigo-100 pb-2" {...props} />,
-                    h3: ({ node, ...props }) => <h3 className="text-xl font-bold text-indigo-800 mt-6 mb-3" {...props} />,
-                    p: ({ node, ...props }) => <p className="text-neutral-600 leading-relaxed mb-4 text-lg" {...props} />,
-                    ul: ({ node, ...props }) => <ul className="list-disc pl-6 mb-6 space-y-2 text-neutral-600" {...props} />,
-                    li: ({ node, ...props }) => <li className="pl-2" {...props} />,
-                    a: ({ node, href, ...props }) => {
+                    h1: ({ node: _node, ...props }) => <h1 className="text-4xl font-extrabold text-brand-purple mb-6 mt-8" {...props} />,
+                    h2: ({ node: _node, ...props }) => <h2 className="text-2xl font-bold text-indigo-900 mt-10 mb-4 border-b border-indigo-100 pb-2" {...props} />,
+                    h3: ({ node: _node, ...props }) => <h3 className="text-xl font-bold text-indigo-800 mt-6 mb-3" {...props} />,
+                    p: ({ node: _node, ...props }) => <p className="text-neutral-600 leading-relaxed mb-4 text-lg" {...props} />,
+                    ul: ({ node: _node, ...props }) => <ul className="list-disc pl-6 mb-6 space-y-2 text-neutral-600" {...props} />,
+                    li: ({ node: _node, ...props }) => <li className="pl-2" {...props} />,
+                    a: ({ node: _node, href, ...props }) => {
                         let mappedHref = href || "";
                         if (mappedHref.endsWith(".md")) {
                             if (mappedHref.includes("privacy-policy")) mappedHref = "/privacy-policy";
@@ -91,14 +91,14 @@ export function MarkdownPolicyViewer({ cdnUrl }: MarkdownPolicyViewerProps) {
                             />
                         );
                     },
-                    strong: ({ node, ...props }) => <strong className="font-semibold text-neutral-900" {...props} />,
-                    table: ({ node, ...props }) => (
+                    strong: ({ node: _node, ...props }) => <strong className="font-semibold text-neutral-900" {...props} />,
+                    table: ({ node: _node, ...props }) => (
                         <div className="overflow-x-auto my-6">
                             <table className="w-full border-collapse border border-neutral-200" {...props} />
                         </div>
                     ),
-                    th: ({ node, ...props }) => <th className="border border-neutral-200 bg-neutral-50 p-3 text-left font-semibold text-neutral-900" {...props} />,
-                    td: ({ node, ...props }) => <td className="border border-neutral-200 p-3 text-neutral-600" {...props} />,
+                    th: ({ node: _node, ...props }) => <th className="border border-neutral-200 bg-neutral-50 p-3 text-left font-semibold text-neutral-900" {...props} />,
+                    td: ({ node: _node, ...props }) => <td className="border border-neutral-200 p-3 text-neutral-600" {...props} />,
                 }}
             >
                 {cleanContent}
