@@ -833,11 +833,43 @@ export type UpdateNarrativePayload = Partial<
     Omit<CreateNarrativePayload, "attach_type" | "attach_id" | "status" | "chain_with">
 >;
 
+// One existing narrative chain attached to a target (marker/quest/region).
+export interface NarrativeChainSummary {
+    chain_id: string;
+    // Human label for the chain (typically the first narrative's title).
+    label: string;
+    // First narrative in the chain — the "edit existing" navigation target.
+    first_narrative_id: string;
+    // Number of active narratives in this chain.
+    count: number;
+    // Highest sequence_order currently used in the chain.
+    max_sequence_order: number;
+    // Sequence order to use when appending the next narrative.
+    next_sequence_order: number;
+}
+
+// A standalone (un-chained) active narrative on the target.
+export interface NarrativeStandaloneSummary {
+    id: string;
+    title: string;
+    status: NarrativeStatus;
+    sequence_order: number | null;
+}
+
 /** Result of `GET /narratives/attach-summary` (drives the chain selector / conflict pre-check). */
 export interface NarrativeAttachSummary {
     attach_type: NarrativeAttachType;
     attach_id: string;
-    [key: string]: unknown;
+    // Total active narratives on the target.
+    active_count: number;
+    // True when active_count > 0.
+    has_conflict: boolean;
+    // True when any active narrative already belongs to a chain.
+    is_chain: boolean;
+    // Existing chains attached to the target.
+    chains: NarrativeChainSummary[];
+    // Active narratives attached to the target with no chain.
+    standalone: NarrativeStandaloneSummary[];
 }
 
 /** Result of `GET /narratives/{id}/audio-status`. */

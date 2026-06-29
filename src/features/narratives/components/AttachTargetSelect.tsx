@@ -76,7 +76,7 @@ export function AttachTargetSelect({
         setSummaryNotice(null);
         try {
             const summary = await narrativeService.getAttachSummary(attachType, attachId);
-            const count = typeof summary["total"] === "number" ? summary["total"] : 0;
+            const count = typeof summary.active_count === "number" ? summary.active_count : 0;
             if (count > 0) {
                 setSummaryNotice(
                     `This target already has ${count} narrative(s); the new one will be added with the next sequence order.`
