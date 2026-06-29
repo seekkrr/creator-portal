@@ -75,7 +75,7 @@ export function AttachTargetSelect({
                     onClick={() => { setTab("marker"); setSearch(""); setSummaryNotice(null); }}
                     className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
                         tab === "marker"
-                            ? "bg-white text-indigo-700 shadow-sm border border-neutral-200"
+                            ? "bg-white text-primary-700 shadow-sm border border-neutral-200"
                             : "text-neutral-600 hover:text-neutral-900"
                     } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
@@ -87,7 +87,7 @@ export function AttachTargetSelect({
                     onClick={() => { setTab("quest"); setSearch(""); setSummaryNotice(null); }}
                     className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
                         tab === "quest"
-                            ? "bg-white text-indigo-700 shadow-sm border border-neutral-200"
+                            ? "bg-white text-primary-700 shadow-sm border border-neutral-200"
                             : "text-neutral-600 hover:text-neutral-900"
                     } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
@@ -102,7 +102,7 @@ export function AttachTargetSelect({
                     placeholder="Search markers..."
                     value={search}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500"
+                    className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-500"
                 />
             )}
 
@@ -120,9 +120,9 @@ export function AttachTargetSelect({
                                     key={m.id}
                                     type="button"
                                     onClick={() => handleSelect("marker", m.id, m.title)}
-                                    className={`w-full text-left px-4 py-2.5 text-sm hover:bg-indigo-50 transition-colors ${
+                                    className={`w-full text-left px-4 py-2.5 text-sm hover:bg-primary-50 transition-colors ${
                                         value?.attach_id === m.id && value.attach_type === "marker"
-                                            ? "bg-indigo-50 text-indigo-700 font-medium"
+                                            ? "bg-primary-50 text-primary-700 font-medium"
                                             : "text-neutral-800"
                                     }`}
                                 >
@@ -145,14 +145,14 @@ export function AttachTargetSelect({
                                     key={q.id}
                                     type="button"
                                     onClick={() => handleSelect("quest", q.id, q.title ?? q.id)}
-                                    className={`w-full text-left px-4 py-2.5 text-sm hover:bg-indigo-50 transition-colors ${
+                                    className={`w-full text-left px-4 py-2.5 text-sm hover:bg-primary-50 transition-colors ${
                                         value?.attach_id === q.id && value.attach_type === "quest"
-                                            ? "bg-indigo-50 text-indigo-700 font-medium"
+                                            ? "bg-primary-50 text-primary-700 font-medium"
                                             : "text-neutral-800"
                                     }`}
                                 >
                                     {q.title ?? "Untitled Quest"}
-                                    <span className={`ml-2 text-xs ${q.status === "Draft" ? "text-slate-400" : "text-amber-500"}`}>
+                                    <span className={`ml-2 text-xs ${q.status === "Draft" ? "text-neutral-400" : "text-amber-500"}`}>
                                         {q.status}
                                     </span>
                                 </button>

@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { MoreVertical, AlertTriangle, Volume2 } from "lucide-react";
-import { Card, Button, Input } from "@components/ui";
+import { Card, Button, Input, Badge } from "@components/ui";
+import type { BadgeStatus } from "@components/ui";
 import { narrativeService } from "@services/narrative.service";
 import { useAuthStore } from "@store/auth.store";
 import { NarrativeFormModal } from "../components/NarrativeFormModal";
@@ -22,14 +23,14 @@ const STATUS_TAB_LABELS: Record<StatusFilter, string> = {
     archived: "Archived",
 };
 
-function getNarrativeStatusColor(status: NarrativeStatus): string {
+function getNarrativeStatusBadge(status: NarrativeStatus): BadgeStatus {
     switch (status) {
-        case "draft": return "bg-slate-100 text-slate-700 border border-slate-200";
-        case "under_review": return "bg-amber-100 text-amber-700 border border-amber-200";
-        case "approved": return "bg-emerald-100 text-emerald-700 border border-emerald-200";
-        case "rejected": return "bg-red-100 text-red-700 border border-red-200";
-        case "archived": return "bg-neutral-100 text-neutral-500 border border-neutral-200";
-        default: return "bg-slate-100 text-slate-700";
+        case "draft": return "draft";
+        case "under_review": return "under_review";
+        case "approved": return "approved";
+        case "rejected": return "rejected";
+        case "archived": return "archived";
+        default: return "draft";
     }
 }
 
@@ -163,8 +164,8 @@ export function NarrativesPage() {
         <div className="animate-fade-in space-y-4 w-full max-w-6xl mx-auto pb-6 px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-900">My Narratives</h1>
-                    <p className="text-slate-500 mt-1">Manage your narrative content and audio</p>
+                    <h1 className="text-3xl font-display font-bold text-primary-900 tracking-tight">My Narratives</h1>
+                    <p className="text-neutral-500 mt-1">Manage your narrative content and audio</p>
                 </div>
                 <div className="flex items-center gap-3 w-full sm:w-auto">
                     <Input
@@ -174,8 +175,9 @@ export function NarrativesPage() {
                         className="w-full sm:w-64"
                     />
                     <Button
+                        variant="accent"
                         onClick={() => { setEditTarget(null); setIsModalOpen(true); }}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white whitespace-nowrap"
+                        className="whitespace-nowrap"
                     >
                         Create New Narrative
                     </Button>
@@ -184,7 +186,7 @@ export function NarrativesPage() {
 
             {/* Delete Confirmation Modal */}
             {isDeleteModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-sm animate-fade-in">
                     <Card className="w-full max-w-md shadow-2xl border-red-100 overflow-hidden animate-scale-up">
                         <div className="p-6">
                             <div className="flex items-center gap-3 text-red-600 mb-4">
@@ -193,9 +195,9 @@ export function NarrativesPage() {
                                 </div>
                                 <h3 className="text-xl font-bold">Delete Narrative?</h3>
                             </div>
-                            <p className="text-slate-600 mb-6">
+                            <p className="text-neutral-600 mb-6">
                                 This action is permanent. To confirm, type{" "}
-                                <span className="font-bold text-slate-900 select-none">CONFIRM</span> below.
+                                <span className="font-bold text-neutral-900 select-none">CONFIRM</span> below.
                             </p>
                             <div className="space-y-4">
                                 <Input
@@ -243,22 +245,22 @@ export function NarrativesPage() {
                 onSaved={handleSaved}
             />
 
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col">
+            <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm flex flex-col">
                 {/* Status Tabs */}
-                <div className="flex items-center overflow-x-auto border-b border-slate-200">
+                <div className="flex items-center overflow-x-auto border-b border-neutral-200">
                     {STATUS_TABS.map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
                             className={`px-5 py-4 text-sm font-medium whitespace-nowrap transition-colors relative
                                 ${activeTab === tab
-                                    ? "text-indigo-600 bg-slate-50"
-                                    : "text-slate-600 hover:text-slate-900"
+                                    ? "text-primary-600 bg-neutral-50"
+                                    : "text-neutral-600 hover:text-neutral-900"
                                 }`}
                         >
                             {STATUS_TAB_LABELS[tab]}
                             {activeTab === tab && (
-                                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600" />
+                                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600" />
                             )}
                         </button>
                     ))}
@@ -268,27 +270,27 @@ export function NarrativesPage() {
                 <div className="p-0 relative">
                     <div className="w-full overflow-y-auto overflow-x-auto max-h-[60vh] min-h-[300px]">
                         <table className="w-full text-left border-collapse min-w-[900px] table-fixed">
-                            <thead className="sticky top-0 z-20 bg-slate-50 shadow-sm outline outline-1 outline-slate-200">
-                                <tr className="border-b border-slate-200">
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[28%]">Title</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[18%]">Attach</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[14%] text-center">Status</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[14%] text-center">Audio</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[12%] text-center">Created</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[14%] text-right">Actions</th>
+                            <thead className="sticky top-0 z-20 bg-neutral-50 shadow-sm outline outline-1 outline-neutral-200">
+                                <tr className="border-b border-neutral-200">
+                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[28%]">Title</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[18%]">Attach</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[14%] text-center">Status</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[14%] text-center">Audio</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[12%] text-center">Created</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[14%] text-right">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100">
+                            <tbody className="divide-y divide-neutral-100">
                                 {isLoading ? (
                                     <tr>
-                                        <td colSpan={6} className="py-8 text-center text-slate-500">
+                                        <td colSpan={6} className="py-8 text-center text-neutral-500">
                                             Loading narratives…
                                         </td>
                                     </tr>
                                 ) : narratives.length === 0 ? (
                                     <tr>
                                         <td colSpan={6} className="py-12 text-center">
-                                            <div className="text-slate-400 mb-2">No narratives found</div>
+                                            <div className="text-neutral-400 mb-2">No narratives found</div>
                                             {activeTab === "all" && (
                                                 <Button
                                                     variant="outline"
@@ -309,30 +311,30 @@ export function NarrativesPage() {
                                         return (
                                             <tr
                                                 key={narrative.id}
-                                                className="hover:bg-slate-50/50 transition-colors group"
+                                                className="hover:bg-neutral-50/50 transition-colors group"
                                             >
-                                                <td className="py-4 px-6 font-medium text-slate-900 truncate max-w-[200px]" title={narrative.title}>
+                                                <td className="py-4 px-6 font-medium text-neutral-900 truncate max-w-[200px]" title={narrative.title}>
                                                     {narrative.title}
                                                     {narrative.subtitle && (
-                                                        <div className="text-xs text-slate-400 truncate font-normal mt-0.5">
+                                                        <div className="text-xs text-neutral-400 truncate font-normal mt-0.5">
                                                             {narrative.subtitle}
                                                         </div>
                                                     )}
                                                 </td>
                                                 <td className="py-4 px-6">
                                                     <div className="flex flex-col gap-0.5">
-                                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-indigo-50 text-indigo-600 border border-indigo-100 w-fit">
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-primary-50 text-primary-600 border border-primary-100 w-fit">
                                                             {narrative.attach_type}
                                                         </span>
-                                                        <span className="text-xs text-slate-400 truncate max-w-[120px]">
+                                                        <span className="text-xs text-neutral-400 truncate max-w-[120px]">
                                                             {narrative.attach_id}
                                                         </span>
                                                     </div>
                                                 </td>
                                                 <td className="py-4 px-6 text-center">
-                                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wider ${getNarrativeStatusColor(narrative.status)}`}>
+                                                    <Badge status={getNarrativeStatusBadge(narrative.status)} className="text-[11px] uppercase tracking-wider">
                                                         {narrative.status.replace("_", " ")}
-                                                    </span>
+                                                    </Badge>
                                                 </td>
                                                 <td className="py-4 px-6 text-center">
                                                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${getAudioChipColor(narrative.audio_status)}`}>
@@ -340,7 +342,7 @@ export function NarrativesPage() {
                                                         {getAudioChipLabel(narrative.audio_status)}
                                                     </span>
                                                 </td>
-                                                <td className="py-4 px-6 text-sm text-slate-500 whitespace-nowrap text-center">
+                                                <td className="py-4 px-6 text-sm text-neutral-500 whitespace-nowrap text-center">
                                                     {narrative.created_at
                                                         ? new Date(narrative.created_at).toLocaleDateString()
                                                         : "—"}
@@ -382,7 +384,7 @@ export function NarrativesPage() {
                                                                             navigate(`/creator/narratives/view/${narrative.id}`);
                                                                             setOpenDropdownId(null);
                                                                         }}
-                                                                        className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-slate-50 flex items-center gap-2 font-medium"
+                                                                        className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 font-medium"
                                                                     >
                                                                         View Details
                                                                     </button>
@@ -392,7 +394,7 @@ export function NarrativesPage() {
                                                                                 handleSubmitForReview(narrative.id);
                                                                                 setOpenDropdownId(null);
                                                                             }}
-                                                                            className="w-full text-left px-4 py-2 text-sm text-indigo-600 hover:bg-indigo-50 flex items-center gap-2 font-medium"
+                                                                            className="w-full text-left px-4 py-2 text-sm text-primary-600 hover:bg-primary-50 flex items-center gap-2 font-medium"
                                                                         >
                                                                             Submit for Review
                                                                         </button>
@@ -403,7 +405,7 @@ export function NarrativesPage() {
                                                                                 handleEditClick(narrative);
                                                                                 setOpenDropdownId(null);
                                                                             }}
-                                                                            className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-slate-50 flex items-center gap-2 font-medium"
+                                                                            className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 font-medium"
                                                                         >
                                                                             Edit
                                                                         </button>

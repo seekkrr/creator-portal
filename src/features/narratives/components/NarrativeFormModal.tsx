@@ -225,17 +225,17 @@ export function NarrativeFormModal({
         : null;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-            <Card className="w-full max-w-2xl shadow-2xl border-slate-200 overflow-hidden animate-scale-up max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-sm animate-fade-in">
+            <Card className="w-full max-w-2xl shadow-2xl border-neutral-200 overflow-hidden animate-scale-up max-h-[90vh] flex flex-col">
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
-                    <h2 className="text-xl font-bold text-slate-900">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100 shrink-0">
+                    <h2 className="text-xl font-display font-semibold text-primary-900 tracking-tight">
                         {mode === "create" ? "Create Narrative" : "Edit Narrative"}
                     </h2>
                     <button
                         type="button"
                         onClick={onClose}
-                        className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                        className="p-2 rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors"
                     >
                         <X className="w-5 h-5" />
                     </button>
@@ -304,7 +304,7 @@ export function NarrativeFormModal({
                                     onChange={(e) =>
                                         field.onChange(e.target.value === "" ? undefined : e.target.value)
                                     }
-                                    className="w-full px-4 py-2.5 bg-white border border-neutral-300 rounded-lg text-neutral-900 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 transition-colors disabled:bg-neutral-100"
+                                    className="w-full px-4 py-2.5 bg-white border border-neutral-300 rounded-lg text-neutral-900 focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-500 transition-colors disabled:bg-neutral-100"
                                 >
                                     <option value="">No voice persona</option>
                                     {VOICE_PERSONAS.map((p) => (
@@ -344,7 +344,7 @@ export function NarrativeFormModal({
                                 type="button"
                                 onClick={() => fileInputRef.current?.click()}
                                 disabled={uploadingMedia}
-                                className="w-20 h-20 border-2 border-dashed border-neutral-300 rounded-lg flex flex-col items-center justify-center gap-1 text-neutral-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors disabled:opacity-50"
+                                className="w-20 h-20 border-2 border-dashed border-neutral-300 rounded-lg flex flex-col items-center justify-center gap-1 text-neutral-400 hover:border-primary-400 hover:text-primary-500 transition-colors disabled:opacity-50"
                             >
                                 <Upload className="w-5 h-5" />
                                 <span className="text-xs">
@@ -380,8 +380,8 @@ export function NarrativeFormModal({
                                         role="switch"
                                         aria-checked={field.value}
                                         onClick={() => field.onChange(!field.value)}
-                                        className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
-                                            field.value ? "bg-indigo-600" : "bg-neutral-200"
+                                        className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${
+                                            field.value ? "bg-primary-600" : "bg-neutral-200"
                                         }`}
                                     >
                                         <span
@@ -406,8 +406,8 @@ export function NarrativeFormModal({
                                         role="switch"
                                         aria-checked={field.value}
                                         onClick={() => field.onChange(!field.value)}
-                                        className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
-                                            field.value ? "bg-indigo-600" : "bg-neutral-200"
+                                        className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${
+                                            field.value ? "bg-primary-600" : "bg-neutral-200"
                                         }`}
                                     >
                                         <span
@@ -441,7 +441,7 @@ export function NarrativeFormModal({
                                         const val = e.target.value;
                                         field.onChange(val === "" ? undefined : parseInt(val, 10));
                                     }}
-                                    className="w-full px-4 py-2.5 bg-white border border-neutral-300 rounded-lg text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 transition-colors"
+                                    className="w-full px-4 py-2.5 bg-white border border-neutral-300 rounded-lg text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-500 transition-colors"
                                 />
                             )}
                         />
