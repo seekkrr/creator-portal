@@ -221,7 +221,7 @@ export function DashboardPage() {
             {/* Hero Section */}
             <div className="flex flex-col lg:flex-row gap-8 lg:gap-24 items-center justify-between mt-4">
                 <div className="space-y-4 sm:space-y-6 lg:space-y-8 xl:space-y-10 max-w-2xl flex-1">
-                    <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl xl:text-6xl 2xl:text-7xl font-light text-neutral-900 leading-tight tracking-tight">
+                    <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl xl:text-6xl 2xl:text-7xl font-display font-bold text-primary-900 leading-tight tracking-tight">
                         Welcome to SeekKrr, {user?.first_name ? `${user.first_name}` : "Creator"}
                     </h1>
 
@@ -295,7 +295,7 @@ export function DashboardPage() {
             {/* How to Create a Quest — video first, then steps */}
             <div className="space-y-8">
                 <div>
-                    <h2 className="text-2xl font-medium text-neutral-900 tracking-tight">
+                    <h2 className="text-2xl font-display font-semibold text-primary-900 tracking-tight">
                         How to create a Quest?
                     </h2>
                     <p className="text-neutral-500 mt-1 text-sm">

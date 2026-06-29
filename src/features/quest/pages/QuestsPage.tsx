@@ -117,7 +117,7 @@ export function QuestsPage() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <div className="flex items-center gap-3">
-                        <h1 className="text-3xl font-bold text-neutral-900">My Quests</h1>
+                        <h1 className="text-3xl font-display font-bold text-primary-900 tracking-tight">My Quests</h1>
                         {isVerified && (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary-50 text-primary-700 border border-primary-100 text-xs font-semibold">
                                 <BadgeCheck className="w-3.5 h-3.5" /> Verified
