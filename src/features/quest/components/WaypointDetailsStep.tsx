@@ -22,18 +22,20 @@ import type { CloudinaryAsset } from "@/types";
 import { VideoWalkthroughModal, VideoHelpButton } from "@components/VideoWalkthroughModal";
 import { WALKTHROUGH_VIDEOS } from "@config/walkthroughVideos";
 
-// Local resolver schema: requires things-to-do text + image per stop, and ≥1
-// gallery image. `.passthrough()` keeps the rest of the playlist item intact.
+// Local resolver schema for draft/proceed: thingsToDo text is recommended but
+// optional (min 0), images are optional. Images are only enforced on "Submit for
+// Review" (checked in CreateQuestPage.handleSubmit — F2 fix). `.passthrough()`
+// keeps the rest of the playlist item (marker_id, new_marker, _display, …) intact.
 const detailsItemSchema = z
     .object({
-        thingsToDo: z.string().min(1, "Describe what to do at this stop"),
-        thingsToDoImage: cloudinaryAssetSchema,
+        thingsToDo: z.string().optional(),
+        thingsToDoImage: cloudinaryAssetSchema.optional(),
     })
     .passthrough();
 
 const waypointDetailsStepSchema = z.object({
     markerPlaylist: z.array(detailsItemSchema),
-    galleryImages: z.array(cloudinaryAssetSchema).min(1, "Add at least one quest image"),
+    galleryImages: z.array(cloudinaryAssetSchema).optional(),
 });
 
 type WaypointDetailsFormData = {
@@ -202,7 +204,8 @@ export function WaypointDetailsStep({ defaultValues, onNext, onBack }: WaypointD
                                                             htmlFor={`markerPlaylist.${index}.thingsToDo`}
                                                             className="text-sm font-semibold text-neutral-900"
                                                         >
-                                                            Things to do <span className="text-red-500">*</span>
+                                                            Things to do
+                                                            <span className="ml-1 text-xs font-normal text-neutral-400">(required to submit)</span>
                                                         </label>
                                                         <InfoHint
                                                             side="top"
@@ -223,7 +226,8 @@ export function WaypointDetailsStep({ defaultValues, onNext, onBack }: WaypointD
                                                     <div className="flex items-center gap-1.5">
                                                         <label className="text-sm font-semibold text-neutral-900 flex items-center gap-2">
                                                             <ImageIcon className="w-4 h-4 text-primary-500" />
-                                                            Things to do image <span className="text-red-500">*</span>
+                                                            Things to do image
+                                                            <span className="text-xs font-normal text-neutral-400">(required to submit)</span>
                                                         </label>
                                                         <InfoHint
                                                             side="top"
@@ -289,7 +293,8 @@ export function WaypointDetailsStep({ defaultValues, onNext, onBack }: WaypointD
                     <div className="space-y-4">
                         <div className="flex items-center gap-1.5">
                             <h3 className="text-lg font-semibold text-neutral-900">
-                                Additional Gallery images <span className="text-red-500">*</span>
+                                Additional Gallery images
+                                <span className="ml-1 text-sm font-normal text-neutral-400">(required to submit)</span>
                             </h3>
                             <InfoHint
                                 side="top"
