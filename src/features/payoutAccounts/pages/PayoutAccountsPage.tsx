@@ -63,17 +63,14 @@ export function PayoutAccountsPage() {
     };
 
     const handleSetPrimary = (id: string) => {
-        const promise = payoutAccountService.setPrimary(id);
+        const promise = payoutAccountService
+            .setPrimary(id)
+            .then(() => queryClient.invalidateQueries({ queryKey: ["payout-accounts"] }));
         toast.promise(promise, {
             loading: "Updating…",
             success: "Primary account updated",
             error: (e) => (e instanceof Error ? e.message : "Failed to set primary"),
         });
-        promise
-            .then(() => queryClient.invalidateQueries({ queryKey: ["payout-accounts"] }))
-            .catch(() => {
-                /* error surfaced by toast */
-            });
     };
 
     const confirmDelete = async () => {
@@ -206,9 +203,9 @@ export function PayoutAccountsPage() {
                                                 ? `UPI · ${a.currency}`
                                                 : `${a.bank_details?.ifsc_code ?? "—"} · ${a.currency}`}
                                         </div>
-                                        {a.status === "rejected" && a.rejection_reason && (
+                                        {a.status === "rejected" && (
                                             <div className="text-sm text-red-600 mt-1">
-                                                {a.rejection_reason}
+                                                {a.rejection_reason ?? "No reason provided."}
                                             </div>
                                         )}
                                     </div>
