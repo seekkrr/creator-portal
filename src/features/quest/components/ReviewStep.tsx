@@ -9,6 +9,7 @@ import {
     Images,
     Flag,
     ListChecks,
+    Info,
 } from "lucide-react";
 import { Button, Card, Badge } from "@components/ui";
 import { WaypointMapComponent, type PlaylistPoint } from "@features/map";
@@ -235,6 +236,11 @@ export function ReviewStep({ formData, onBack, onSubmit, isSubmitting }: ReviewS
                             <BookOpen className="w-4 h-4 text-primary-500" />
                             Quest narrative
                         </h4>
+                        {/* Inline hint: per-marker narratives and full narrative editing happen in Narratives section */}
+                        <div className="flex items-start gap-2 mb-2 rounded-lg bg-primary-50 border border-primary-100 px-3 py-2 text-xs text-primary-700">
+                            <Info className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-primary-500" />
+                            <span>Narrative content is managed in the <strong>Narratives</strong> section after creation. This preview reflects the quest-level narrative you set in step 5.</span>
+                        </div>
                         {hasNarrative ? (
                             <div className="rounded-xl border border-neutral-200 bg-white p-3">
                                 <p className="text-sm font-medium text-neutral-900">

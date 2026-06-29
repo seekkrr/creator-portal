@@ -397,6 +397,7 @@ export function LocationStep({ defaultValues, onNext }: LocationStepProps) {
                         type="button"
                         onClick={handleNextClick}
                         disabled={!canProceed || isResolving}
+                        isLoading={isResolving}
                         variant="outline"
                         className="rounded-lg px-10 py-3 text-sm font-medium border border-neutral-900 text-neutral-900 hover:bg-neutral-900 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                         rightIcon={<ChevronRight className="w-5 h-5" />}

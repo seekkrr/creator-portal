@@ -210,15 +210,15 @@ export function DetailsStep({ defaultValues, onNext, onBack }: DetailsStepProps)
                                             onClick={() => toggleTheme(opt.value)}
                                             className={`px-3 py-2 rounded-lg border-2 transition-all text-sm inline-flex items-center gap-1.5 ${
                                                 active
-                                                    ? "border-primary-500 bg-primary-50 text-primary-900"
-                                                    : "border-neutral-200 hover:border-neutral-300"
+                                                    ? "border-primary-600 bg-primary-600 text-white shadow-sm"
+                                                    : "border-neutral-200 bg-white text-neutral-700 hover:border-neutral-300 hover:bg-neutral-50"
                                             }`}
                                         >
                                             <span>{opt.icon}</span>
                                             {opt.label}
                                             {/* fixed-width check slot so chips don't reflow on toggle */}
                                             <span className="w-3.5 inline-flex justify-center">
-                                                {active && <Check className="w-3.5 h-3.5 text-primary-600" />}
+                                                {active && <Check className="w-3.5 h-3.5 text-white" />}
                                             </span>
                                         </button>
                                     );

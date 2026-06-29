@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { Check, Loader2 } from "lucide-react";
 import { Card } from "@components/ui";
 import { questService } from "@services/quest.service";
 import { narrativeService } from "@services/narrative.service";
@@ -82,6 +83,11 @@ export function CreateQuestPage() {
   // restore (or a remount under React StrictMode) can't be clobbered by a save
   // of the default empty state. Without this the draft resets to step 1 on reload.
   const [hydrated, setHydrated] = useState(false);
+
+  // Draft save indicator: "idle" | "saving" | "saved"
+  type DraftSaveState = "idle" | "saving" | "saved";
+  const [draftSaveState, setDraftSaveState] = useState<DraftSaveState>("idle");
+  const draftSaveTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
   // Fetch quest data if editing
   const { data: existingQuest, isLoading: isLoadingQuest } = useQuery({
@@ -176,7 +182,14 @@ export function CreateQuestPage() {
   // so a remount can't overwrite the saved draft with the default empty state.
   useEffect(() => {
     if (isEditing || !hydrated) return;
+    setDraftSaveState("saving");
     sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ formData, currentStep }));
+    // Briefly flash "Saved ✓" after the write completes.
+    if (draftSaveTimerRef.current) clearTimeout(draftSaveTimerRef.current);
+    draftSaveTimerRef.current = setTimeout(() => setDraftSaveState("saved"), 400);
+    return () => {
+      if (draftSaveTimerRef.current) clearTimeout(draftSaveTimerRef.current);
+    };
   }, [formData, currentStep, isEditing, hydrated]);
 
   const clearSession = () => sessionStorage.removeItem(SESSION_STORAGE_KEY);
@@ -393,6 +406,25 @@ export function CreateQuestPage() {
             </div>
           ))}
         </div>
+
+        {/* Draft save indicator — only shown when creating (not editing) */}
+        {!isEditing && draftSaveState !== "idle" && (
+          <div className="flex justify-end mt-3">
+            <span className="inline-flex items-center gap-1 text-xs text-neutral-400 transition-opacity duration-300">
+              {draftSaveState === "saving" ? (
+                <>
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Saving draft…
+                </>
+              ) : (
+                <>
+                  <Check className="w-3 h-3 text-green-500" />
+                  Draft saved
+                </>
+              )}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Step Content */}

@@ -566,14 +566,21 @@ export function WaypointsStep({ defaultValues, onNext, onBack, onRegionChange }:
                             </div>
 
                             {markerPlaylist.length === 0 ? (
-                                <Card padding="lg" className="text-center bg-neutral-50 border-dashed">
-                                    <MapPin className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
-                                    <p className="text-sm font-medium text-neutral-600">No markers yet</p>
-                                    <p className="text-xs text-neutral-400 mt-1">
+                                <Card padding="lg" className="text-center bg-primary-50 border-2 border-dashed border-primary-300">
+                                    <div className="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center mx-auto mb-3">
+                                        <MapPin className="w-6 h-6 text-primary-600" />
+                                    </div>
+                                    <p className="text-sm font-semibold text-neutral-800">No stops added yet</p>
+                                    <p className="text-xs text-neutral-500 mt-1 max-w-[220px] mx-auto">
                                         {isLoadingMarkers
                                             ? "Loading markers in this region…"
-                                            : "Click a teal marker on the map, search above, or click the map to add one."}
+                                            : "Add at least 2 stops to build the route. Search above or click the map."}
                                     </p>
+                                    {!isLoadingMarkers && (
+                                        <span className="inline-flex items-center gap-1 mt-3 text-xs font-medium text-accent-500 bg-white border border-accent-400 rounded-full px-3 py-1">
+                                            <Plus className="w-3 h-3" /> Use the search or map to add stops
+                                        </span>
+                                    )}
                                 </Card>
                             ) : (
                                 <div className="space-y-2 max-h-[560px] overflow-y-auto pr-1">
