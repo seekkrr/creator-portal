@@ -21,6 +21,7 @@ import {
 import type { NarrativeFormData } from "../schemas/narrative.schema";
 import { chainFieldsFromSummary } from "../utils/chainFields";
 import { estimateSeconds, exceedsSegment, MAX_SEGMENT_SECONDS } from "../utils/duration";
+import { resolveNarrativeStatus } from "@/utils/submissionStatus";
 import type { Narrative, CreateNarrativePayload } from "@/types";
 
 interface NarrativeFormModalProps {
@@ -49,8 +50,6 @@ export function NarrativeFormModal({
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [uploadingMedia, setUploadingMedia] = useState(false);
     const [uploadError, setUploadError] = useState<string | null>(null);
-    // Tracks which submit action the user clicked so onSubmit knows the intent.
-    const [pendingStatus, setPendingStatus] = useState<"draft" | "under_review">("under_review");
 
     const {
         register,
@@ -188,11 +187,12 @@ export function NarrativeFormModal({
         },
     });
 
-    const onSubmit = async (data: NarrativeFormData) => {
+    const onSubmit = async (data: NarrativeFormData, action: "submit" | "draft" = "submit") => {
         if (mode === "create") {
+            const status = resolveNarrativeStatus(action);
             const chainFields = attachSummary ? chainFieldsFromSummary(attachSummary) : {};
             const payload: CreateNarrativePayload = {
-                ...toCreatePayload(data, pendingStatus),
+                ...toCreatePayload(data, status),
                 ...chainFields,
             };
             const promise = createMutation.mutateAsync(payload);
@@ -241,6 +241,11 @@ export function NarrativeFormModal({
             }
         }
     };
+
+    // Dedicated handlers for create-mode buttons — status is bound at definition time,
+    // eliminating the stale-closure risk of setting state before a submit event fires.
+    const submitForReview = handleSubmit((data) => onSubmit(data, "submit"));
+    const saveAsDraft = handleSubmit((data) => onSubmit(data, "draft"));
 
     const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -322,7 +327,7 @@ export function NarrativeFormModal({
 
                 {/* Scrollable body */}
                 <form
-                    onSubmit={handleSubmit(onSubmit)}
+                    onSubmit={handleSubmit((data) => onSubmit(data))}
                     className="overflow-y-auto flex-1 px-6 py-5 space-y-5"
                     noValidate
                 >
@@ -618,22 +623,22 @@ export function NarrativeFormModal({
                         {mode === "create" ? (
                             <>
                                 <Button
-                                    type="submit"
+                                    type="button"
                                     variant="secondary"
                                     fullWidth
-                                    isLoading={isSubmitting && pendingStatus === "draft"}
+                                    isLoading={isSubmitting}
                                     disabled={isSubmitting}
-                                    onClick={() => setPendingStatus("draft")}
+                                    onClick={saveAsDraft}
                                 >
                                     Save as Draft
                                 </Button>
                                 <Button
-                                    type="submit"
+                                    type="button"
                                     variant="primary"
                                     fullWidth
-                                    isLoading={isSubmitting && pendingStatus === "under_review"}
+                                    isLoading={isSubmitting}
                                     disabled={isSubmitting}
-                                    onClick={() => setPendingStatus("under_review")}
+                                    onClick={submitForReview}
                                 >
                                     Submit for Review
                                 </Button>
