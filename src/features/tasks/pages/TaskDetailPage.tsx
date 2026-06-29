@@ -20,9 +20,9 @@ const TYPE_BADGE_VARIANT: Record<TaskType, "primary" | "success" | "warning" | "
 
 function DetailRow({ label, value }: { label: string; value: string }) {
     return (
-        <div className="flex justify-between items-start py-3 border-b border-slate-100 last:border-0 gap-4">
-            <span className="text-sm text-slate-500 font-medium shrink-0">{label}</span>
-            <span className="text-sm text-slate-800 font-semibold text-right break-all">{value}</span>
+        <div className="flex justify-between items-start py-3 border-b border-neutral-100 last:border-0 gap-4">
+            <span className="text-sm text-neutral-500 font-medium shrink-0">{label}</span>
+            <span className="text-sm text-neutral-800 font-semibold text-right break-all">{value}</span>
         </div>
     );
 }
@@ -69,8 +69,8 @@ export function TaskDetailPage() {
     if (isLoading) {
         return (
             <div className="flex flex-col items-center justify-center py-20 gap-4">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600" />
-                <p className="text-slate-500 font-medium">Loading task details...</p>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600" />
+                <p className="text-neutral-500 font-medium">Loading task details...</p>
             </div>
         );
     }
@@ -82,8 +82,8 @@ export function TaskDetailPage() {
                     <AlertCircle className="w-10 h-10 text-red-500" />
                 </div>
                 <div>
-                    <h3 className="text-lg font-bold text-slate-900">Task Not Found</h3>
-                    <p className="text-slate-500 max-w-xs">
+                    <h3 className="text-lg font-bold text-neutral-900">Task Not Found</h3>
+                    <p className="text-neutral-500 max-w-xs">
                         The task you're looking for might have been deleted or moved.
                     </p>
                 </div>
@@ -104,25 +104,25 @@ export function TaskDetailPage() {
                 const options = Array.isArray(qd["options"]) ? (qd["options"] as string[]) : [];
                 const correctAnswer = typeof qd["correct_answer"] === "string" ? qd["correct_answer"] : "";
                 return (
-                    <Card className="rounded-2xl border-slate-200 shadow-sm" padding="md">
-                        <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Quiz Details</h3>
+                    <Card className="rounded-2xl border-neutral-200 shadow-sm" padding="md">
+                        <h3 className="text-sm font-bold text-neutral-500 uppercase tracking-widest mb-4">Quiz Details</h3>
                         <div className="space-y-3">
                             <div>
-                                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Question</span>
-                                <p className="text-slate-800 font-medium mt-1">{question}</p>
+                                <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Question</span>
+                                <p className="text-neutral-800 font-medium mt-1">{question}</p>
                             </div>
                             <div>
-                                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Options</span>
+                                <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Options</span>
                                 <ul className="mt-2 space-y-1.5">
                                     {options.map((opt, i) => (
                                         <li key={i} className={`flex items-center gap-2 text-sm px-3 py-2 rounded-lg
                                             ${opt === correctAnswer
                                                 ? "bg-emerald-50 text-emerald-800 font-semibold border border-emerald-200"
-                                                : "bg-slate-50 text-slate-700 border border-slate-100"
+                                                : "bg-neutral-50 text-neutral-700 border border-neutral-100"
                                             }`}
                                         >
                                             <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0
-                                                ${opt === correctAnswer ? "border-emerald-600 bg-emerald-600" : "border-slate-300"}`}
+                                                ${opt === correctAnswer ? "border-emerald-600 bg-emerald-600" : "border-neutral-300"}`}
                                             >
                                                 {opt === correctAnswer && <span className="w-2 h-2 rounded-full bg-white block" />}
                                             </span>
@@ -143,8 +143,8 @@ export function TaskDetailPage() {
                 const qr = task.qr_data as Record<string, unknown>;
                 const expected = typeof qr["expected_value"] === "string" ? qr["expected_value"] : "—";
                 return (
-                    <Card className="rounded-2xl border-slate-200 shadow-sm" padding="md">
-                        <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">QR Scan Details</h3>
+                    <Card className="rounded-2xl border-neutral-200 shadow-sm" padding="md">
+                        <h3 className="text-sm font-bold text-neutral-500 uppercase tracking-widest mb-4">QR Scan Details</h3>
                         <DetailRow label="Expected Value" value={expected} />
                     </Card>
                 );
@@ -154,8 +154,8 @@ export function TaskDetailPage() {
                 const pr = task.photo_requirements as Record<string, unknown>;
                 const prompt = typeof pr["prompt"] === "string" ? pr["prompt"] : "—";
                 return (
-                    <Card className="rounded-2xl border-slate-200 shadow-sm" padding="md">
-                        <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Photo Challenge Details</h3>
+                    <Card className="rounded-2xl border-neutral-200 shadow-sm" padding="md">
+                        <h3 className="text-sm font-bold text-neutral-500 uppercase tracking-widest mb-4">Photo Challenge Details</h3>
                         <DetailRow label="Prompt" value={prompt} />
                     </Card>
                 );
@@ -163,11 +163,11 @@ export function TaskDetailPage() {
             case "collection": {
                 if (!task.collection_items || task.collection_items.length === 0) return null;
                 return (
-                    <Card className="rounded-2xl border-slate-200 shadow-sm" padding="md">
-                        <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Collection Items</h3>
+                    <Card className="rounded-2xl border-neutral-200 shadow-sm" padding="md">
+                        <h3 className="text-sm font-bold text-neutral-500 uppercase tracking-widest mb-4">Collection Items</h3>
                         <ul className="space-y-1.5">
                             {task.collection_items.map((item, i) => (
-                                <li key={i} className="text-sm text-slate-700 bg-slate-50 px-3 py-2 rounded-lg border border-slate-100">
+                                <li key={i} className="text-sm text-neutral-700 bg-neutral-50 px-3 py-2 rounded-lg border border-neutral-100">
                                     {String(item)}
                                 </li>
                             ))}
@@ -181,8 +181,8 @@ export function TaskDetailPage() {
                 const platform = typeof st["platform"] === "string" ? st["platform"] : "—";
                 const action = typeof st["action"] === "string" ? st["action"] : "—";
                 return (
-                    <Card className="rounded-2xl border-slate-200 shadow-sm" padding="md">
-                        <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Social Task Details</h3>
+                    <Card className="rounded-2xl border-neutral-200 shadow-sm" padding="md">
+                        <h3 className="text-sm font-bold text-neutral-500 uppercase tracking-widest mb-4">Social Task Details</h3>
                         <div className="space-y-0">
                             <DetailRow label="Platform" value={platform} />
                             <DetailRow label="Action" value={action} />
@@ -212,7 +212,7 @@ export function TaskDetailPage() {
             )}
 
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center gap-4 justify-between bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <div className="flex flex-col md:flex-row md:items-center gap-4 justify-between bg-white p-5 sm:p-6 rounded-2xl border border-neutral-200 shadow-sm">
                 <div className="flex items-center gap-4">
                     <Button
                         variant="secondary"
@@ -223,24 +223,24 @@ export function TaskDetailPage() {
                         <ArrowLeft className="w-5 h-5" />
                     </Button>
                     <div>
-                        <h1 className="text-2xl font-bold text-slate-900 leading-tight">
+                        <h1 className="text-2xl font-display font-bold text-primary-900 tracking-tight leading-tight">
                             {task.title}
                         </h1>
                         <div className="flex flex-wrap items-center gap-2 mt-1">
                             <Badge variant={TYPE_BADGE_VARIANT[task.task_type]}>
                                 {TASK_TYPE_LABELS[task.task_type]}
                             </Badge>
-                            <span className="text-sm text-slate-400 font-medium">ID: {task.id.slice(-8)}</span>
+                            <span className="text-sm text-neutral-400 font-medium">ID: {task.id.slice(-8)}</span>
                         </div>
                     </div>
                 </div>
-                <div className="flex items-center gap-3 pt-4 md:pt-0 border-t border-slate-100 md:border-0 mt-2 md:mt-0">
+                <div className="flex items-center gap-3 pt-4 md:pt-0 border-t border-neutral-100 md:border-0 mt-2 md:mt-0">
                     <button
                         onClick={handleToggleActive}
                         className={`flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg border transition-colors
                             ${task.is_active
                                 ? "text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100"
-                                : "text-slate-500 bg-slate-50 border-slate-200 hover:bg-slate-100"
+                                : "text-neutral-500 bg-neutral-50 border-neutral-200 hover:bg-neutral-100"
                             }`}
                         title={task.is_active ? "Click to deactivate" : "Click to activate"}
                     >
@@ -262,8 +262,8 @@ export function TaskDetailPage() {
             </div>
 
             {/* Core Details */}
-            <Card className="rounded-2xl border-slate-200 shadow-sm" padding="md">
-                <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Task Details</h3>
+            <Card className="rounded-2xl border-neutral-200 shadow-sm" padding="md">
+                <h3 className="text-sm font-bold text-neutral-500 uppercase tracking-widest mb-4">Task Details</h3>
                 <div className="space-y-0">
                     <DetailRow label="Type" value={TASK_TYPE_LABELS[task.task_type]} />
                     <DetailRow label="Marker ID" value={task.marker_id} />
@@ -295,9 +295,9 @@ export function TaskDetailPage() {
 
             {/* Description */}
             {task.description && (
-                <Card className="rounded-2xl border-slate-200 shadow-sm" padding="md">
-                    <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Description</h3>
-                    <p className="text-slate-700 text-sm leading-relaxed">{task.description}</p>
+                <Card className="rounded-2xl border-neutral-200 shadow-sm" padding="md">
+                    <h3 className="text-sm font-bold text-neutral-500 uppercase tracking-widest mb-4">Description</h3>
+                    <p className="text-neutral-700 text-sm leading-relaxed">{task.description}</p>
                 </Card>
             )}
 

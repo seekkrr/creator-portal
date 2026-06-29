@@ -144,17 +144,17 @@ export function TaskFormModal({ open, mode, initial, onClose, onSaved }: TaskFor
     const markerIdError = errors.marker_id?.message;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-            <Card className="w-full max-w-xl shadow-2xl border-slate-200 overflow-hidden animate-scale-up max-h-[90vh] flex flex-col" padding="none">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-sm animate-fade-in">
+            <Card className="w-full max-w-xl shadow-2xl border-neutral-200 overflow-hidden animate-scale-up max-h-[90vh] flex flex-col" padding="none">
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-                    <h2 className="text-lg font-bold text-slate-900">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100">
+                    <h2 className="text-lg font-bold text-neutral-900">
                         {isEdit ? "Edit Task" : "Create New Task"}
                     </h2>
                     <button
                         type="button"
                         onClick={onClose}
-                        className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                        className="p-2 rounded-lg text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors"
                     >
                         <X className="w-5 h-5" />
                     </button>
@@ -171,7 +171,7 @@ export function TaskFormModal({ open, mode, initial, onClose, onSaved }: TaskFor
                             <select
                                 {...register("task_type")}
                                 disabled={isEdit}
-                                className="w-full px-4 py-2.5 bg-white border border-neutral-300 rounded-lg text-neutral-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 disabled:bg-neutral-100 disabled:cursor-not-allowed"
+                                className="w-full px-4 py-2.5 bg-white border border-neutral-300 rounded-lg text-neutral-900 text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-500 disabled:bg-neutral-100 disabled:cursor-not-allowed"
                             >
                                 {TASK_TYPES.map((t) => (
                                     <option key={t} value={t}>{TASK_TYPE_LABELS[t]}</option>
@@ -230,7 +230,7 @@ export function TaskFormModal({ open, mode, initial, onClose, onSaved }: TaskFor
                             <input
                                 type="checkbox"
                                 id="is_active"
-                                className="w-4 h-4 rounded border-neutral-300 text-indigo-600 focus:ring-indigo-500"
+                                className="w-4 h-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
                                 {...register("is_active")}
                             />
                             <label htmlFor="is_active" className="text-sm font-medium text-neutral-700">
@@ -262,7 +262,7 @@ export function TaskFormModal({ open, mode, initial, onClose, onSaved }: TaskFor
                     </div>
 
                     {/* Footer */}
-                    <div className="px-6 py-4 border-t border-slate-100 flex gap-3">
+                    <div className="px-6 py-4 border-t border-neutral-100 flex gap-3">
                         <Button
                             type="button"
                             variant="ghost"

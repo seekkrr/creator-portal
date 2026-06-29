@@ -13,10 +13,10 @@ import { TASK_TYPES, TASK_TYPE_LABELS } from "../schemas/task.schema";
 const TYPE_BADGE_COLORS: Record<TaskType, string> = {
     photo_challenge: "bg-emerald-100 text-emerald-700 border border-emerald-200",
     qr_scan: "bg-amber-100 text-amber-700 border border-amber-200",
-    quiz: "bg-indigo-100 text-indigo-700 border border-indigo-200",
-    collection: "bg-purple-100 text-purple-700 border border-purple-200",
+    quiz: "bg-primary-100 text-primary-700 border border-primary-200",
+    collection: "bg-primary-100 text-primary-700 border border-primary-200",
     social: "bg-pink-100 text-pink-700 border border-pink-200",
-    checkin: "bg-slate-100 text-slate-700 border border-slate-200",
+    checkin: "bg-neutral-100 text-neutral-700 border border-neutral-200",
 };
 
 export function TasksPage() {
@@ -91,12 +91,13 @@ export function TasksPage() {
         <div className="animate-fade-in space-y-4 w-full max-w-6xl mx-auto pb-6 px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-900">My Tasks</h1>
-                    <p className="text-slate-500 mt-1">Manage your task configurations</p>
+                    <h1 className="text-3xl font-display font-bold text-primary-900 tracking-tight">My Tasks</h1>
+                    <p className="text-neutral-500 mt-1">Manage your task configurations</p>
                 </div>
                 <Button
+                    variant="accent"
                     onClick={() => setIsCreateModalOpen(true)}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white w-full sm:w-auto"
+                    className="w-full sm:w-auto"
                     leftIcon={<Plus className="w-4 h-4" />}
                 >
                     Create New Task
@@ -105,7 +106,7 @@ export function TasksPage() {
 
             {/* Delete Confirmation Modal */}
             {isDeleteModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-sm animate-fade-in">
                     <Card className="w-full max-w-md shadow-2xl border-red-100 overflow-hidden animate-scale-up">
                         <div className="p-6">
                             <div className="flex items-center gap-3 text-red-600 mb-4">
@@ -114,9 +115,9 @@ export function TasksPage() {
                                 </div>
                                 <h3 className="text-xl font-bold">Delete Task?</h3>
                             </div>
-                            <p className="text-slate-600 mb-6">
+                            <p className="text-neutral-600 mb-6">
                                 This action will delete your task. To confirm, please type{" "}
-                                <span className="font-bold text-slate-900 select-none">CONFIRM</span> below.
+                                <span className="font-bold text-neutral-900 select-none">CONFIRM</span> below.
                             </p>
                             <div className="space-y-4">
                                 <Input
@@ -170,14 +171,14 @@ export function TasksPage() {
                 />
             )}
 
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col">
+            <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm flex flex-col">
                 {/* Type Filter */}
-                <div className="flex items-center gap-2 overflow-x-auto px-4 py-3 border-b border-slate-200">
-                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider shrink-0">Type:</span>
+                <div className="flex items-center gap-2 overflow-x-auto px-4 py-3 border-b border-neutral-200">
+                    <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider shrink-0">Type:</span>
                     <button
                         onClick={() => setTypeFilter("")}
                         className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors whitespace-nowrap
-                            ${typeFilter === "" ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+                            ${typeFilter === "" ? "bg-primary-600 text-white" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
                     >
                         All
                     </button>
@@ -186,7 +187,7 @@ export function TasksPage() {
                             key={t}
                             onClick={() => setTypeFilter(t)}
                             className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors whitespace-nowrap
-                                ${typeFilter === t ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+                                ${typeFilter === t ? "bg-primary-600 text-white" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
                         >
                             {TASK_TYPE_LABELS[t]}
                         </button>
@@ -196,28 +197,28 @@ export function TasksPage() {
                 <div className="p-0 relative">
                     <div className="w-full overflow-y-auto overflow-x-auto max-h-[60vh] min-h-[300px]">
                         <table className="w-full text-left border-collapse min-w-[900px] table-fixed">
-                            <thead className="sticky top-0 z-20 bg-slate-50 shadow-sm outline outline-1 outline-slate-200">
-                                <tr className="border-b border-slate-200">
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[28%]">Title</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[14%] text-center">Type</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[18%]">Marker</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[10%] text-center">Points</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[10%] text-center">Active</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[10%] text-center">Created</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[10%] text-right">Actions</th>
+                            <thead className="sticky top-0 z-20 bg-neutral-50 shadow-sm outline outline-1 outline-neutral-200">
+                                <tr className="border-b border-neutral-200">
+                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[28%]">Title</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[14%] text-center">Type</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[18%]">Marker</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[10%] text-center">Points</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[10%] text-center">Active</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[10%] text-center">Created</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[10%] text-right">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100">
+                            <tbody className="divide-y divide-neutral-100">
                                 {isLoading ? (
                                     <tr>
-                                        <td colSpan={7} className="py-8 text-center text-slate-500">
+                                        <td colSpan={7} className="py-8 text-center text-neutral-500">
                                             Loading tasks...
                                         </td>
                                     </tr>
                                 ) : tasks.length === 0 ? (
                                     <tr>
                                         <td colSpan={7} className="py-12 text-center">
-                                            <div className="text-slate-400 mb-2">No tasks found</div>
+                                            <div className="text-neutral-400 mb-2">No tasks found</div>
                                             <Button
                                                 variant="outline"
                                                 className="mt-4 border-dashed border-2"
@@ -229,8 +230,8 @@ export function TasksPage() {
                                     </tr>
                                 ) : (
                                     tasks.map((task) => (
-                                        <tr key={task.id} className="hover:bg-slate-50/50 transition-colors group">
-                                            <td className="py-4 px-6 font-medium text-slate-900 truncate max-w-[200px]" title={task.title}>
+                                        <tr key={task.id} className="hover:bg-neutral-50/50 transition-colors group">
+                                            <td className="py-4 px-6 font-medium text-neutral-900 truncate max-w-[200px]" title={task.title}>
                                                 {task.title}
                                             </td>
                                             <td className="py-4 px-6 text-center">
@@ -238,16 +239,16 @@ export function TasksPage() {
                                                     {TASK_TYPE_LABELS[task.task_type]}
                                                 </span>
                                             </td>
-                                            <td className="py-4 px-6 text-sm text-slate-500 truncate max-w-[140px]" title={task.marker_id}>
+                                            <td className="py-4 px-6 text-sm text-neutral-500 truncate max-w-[140px]" title={task.marker_id}>
                                                 {task.marker_id.slice(-8)}
                                             </td>
-                                            <td className="py-4 px-6 text-sm text-slate-700 font-semibold text-center">
+                                            <td className="py-4 px-6 text-sm text-neutral-700 font-semibold text-center">
                                                 {task.base_points}
                                             </td>
                                             <td className="py-4 px-6 text-center">
                                                 <button
                                                     onClick={() => handleToggleActive(task.id)}
-                                                    className={`inline-flex items-center transition-colors ${task.is_active ? "text-emerald-600 hover:text-emerald-700" : "text-slate-400 hover:text-slate-600"}`}
+                                                    className={`inline-flex items-center transition-colors ${task.is_active ? "text-emerald-600 hover:text-emerald-700" : "text-neutral-400 hover:text-neutral-600"}`}
                                                     title={task.is_active ? "Click to deactivate" : "Click to activate"}
                                                 >
                                                     {task.is_active
@@ -256,7 +257,7 @@ export function TasksPage() {
                                                     }
                                                 </button>
                                             </td>
-                                            <td className="py-4 px-6 text-sm text-slate-500 whitespace-nowrap text-center">
+                                            <td className="py-4 px-6 text-sm text-neutral-500 whitespace-nowrap text-center">
                                                 {task.created_at ? new Date(task.created_at).toLocaleDateString() : "—"}
                                             </td>
                                             <td className="py-4 px-6 text-right relative">
@@ -284,13 +285,13 @@ export function TasksPage() {
                                                             >
                                                                 <button
                                                                     onClick={() => { navigate(`/creator/tasks/view/${task.id}`); setOpenDropdownId(null); }}
-                                                                    className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-slate-50 flex items-center gap-2 font-medium"
+                                                                    className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 font-medium"
                                                                 >
                                                                     <Eye className="w-4 h-4" /> View Details
                                                                 </button>
                                                                 <button
                                                                     onClick={() => { setEditTask(task); setOpenDropdownId(null); }}
-                                                                    className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-slate-50 flex items-center gap-2 font-medium"
+                                                                    className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 font-medium"
                                                                 >
                                                                     <Edit2 className="w-4 h-4" /> Edit
                                                                 </button>
