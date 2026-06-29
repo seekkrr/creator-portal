@@ -17,6 +17,7 @@ interface MarkerRegionSelectProps {
 export function MarkerRegionSelect({ value, onChange }: MarkerRegionSelectProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState("");
+    const [noRegionExplicit, setNoRegionExplicit] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
     // The search endpoint requires a non-empty query (returns 422 for q=""),
@@ -57,6 +58,11 @@ export function MarkerRegionSelect({ value, onChange }: MarkerRegionSelectProps)
         onChange(regionId);
         setIsOpen(false);
         setSearch("");
+        if (regionId === "") {
+            setNoRegionExplicit(true);
+        } else {
+            setNoRegionExplicit(false);
+        }
     };
 
     return (
@@ -66,12 +72,17 @@ export function MarkerRegionSelect({ value, onChange }: MarkerRegionSelectProps)
                 onClick={() => setIsOpen((o) => !o)}
                 className="w-full flex items-center justify-between px-4 py-2.5 bg-white border border-neutral-300 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-500"
             >
-                <span className={`flex items-center gap-2 text-sm ${value ? "text-neutral-900" : "text-neutral-400"}`}>
+                <span className={`flex items-center gap-2 text-sm ${(value || noRegionExplicit) ? "text-neutral-900" : "text-neutral-400"}`}>
                     {value ? (
                         <>
                             <MapPinned className="w-4 h-4 text-primary-500 shrink-0" />
                             <span className="truncate">{displayName ?? "Loading region…"}</span>
                         </>
+                    ) : noRegionExplicit ? (
+                        <span className="flex items-center gap-2 text-neutral-600">
+                            <X className="w-4 h-4 text-neutral-400 shrink-0" />
+                            No region
+                        </span>
                     ) : (
                         "Search & select a region…"
                     )}

@@ -13,7 +13,8 @@ const optionalAmount = z.preprocess(
     z.number().min(0).optional()
 );
 
-/** Canonical marker categories — must mirror VALID_MARKER_CATEGORIES in the V2 backend. */
+// Canonical marker categories — must mirror VALID_MARKER_CATEGORIES in backend/v2/models/marker.py.
+// NOTE: "Landmark" is NOT in the backend enum (legacy data exists); do not add it until backend is updated.
 export const MARKER_CATEGORIES = [
     "Restaurants", "Cafes", "Activities", "Shops", "Stays", "Touristy", "Quest", "Others",
 ] as const;
