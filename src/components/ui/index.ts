@@ -5,5 +5,6 @@ export { FloatingInput } from "./FloatingInput";
 export { Textarea } from "./Textarea";
 export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "./Card";
 export { Badge } from "./Badge";
+export type { BadgeStatus } from "./Badge";
 export { Skeleton, SkeletonText, SkeletonCard } from "./Skeleton";
 export { Tooltip, InfoHint } from "./Tooltip";

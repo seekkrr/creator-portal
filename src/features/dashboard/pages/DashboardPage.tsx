@@ -4,6 +4,7 @@ import { useCreatorStats } from "@hooks/useCreatorStats";
 import { MapPin, Compass, Trophy, Clock, Play, BadgeCheck, AlertTriangle } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { WALKTHROUGH_VIDEOS } from "@config/walkthroughVideos";
+import { Button } from "@components/ui";
 
 // ... (StackedHeroCards remains same)
 
@@ -11,7 +12,7 @@ function StackedHeroCards() {
     const [activeIndex, setActiveIndex] = useState(0);
     const cards = [
         { id: 1, src: "/hiker.png", alt: "Hiker looking at scenic mountains", color: "bg-neutral-100" },
-        { id: 2, src: "/cafe.png", alt: "Cozy cafe table setting", color: "bg-indigo-50" },
+        { id: 2, src: "/cafe.png", alt: "Cozy cafe table setting", color: "bg-primary-50" },
         { id: 3, src: "/dancing.png", alt: "Group of people dancing outdoors", color: "bg-green-50" },
         { id: 4, src: "/old_man.png", alt: "Portrait of an elderly man with traditional headwear", color: "bg-amber-50" },
     ];
@@ -188,7 +189,7 @@ export function DashboardPage() {
 
             {/* Verification is a trust BADGE, never a submission blocker. */}
             {!isBlocked && (isVerified ? (
-                <div className="p-4 rounded-2xl max-[420px]:hidden flex items-center gap-4 bg-indigo-50 text-indigo-700 border border-indigo-100">
+                <div className="p-4 rounded-2xl max-[420px]:hidden flex items-center gap-4 bg-primary-50 text-primary-700 border border-primary-100">
                     <BadgeCheck className="w-5 h-5 flex-shrink-0" />
                     <div>
                         <p className="font-semibold">Verified Creator</p>
@@ -240,9 +241,9 @@ export function DashboardPage() {
                             What's the wait then, create your first Quest today
                         </p>
                         <Link to="/creator/quest/create">
-                            <button className="px-8 py-3 lg:px-10 lg:py-4 bg-white border-2 border-neutral-900 text-neutral-900 font-normal rounded-full hover:bg-neutral-900 hover:text-white transition-all transform hover:scale-105 duration-200 text-lg lg:text-xl tracking-wide cursor-pointer">
+                            <Button variant="accent" size="lg" className="rounded-full text-lg lg:text-xl tracking-wide px-8 py-3 lg:px-10 lg:py-4 hover:scale-105 transition-transform">
                                 Create Quest
-                            </button>
+                            </Button>
                         </Link>
                     </div>
                 </div>
@@ -256,7 +257,7 @@ export function DashboardPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-white p-6 rounded-2xl border border-neutral-100 shadow-sm hover:shadow-md transition-all">
                     <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600">
+                        <div className="w-12 h-12 bg-primary-50 rounded-xl flex items-center justify-center text-primary-600">
                             <MapPin className="w-6 h-6" />
                         </div>
                         <div>
@@ -331,9 +332,9 @@ export function DashboardPage() {
                     ].map(({ n, title, desc }) => (
                         <div
                             key={n}
-                            className="group p-5 bg-white rounded-2xl border border-neutral-100 hover:border-indigo-100 hover:shadow-lg transition-all duration-300 flex flex-col gap-3"
+                            className="group p-5 bg-white rounded-2xl border border-neutral-100 hover:border-primary-100 hover:shadow-lg transition-all duration-300 flex flex-col gap-3"
                         >
-                            <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-base shadow-indigo-200 shadow-md group-hover:scale-110 transition-transform flex-shrink-0">
+                            <div className="w-9 h-9 rounded-xl bg-primary-600 text-white flex items-center justify-center font-bold text-base shadow-primary-200 shadow-md group-hover:scale-110 transition-transform flex-shrink-0">
                                 {n}
                             </div>
                             <div>

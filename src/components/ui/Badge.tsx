@@ -14,7 +14,7 @@ type BadgeVariant = "default" | "primary" | "success" | "warning" | "danger" | "
  *   draft              → neutral  (bg-neutral-100  text-neutral-700  border-neutral-200)
  *   archived           → muted neutral (bg-neutral-100 text-neutral-500 border-neutral-200)
  */
-type BadgeStatus =
+export type BadgeStatus =
     | "approved"
     | "under_review"
     | "changes_requested"
