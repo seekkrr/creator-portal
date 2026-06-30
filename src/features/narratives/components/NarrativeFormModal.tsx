@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { X, Upload, Trash2, AlertTriangle } from "lucide-react";
+import { X, Upload, Trash2, AlertTriangle, Info } from "lucide-react";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { Button, Input, Textarea, Card } from "@components/ui";
 import { narrativeService } from "@services/narrative.service";
@@ -18,7 +19,10 @@ import {
     VOICE_PERSONAS,
 } from "../schemas/narrative.schema";
 import type { NarrativeFormData } from "../schemas/narrative.schema";
-import type { Narrative } from "@/types";
+import { chainFieldsFromSummary } from "../utils/chainFields";
+import { estimateSeconds, exceedsSegment, MAX_SEGMENT_SECONDS } from "../utils/duration";
+import { resolveNarrativeStatus } from "@/utils/submissionStatus";
+import type { Narrative, CreateNarrativePayload } from "@/types";
 
 interface NarrativeFormModalProps {
     open: boolean;
@@ -46,6 +50,7 @@ export function NarrativeFormModal({
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [uploadingMedia, setUploadingMedia] = useState(false);
     const [uploadError, setUploadError] = useState<string | null>(null);
+    const [attachLabel, setAttachLabel] = useState<string>("");
 
     const {
         register,
@@ -64,6 +69,7 @@ export function NarrativeFormModal({
             content: "",
             subtitle: "",
             voice_persona: undefined,
+            custom_voice_id: "",
             media: [],
             is_mandatory: false,
             is_unlocked: false,
@@ -81,11 +87,13 @@ export function NarrativeFormModal({
                 content: initial.content ?? "",
                 subtitle: initial.subtitle ?? "",
                 voice_persona: initial.voice_persona ?? undefined,
+                custom_voice_id: initial.custom_voice_id ?? "",
                 media: initial.media ?? [],
                 is_mandatory: initial.is_mandatory,
                 is_unlocked: initial.is_unlocked,
                 sequence_order: initial.sequence_order ?? undefined,
             });
+            setAttachLabel("");
         } else if (mode === "create") {
             reset({
                 title: "",
@@ -94,17 +102,21 @@ export function NarrativeFormModal({
                 content: "",
                 subtitle: "",
                 voice_persona: undefined,
+                custom_voice_id: "",
                 media: [],
                 is_mandatory: false,
                 is_unlocked: false,
                 sequence_order: undefined,
             });
+            setAttachLabel("");
         }
     }, [mode, initial, reset, open]);
 
     const mediaUrls = watch("media");
     const attachId = watch("attach_id");
     const attachType = watch("attach_type");
+    const content = watch("content") ?? "";
+    const selectedPersona = watch("voice_persona");
 
     // In edit mode, resolve the human-readable name of the attached target so
     // AttachTargetSelect can display "Marker: Colosseum" instead of "marker: 64f3a2b…".
@@ -134,9 +146,36 @@ export function NarrativeFormModal({
         staleTime: 5 * 60 * 1000,
     });
 
+    // Fetch attach summary for create mode (conflict pre-check + chain fields).
+    const {
+        data: attachSummary,
+        refetch: refetchSummary,
+    } = useQuery({
+        queryKey: ["attach-summary", attachType, attachId],
+        queryFn: () =>
+            narrativeService.getAttachSummary(
+                attachType as "marker" | "quest",
+                attachId
+            ),
+        enabled: mode === "create" && !!attachId && !!attachType,
+        staleTime: 30_000,
+    });
+
+    // When over the segment limit and there's a chain, fetch the chain narratives for context.
+    const chainId = attachSummary?.chains?.[0]?.chain_id;
+    const isOverLimit = exceedsSegment(content);
+
+    const { data: chainNarratives } = useQuery({
+        queryKey: ["chain-narratives", chainId],
+        queryFn: () => narrativeService.getByChain(chainId ?? ""),
+        enabled: mode === "create" && !!chainId && isOverLimit,
+        staleTime: 60_000,
+    });
+
+    // Accept CreateNarrativePayload directly so we can merge chain fields in onSubmit.
     const createMutation = useMutation({
-        mutationFn: (data: NarrativeFormData) =>
-            narrativeService.createNarrative(toCreatePayload(data)),
+        mutationFn: (payload: CreateNarrativePayload) =>
+            narrativeService.createNarrative(payload),
         onSuccess: async () => {
             await queryClient.invalidateQueries({ queryKey: ["creator-narratives"] });
         },
@@ -155,27 +194,65 @@ export function NarrativeFormModal({
         },
     });
 
-    const onSubmit = async (data: NarrativeFormData) => {
-        const mutation = mode === "create" ? createMutation : updateMutation;
-        const promise = mutation.mutateAsync(data);
+    const onSubmit = async (data: NarrativeFormData, action: "submit" | "draft" = "submit") => {
+        if (mode === "create") {
+            const status = resolveNarrativeStatus(action);
+            const chainFields = attachSummary ? chainFieldsFromSummary(attachSummary) : {};
+            const payload: CreateNarrativePayload = {
+                ...toCreatePayload(data, status),
+                ...chainFields,
+            };
+            const promise = createMutation.mutateAsync(payload);
 
-        toast.promise(promise, {
-            loading: mode === "create" ? "Creating narrative…" : "Saving changes…",
-            success: mode === "create" ? "Narrative created!" : "Narrative updated!",
-            error: (err: unknown) => {
-                const message = err instanceof Error ? err.message : "Something went wrong";
-                return `Failed: ${message}`;
-            },
-        });
+            toast.promise(promise, {
+                loading: "Creating narrative…",
+                success: "Narrative created!",
+                error: (err: unknown) => {
+                    const message = err instanceof Error ? err.message : "Something went wrong";
+                    return `Failed: ${message}`;
+                },
+            });
 
-        try {
-            const narrative = await promise;
-            onSaved(narrative);
-            onClose();
-        } catch {
-            // error handled by toast; keep modal open
+            try {
+                const narrative = await promise;
+                onSaved(narrative);
+                onClose();
+            } catch (err: unknown) {
+                // On 409, re-fetch the summary so the conflict notice updates.
+                if (err && typeof err === "object" && "response" in err) {
+                    const axiosErr = err as { response?: { status?: number } };
+                    if (axiosErr.response?.status === 409) {
+                        void refetchSummary();
+                    }
+                }
+                // error handled by toast; keep modal open
+            }
+        } else {
+            const promise = updateMutation.mutateAsync(data);
+
+            toast.promise(promise, {
+                loading: "Saving changes…",
+                success: "Narrative updated!",
+                error: (err: unknown) => {
+                    const message = err instanceof Error ? err.message : "Something went wrong";
+                    return `Failed: ${message}`;
+                },
+            });
+
+            try {
+                const narrative = await promise;
+                onSaved(narrative);
+                onClose();
+            } catch {
+                // error handled by toast; keep modal open
+            }
         }
     };
+
+    // Dedicated handlers for create-mode buttons — status is bound at definition time,
+    // eliminating the stale-closure risk of setting state before a submit event fires.
+    const submitForReview = handleSubmit((data) => onSubmit(data, "submit"));
+    const saveAsDraft = handleSubmit((data) => onSubmit(data, "draft"));
 
     const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -220,22 +297,36 @@ export function NarrativeFormModal({
         ? {
               attach_type: attachType,
               attach_id: attachId,
-              label: mode === "edit" ? editLabel : attachId,
+              label: mode === "edit" ? editLabel : (attachLabel || attachId),
           }
         : null;
 
+    // Duration meter state
+    const secs = estimateSeconds(content);
+    const roundedSecs = Math.round(secs);
+    const isAmber = secs >= 11 && secs <= MAX_SEGMENT_SECONDS;
+    const meterColor = isOverLimit
+        ? "text-orange-600"
+        : isAmber
+        ? "text-amber-600"
+        : "text-neutral-500";
+
+    // Safe first-element accessors for noUncheckedIndexedAccess compliance.
+    const firstChain = attachSummary?.chains[0];
+    const firstStandalone = attachSummary?.standalone[0];
+
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-            <Card className="w-full max-w-2xl shadow-2xl border-slate-200 overflow-hidden animate-scale-up max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-sm animate-fade-in">
+            <Card className="w-full max-w-2xl shadow-2xl border-neutral-200 overflow-hidden animate-scale-up max-h-[90vh] flex flex-col">
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
-                    <h2 className="text-xl font-bold text-slate-900">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100 shrink-0">
+                    <h2 className="text-xl font-display font-semibold text-primary-900 tracking-tight">
                         {mode === "create" ? "Create Narrative" : "Edit Narrative"}
                     </h2>
                     <button
                         type="button"
                         onClick={onClose}
-                        className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                        className="p-2 rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors"
                     >
                         <X className="w-5 h-5" />
                     </button>
@@ -243,7 +334,7 @@ export function NarrativeFormModal({
 
                 {/* Scrollable body */}
                 <form
-                    onSubmit={handleSubmit(onSubmit)}
+                    onSubmit={handleSubmit((data) => onSubmit(data))}
                     className="overflow-y-auto flex-1 px-6 py-5 space-y-5"
                     noValidate
                 >
@@ -267,10 +358,41 @@ export function NarrativeFormModal({
                                 onChange={(sel) => {
                                     setValue("attach_type", sel.attach_type as "marker" | "quest");
                                     setValue("attach_id", sel.attach_id);
+                                    setAttachLabel(sel.label);
                                 }}
                             />
                         )}
                     />
+
+                    {/* Conflict notice (create mode only) — shows when there are existing narratives */}
+                    {mode === "create" && attachSummary?.has_conflict && (
+                        <div className="flex items-start gap-2 px-3 py-2.5 bg-[#8398FF]/10 border border-[#8398FF]/30 rounded-lg text-sm text-[#3D4E99]">
+                            <Info className="w-4 h-4 mt-0.5 shrink-0 text-[#5C6FD9]" />
+                            <div className="flex-1 min-w-0">
+                                {firstChain !== undefined ? (
+                                    <p>
+                                        Adding to existing chain — Will be added as part #{firstChain.next_sequence_order} of &lsquo;
+                                        {firstChain.label}&rsquo;.
+                                    </p>
+                                ) : firstStandalone !== undefined ? (
+                                    <p>
+                                        Adding to existing chain — Will be chained after &lsquo;{firstStandalone.title}&rsquo;.
+                                    </p>
+                                ) : null}
+                                <Link
+                                    to={`/creator/narratives/view/${
+                                        firstChain !== undefined
+                                            ? firstChain.first_narrative_id
+                                            : (firstStandalone?.id ?? "")
+                                    }`}
+                                    className="text-[#5C6FD9]/70 text-xs mt-1 inline-block hover:text-[#3D4E99] hover:underline"
+                                    onClick={onClose}
+                                >
+                                    Edit existing instead
+                                </Link>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Subtitle */}
                     <Input
@@ -281,13 +403,58 @@ export function NarrativeFormModal({
                     />
 
                     {/* Content */}
-                    <Textarea
-                        label="Content"
-                        placeholder="Write the narrative content (Markdown supported)…"
-                        rows={6}
-                        error={errors.content?.message}
-                        {...register("content")}
-                    />
+                    <div className="w-full">
+                        <Textarea
+                            label="Content"
+                            placeholder="Write the narrative content (Markdown supported)…"
+                            rows={6}
+                            error={errors.content?.message}
+                            {...register("content")}
+                        />
+
+                        {/* Duration meter — always shown when content is non-empty */}
+                        {content.trim().length > 0 && (
+                            <div className="mt-1 space-y-1">
+                                <p className={`text-xs font-medium ${meterColor}`}>
+                                    ~{roundedSecs}s / {MAX_SEGMENT_SECONDS}s
+                                </p>
+                                {isOverLimit && (
+                                    <div className="px-3 py-2 bg-orange-50 border border-orange-200 rounded-lg text-xs text-orange-700">
+                                        This segment exceeds {MAX_SEGMENT_SECONDS} seconds. Consider splitting into a
+                                        chain — each segment is linked via{" "}
+                                        <span className="font-semibold">chain_id</span> and plays in sequence.
+                                        {firstChain !== undefined && (
+                                            <span className="block mt-1 text-orange-600">
+                                                This will be added as part #{firstChain.next_sequence_order} of &lsquo;
+                                                {firstChain.label}&rsquo;.
+                                            </span>
+                                        )}
+                                        {/* Show existing chain segments when over limit */}
+                                        {chainNarratives && chainNarratives.items.length > 0 && (
+                                            <div className="mt-2 space-y-1">
+                                                <p className="font-medium text-orange-700">
+                                                    Existing segments in this chain:
+                                                </p>
+                                                <ol className="list-decimal list-inside space-y-0.5 text-orange-600">
+                                                    {chainNarratives.items.map((n, idx) => (
+                                                        <li key={n.id}>
+                                                            <span className="font-medium">#{idx + 1}</span>{" "}
+                                                            {n.title}
+                                                            {n.audio_duration_s !== null && n.audio_duration_s !== undefined && (
+                                                                <span className="ml-1 opacity-75">
+                                                                    ({Math.round(n.audio_duration_s)}s)
+                                                                </span>
+                                                            )}
+                                                        </li>
+                                                    ))}
+                                                </ol>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
 
                     {/* Voice Persona */}
                     <div className="w-full">
@@ -304,14 +471,15 @@ export function NarrativeFormModal({
                                     onChange={(e) =>
                                         field.onChange(e.target.value === "" ? undefined : e.target.value)
                                     }
-                                    className="w-full px-4 py-2.5 bg-white border border-neutral-300 rounded-lg text-neutral-900 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 transition-colors disabled:bg-neutral-100"
+                                    className="w-full px-4 py-2.5 bg-white border border-neutral-300 rounded-lg text-neutral-900 focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-500 transition-colors disabled:bg-neutral-100"
                                 >
                                     <option value="">No voice persona</option>
-                                    {VOICE_PERSONAS.map((p) => (
+                                    {VOICE_PERSONAS.filter((p) => p !== "custom").map((p) => (
                                         <option key={p} value={p}>
                                             {VOICE_PERSONA_LABELS[p] ?? p}
                                         </option>
                                     ))}
+                                    <option value="custom">Custom (ElevenLabs voice ID)</option>
                                 </select>
                             )}
                         />
@@ -319,6 +487,26 @@ export function NarrativeFormModal({
                             <p className="mt-1.5 text-sm text-red-600">{errors.voice_persona.message}</p>
                         )}
                     </div>
+
+                    {/* Custom ElevenLabs voice ID */}
+                    {selectedPersona === "custom" && (
+                        <div className="w-full">
+                            <label className="block text-sm font-medium text-neutral-700 mb-1.5">
+                                ElevenLabs voice ID
+                            </label>
+                            <input
+                                {...register("custom_voice_id")}
+                                placeholder="e.g. pNInz6obpgDQGcFmaJgB"
+                                className="w-full px-4 py-2.5 bg-white border border-neutral-300 rounded-lg text-neutral-900 focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-500 transition-colors"
+                            />
+                            <p className="mt-1.5 text-xs text-neutral-500">
+                                The 20-character voice ID from your ElevenLabs voice library.
+                            </p>
+                            {errors.custom_voice_id && (
+                                <p className="mt-1.5 text-sm text-red-600">{errors.custom_voice_id.message}</p>
+                            )}
+                        </div>
+                    )}
 
                     {/* Media upload */}
                     <div className="w-full space-y-2">
@@ -344,7 +532,7 @@ export function NarrativeFormModal({
                                 type="button"
                                 onClick={() => fileInputRef.current?.click()}
                                 disabled={uploadingMedia}
-                                className="w-20 h-20 border-2 border-dashed border-neutral-300 rounded-lg flex flex-col items-center justify-center gap-1 text-neutral-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors disabled:opacity-50"
+                                className="w-20 h-20 border-2 border-dashed border-neutral-300 rounded-lg flex flex-col items-center justify-center gap-1 text-neutral-400 hover:border-primary-400 hover:text-primary-500 transition-colors disabled:opacity-50"
                             >
                                 <Upload className="w-5 h-5" />
                                 <span className="text-xs">
@@ -380,8 +568,8 @@ export function NarrativeFormModal({
                                         role="switch"
                                         aria-checked={field.value}
                                         onClick={() => field.onChange(!field.value)}
-                                        className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
-                                            field.value ? "bg-indigo-600" : "bg-neutral-200"
+                                        className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${
+                                            field.value ? "bg-primary-600" : "bg-neutral-200"
                                         }`}
                                     >
                                         <span
@@ -406,8 +594,8 @@ export function NarrativeFormModal({
                                         role="switch"
                                         aria-checked={field.value}
                                         onClick={() => field.onChange(!field.value)}
-                                        className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
-                                            field.value ? "bg-indigo-600" : "bg-neutral-200"
+                                        className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${
+                                            field.value ? "bg-primary-600" : "bg-neutral-200"
                                         }`}
                                     >
                                         <span
@@ -433,7 +621,8 @@ export function NarrativeFormModal({
                             render={({ field }) => (
                                 <input
                                     type="number"
-                                    min={0}
+                                    min={1}
+                                    max={999}
                                     step={1}
                                     placeholder="e.g. 1"
                                     value={field.value ?? ""}
@@ -441,7 +630,7 @@ export function NarrativeFormModal({
                                         const val = e.target.value;
                                         field.onChange(val === "" ? undefined : parseInt(val, 10));
                                     }}
-                                    className="w-full px-4 py-2.5 bg-white border border-neutral-300 rounded-lg text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 transition-colors"
+                                    className="w-full px-4 py-2.5 bg-white border border-neutral-300 rounded-lg text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-500 transition-colors"
                                 />
                             )}
                         />
@@ -461,14 +650,39 @@ export function NarrativeFormModal({
                         >
                             Cancel
                         </Button>
-                        <Button
-                            type="submit"
-                            variant="primary"
-                            fullWidth
-                            isLoading={isSubmitting}
-                        >
-                            {mode === "create" ? "Create Narrative" : "Save Changes"}
-                        </Button>
+                        {mode === "create" ? (
+                            <>
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    fullWidth
+                                    isLoading={isSubmitting}
+                                    disabled={isSubmitting}
+                                    onClick={saveAsDraft}
+                                >
+                                    Save as Draft
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="primary"
+                                    fullWidth
+                                    isLoading={isSubmitting}
+                                    disabled={isSubmitting}
+                                    onClick={submitForReview}
+                                >
+                                    Submit for Review
+                                </Button>
+                            </>
+                        ) : (
+                            <Button
+                                type="submit"
+                                variant="primary"
+                                fullWidth
+                                isLoading={isSubmitting}
+                            >
+                                Save Changes
+                            </Button>
+                        )}
                     </div>
                 </form>
             </Card>

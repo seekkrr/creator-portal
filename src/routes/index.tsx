@@ -79,7 +79,8 @@ const PayoutAccountsPage = lazyRetry(() =>
     }))
 );
 
-export const router = createBrowserRouter([
+export const router = createBrowserRouter(
+    [
     {
         element: <RootWrapper />,
         children: [
@@ -272,7 +273,7 @@ export const router = createBrowserRouter([
                             <p className="text-neutral-600 mb-8">Page not found</p>
                             <Link
                                 to="/creator/login"
-                                className="text-indigo-600 hover:text-indigo-700 font-medium"
+                                className="text-primary-600 hover:text-primary-700 font-medium"
                             >
                                 Go to Login
                             </Link>
@@ -282,4 +283,10 @@ export const router = createBrowserRouter([
             },
         ],
     },
-]);
+    ],
+    {
+        future: {
+            v7_relativeSplatPath: true,
+        },
+    }
+);

@@ -44,7 +44,7 @@ export function MarkdownPolicyViewer({ cdnUrl }: MarkdownPolicyViewerProps) {
     if (isLoading) {
         return (
             <div className="flex justify-center items-center py-20">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
             </div>
         );
     }
@@ -60,9 +60,9 @@ export function MarkdownPolicyViewer({ cdnUrl }: MarkdownPolicyViewerProps) {
             <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={{
-                    h1: ({ node: _node, ...props }) => <h1 className="text-4xl font-extrabold text-brand-purple mb-6 mt-8" {...props} />,
-                    h2: ({ node: _node, ...props }) => <h2 className="text-2xl font-bold text-indigo-900 mt-10 mb-4 border-b border-indigo-100 pb-2" {...props} />,
-                    h3: ({ node: _node, ...props }) => <h3 className="text-xl font-bold text-indigo-800 mt-6 mb-3" {...props} />,
+                    h1: ({ node: _node, ...props }) => <h1 className="text-4xl font-display font-bold text-primary-900 tracking-tight mb-6 mt-8" {...props} />,
+                    h2: ({ node: _node, ...props }) => <h2 className="text-2xl font-display font-semibold text-primary-900 tracking-tight mt-10 mb-4 border-b border-primary-100 pb-2" {...props} />,
+                    h3: ({ node: _node, ...props }) => <h3 className="text-xl font-display font-semibold text-primary-900 tracking-tight mt-6 mb-3" {...props} />,
                     p: ({ node: _node, ...props }) => <p className="text-neutral-600 leading-relaxed mb-4 text-lg" {...props} />,
                     ul: ({ node: _node, ...props }) => <ul className="list-disc pl-6 mb-6 space-y-2 text-neutral-600" {...props} />,
                     li: ({ node: _node, ...props }) => <li className="pl-2" {...props} />,
@@ -76,7 +76,7 @@ export function MarkdownPolicyViewer({ cdnUrl }: MarkdownPolicyViewerProps) {
                         }
 
                         const isInternal = mappedHref.startsWith("/");
-                        const className = "text-indigo-600 hover:text-indigo-800 hover:underline font-medium";
+                        const className = "text-primary-600 hover:text-primary-800 hover:underline font-medium";
 
                         if (isInternal) {
                             return <Link to={mappedHref} className={className} {...props} />;

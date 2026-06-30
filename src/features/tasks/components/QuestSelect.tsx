@@ -85,14 +85,14 @@ export function QuestSelect({ value, onChange, disabled = false, error }: QuestS
                     disabled:bg-neutral-100 disabled:cursor-not-allowed
                     ${error
                         ? "border-red-500 focus:border-red-500 focus:ring-red-200"
-                        : "border-neutral-300 focus:border-indigo-500 focus:ring-indigo-200"
+                        : "border-neutral-300 focus:border-primary-500 focus:ring-primary-200"
                     }
                 `}
             >
                 <span className={`flex items-center gap-2 text-sm ${displayTitle ? "text-neutral-900" : "text-neutral-400"}`}>
                     {displayTitle ? (
                         <>
-                            <Map className="w-4 h-4 text-indigo-500 shrink-0" />
+                            <Map className="w-4 h-4 text-primary-500 shrink-0" />
                             <span className="truncate">{displayTitle}</span>
                         </>
                     ) : value ? (
@@ -119,7 +119,7 @@ export function QuestSelect({ value, onChange, disabled = false, error }: QuestS
                                 value={search}
                                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
                                 placeholder="Search quests..."
-                                className="w-full pl-9 pr-4 py-2 text-sm bg-neutral-50 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400"
+                                className="w-full pl-9 pr-4 py-2 text-sm bg-neutral-50 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
                             />
                         </div>
                     </div>
@@ -129,8 +129,8 @@ export function QuestSelect({ value, onChange, disabled = false, error }: QuestS
                             <button
                                 type="button"
                                 onClick={handleClear}
-                                className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2 hover:bg-indigo-50 transition-colors
-                                    ${!value ? "bg-indigo-50 text-indigo-700 font-medium" : "text-neutral-500 italic"}
+                                className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2 hover:bg-primary-50 transition-colors
+                                    ${!value ? "bg-primary-50 text-primary-700 font-medium" : "text-neutral-500 italic"}
                                 `}
                             >
                                 None / no quest
@@ -146,11 +146,11 @@ export function QuestSelect({ value, onChange, disabled = false, error }: QuestS
                                     <button
                                         type="button"
                                         onClick={() => handleSelect(quest.id)}
-                                        className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2 hover:bg-indigo-50 transition-colors
-                                            ${quest.id === value ? "bg-indigo-50 text-indigo-700 font-medium" : "text-neutral-700"}
+                                        className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2 hover:bg-primary-50 transition-colors
+                                            ${quest.id === value ? "bg-primary-50 text-primary-700 font-medium" : "text-neutral-700"}
                                         `}
                                     >
-                                        <Map className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                                        <Map className="w-3.5 h-3.5 text-primary-400 shrink-0" />
                                         <span className="truncate">{quest.title ?? "(untitled)"}</span>
                                         {quest.status && (
                                             <span className="ml-auto text-xs text-neutral-400 shrink-0">{quest.status}</span>

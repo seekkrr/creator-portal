@@ -87,7 +87,7 @@ export function NarrativeAudioPanel({ narrative, onChanged }: NarrativeAudioPane
     return (
         <div className="rounded-xl border border-neutral-200 bg-white p-4 space-y-3">
             <div className="flex items-center gap-2">
-                <Volume2 className="w-4 h-4 text-indigo-600 shrink-0" />
+                <Volume2 className="w-4 h-4 text-primary-600 shrink-0" />
                 <span className="text-sm font-semibold text-neutral-800">Audio Narration</span>
                 {narrative.voice_persona && (
                     <span className="text-xs text-neutral-400 capitalize">
@@ -161,7 +161,7 @@ export function NarrativeAudioPanel({ narrative, onChanged }: NarrativeAudioPane
                     isLoading={isGenerating}
                     leftIcon={<Play className="w-3.5 h-3.5" />}
                     onClick={handleGenerate}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                    className="bg-primary-600 hover:bg-primary-700 text-white"
                 >
                     {currentStatus === "failed" || currentStatus === "quota_exceeded"
                         ? "Retry Generation"

@@ -1,9 +1,14 @@
 import { Link } from "react-router-dom";
 import { useAuthStore } from "@store/auth.store";
 import { useCreatorStats } from "@hooks/useCreatorStats";
-import { MapPin, Compass, Trophy, Clock, Play, BadgeCheck, AlertTriangle } from "lucide-react";
+import { MapPin, Compass, Trophy, Clock, Play, BadgeCheck, AlertTriangle, BookOpen, Navigation, FileText } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { WALKTHROUGH_VIDEOS } from "@config/walkthroughVideos";
+import { Button } from "@components/ui";
+import { markerService } from "@services/marker.service";
+import { narrativeService } from "@services/narrative.service";
+import { questService } from "@services/quest.service";
 
 // ... (StackedHeroCards remains same)
 
@@ -11,7 +16,7 @@ function StackedHeroCards() {
     const [activeIndex, setActiveIndex] = useState(0);
     const cards = [
         { id: 1, src: "/hiker.png", alt: "Hiker looking at scenic mountains", color: "bg-neutral-100" },
-        { id: 2, src: "/cafe.png", alt: "Cozy cafe table setting", color: "bg-indigo-50" },
+        { id: 2, src: "/cafe.png", alt: "Cozy cafe table setting", color: "bg-primary-50" },
         { id: 3, src: "/dancing.png", alt: "Group of people dancing outdoors", color: "bg-green-50" },
         { id: 4, src: "/old_man.png", alt: "Portrait of an elderly man with traditional headwear", color: "bg-amber-50" },
     ];
@@ -147,6 +152,33 @@ function HowToVideoPlayer() {
     );
 }
 
+// --- Resume Draft Cue ---
+// Reads the quest_creation_form sessionStorage key written by CreateQuestPage.
+// Returns null when no draft exists (cue is hidden).
+interface WizardDraftInfo {
+    title: string | null;
+    step: number;
+    totalSteps: number;
+}
+function useWizardDraft(): WizardDraftInfo | null {
+    const [draft, setDraft] = useState<WizardDraftInfo | null>(null);
+    useEffect(() => {
+        try {
+            const raw = sessionStorage.getItem("quest_creation_form");
+            if (!raw) return;
+            const parsed = JSON.parse(raw) as { formData?: { title?: string }; currentStep?: number };
+            setDraft({
+                title: parsed.formData?.title ?? null,
+                step: parsed.currentStep ?? 1,
+                totalSteps: 6,
+            });
+        } catch {
+            // ignore
+        }
+    }, []);
+    return draft;
+}
+
 export function DashboardPage() {
     const { user, creator } = useAuthStore();
 
@@ -159,6 +191,33 @@ export function DashboardPage() {
     // banners are defensive — they should only ever surface on a stale session.
     const status = creator?.status;
     const isBlocked = status === "suspended" || status === "rejected";
+
+    // Draft resume cue (sessionStorage wizard draft)
+    const wizardDraft = useWizardDraft();
+
+    // Content counts — markers, narratives, quests (my own, all statuses).
+    // page_size=1 is enough: we only need the total count from the response.
+    const { data: markerData } = useQuery({
+        queryKey: ["markers", "mine", "dashboard"],
+        queryFn: () => markerService.listMarkers({ mine: true, page_size: 1 }),
+        staleTime: 60_000,
+    });
+    const { data: narrativeData } = useQuery({
+        queryKey: ["narratives", "mine", "dashboard"],
+        queryFn: () => narrativeService.listNarratives({ mine: true, page_size: 1 }),
+        staleTime: 60_000,
+    });
+    const { data: myQuestData } = useQuery({
+        queryKey: ["quests", "me", "dashboard"],
+        queryFn: () => questService.getMyQuests({ page_size: 1 }),
+        staleTime: 60_000,
+    });
+
+    const markerCount = markerData?.total ?? 0;
+    const narrativeCount = narrativeData?.total ?? 0;
+    const myQuestCount = myQuestData?.total ?? 0;
+    // "has content" = at least one marker, narrative, or quest exists
+    const hasContent = markerCount > 0 || narrativeCount > 0 || myQuestCount > 0;
 
     return (
         <div className="animate-fade-in font-sans space-y-4 lg:space-y-6">
@@ -188,7 +247,7 @@ export function DashboardPage() {
 
             {/* Verification is a trust BADGE, never a submission blocker. */}
             {!isBlocked && (isVerified ? (
-                <div className="p-4 rounded-2xl max-[420px]:hidden flex items-center gap-4 bg-indigo-50 text-indigo-700 border border-indigo-100">
+                <div className="p-4 rounded-2xl max-[420px]:hidden flex items-center gap-4 bg-primary-50 text-primary-700 border border-primary-100">
                     <BadgeCheck className="w-5 h-5 flex-shrink-0" />
                     <div>
                         <p className="font-semibold">Verified Creator</p>
@@ -217,10 +276,35 @@ export function DashboardPage() {
                 </div>
             ))}
 
+            {/* Resume Draft Cue — shown only when a wizard draft exists in sessionStorage */}
+            {wizardDraft && (
+                <Link to="/creator/quest/create" className="block">
+                    <div className="p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 bg-primary-50 border border-primary-200 hover:border-primary-400 hover:bg-primary-100 transition-colors cursor-pointer">
+                        <div className="flex items-center gap-3 flex-1">
+                            <div className="w-9 h-9 bg-primary-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <FileText className="w-5 h-5 text-white" />
+                            </div>
+                            <div>
+                                <p className="font-semibold text-primary-900 text-sm">
+                                    Continue your draft
+                                    {wizardDraft.title ? ` — ${wizardDraft.title}` : ""}
+                                </p>
+                                <p className="text-xs text-primary-700 mt-0.5">
+                                    Step {wizardDraft.step} of {wizardDraft.totalSteps} · Pick up where you left off
+                                </p>
+                            </div>
+                        </div>
+                        <span className="flex-shrink-0 px-4 py-2 rounded-full bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition-colors whitespace-nowrap">
+                            Resume
+                        </span>
+                    </div>
+                </Link>
+            )}
+
             {/* Hero Section */}
             <div className="flex flex-col lg:flex-row gap-8 lg:gap-24 items-center justify-between mt-4">
                 <div className="space-y-4 sm:space-y-6 lg:space-y-8 xl:space-y-10 max-w-2xl flex-1">
-                    <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl xl:text-6xl 2xl:text-7xl font-light text-neutral-900 leading-tight tracking-tight">
+                    <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl xl:text-6xl 2xl:text-7xl font-display font-bold text-primary-900 leading-tight tracking-tight">
                         Welcome to SeekKrr, {user?.first_name ? `${user.first_name}` : "Creator"}
                     </h1>
 
@@ -237,12 +321,14 @@ export function DashboardPage() {
 
                     <div className="pt-1 lg:pt-2">
                         <p className="text-lg lg:text-xl font-medium text-neutral-900 mb-3 sm:mb-4 lg:mb-6 xl:mb-8">
-                            What's the wait then, create your first Quest today
+                            {hasContent
+                                ? "Keep building your journeys"
+                                : "What's the wait then, create your first Quest today"}
                         </p>
                         <Link to="/creator/quest/create">
-                            <button className="px-8 py-3 lg:px-10 lg:py-4 bg-white border-2 border-neutral-900 text-neutral-900 font-normal rounded-full hover:bg-neutral-900 hover:text-white transition-all transform hover:scale-105 duration-200 text-lg lg:text-xl tracking-wide cursor-pointer">
-                                Create Quest
-                            </button>
+                            <Button variant="accent" size="lg" className="rounded-full text-lg lg:text-xl tracking-wide px-8 py-3 lg:px-10 lg:py-4 hover:scale-105 transition-transform">
+                                {hasContent ? "Create Quest" : "Create Quest"}
+                            </Button>
                         </Link>
                     </div>
                 </div>
@@ -253,10 +339,10 @@ export function DashboardPage() {
             </div>
 
             {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 lg:gap-6">
                 <div className="bg-white p-6 rounded-2xl border border-neutral-100 shadow-sm hover:shadow-md transition-all">
                     <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600">
+                        <div className="w-12 h-12 bg-primary-50 rounded-xl flex items-center justify-center text-primary-600">
                             <MapPin className="w-6 h-6" />
                         </div>
                         <div>
@@ -289,12 +375,36 @@ export function DashboardPage() {
                         </div>
                     </div>
                 </div>
+
+                <div className="bg-white p-6 rounded-2xl border border-neutral-100 shadow-sm hover:shadow-md transition-all">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-teal-50 rounded-xl flex items-center justify-center text-teal-600">
+                            <Navigation className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium text-neutral-500 uppercase tracking-wider">Markers</p>
+                            <p className="text-3xl font-bold text-neutral-900">{markerCount}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-white p-6 rounded-2xl border border-neutral-100 shadow-sm hover:shadow-md transition-all">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
+                            <BookOpen className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium text-neutral-500 uppercase tracking-wider">Narratives</p>
+                            <p className="text-3xl font-bold text-neutral-900">{narrativeCount}</p>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* How to Create a Quest — video first, then steps */}
             <div className="space-y-8">
                 <div>
-                    <h2 className="text-2xl font-medium text-neutral-900 tracking-tight">
+                    <h2 className="text-2xl font-display font-semibold text-primary-900 tracking-tight">
                         How to create a Quest?
                     </h2>
                     <p className="text-neutral-500 mt-1 text-sm">
@@ -305,13 +415,13 @@ export function DashboardPage() {
                 {/* Video */}
                 <HowToVideoPlayer />
 
-                {/* Steps — horizontal scroll on mobile, 4-col on desktop */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                {/* Steps — 6-step flow mirroring the actual wizard */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                     {[
                         {
                             n: 1,
-                            title: "Add Destination or Content Link",
-                            desc: "Click Create Quest and enter the location, or paste a link to your content.",
+                            title: "Add Destination",
+                            desc: "Enter the location or region your quest takes place in.",
                         },
                         {
                             n: 2,
@@ -320,20 +430,30 @@ export function DashboardPage() {
                         },
                         {
                             n: 3,
-                            title: "Add Locations",
-                            desc: "Guide travelers by pinning waypoints on the map and adding navigation tips.",
+                            title: "Add Markers",
+                            desc: "Pin waypoints on the map — these are the stops explorers will visit.",
                         },
                         {
                             n: 4,
-                            title: "Earn Rewards",
-                            desc: "Get recognised and earn commission as explorers complete your quests.",
+                            title: "Add Marker Details",
+                            desc: "Fill in \"Things to do\" text and photos for each stop.",
+                        },
+                        {
+                            n: 5,
+                            title: "Add Narratives",
+                            desc: "Write audio-guided stories that play at each marker during the quest.",
+                        },
+                        {
+                            n: 6,
+                            title: "Review & Publish",
+                            desc: "Review your quest and submit it for approval to start earning.",
                         },
                     ].map(({ n, title, desc }) => (
                         <div
                             key={n}
-                            className="group p-5 bg-white rounded-2xl border border-neutral-100 hover:border-indigo-100 hover:shadow-lg transition-all duration-300 flex flex-col gap-3"
+                            className="group p-5 bg-white rounded-2xl border border-neutral-100 hover:border-primary-100 hover:shadow-lg transition-all duration-300 flex flex-col gap-3"
                         >
-                            <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-base shadow-indigo-200 shadow-md group-hover:scale-110 transition-transform flex-shrink-0">
+                            <div className="w-9 h-9 rounded-xl bg-primary-600 text-white flex items-center justify-center font-bold text-base shadow-primary-200 shadow-md group-hover:scale-110 transition-transform flex-shrink-0">
                                 {n}
                             </div>
                             <div>

@@ -1,35 +1,38 @@
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { MoreVertical, AlertTriangle, Volume2 } from "lucide-react";
-import { Card, Button, Input } from "@components/ui";
+import { MoreVertical, AlertTriangle, Volume2, Link2, BookOpen } from "lucide-react";
+import { Card, Button, Input, Badge, EmptyState, ErrorState, SkeletonTableRows, StatusFilterPills, SearchBar } from "@components/ui";
+import type { BadgeStatus } from "@components/ui";
 import { narrativeService } from "@services/narrative.service";
+import { markerService } from "@services/marker.service";
+import { questService } from "@services/quest.service";
+import { regionService } from "@services/region.service";
 import { useAuthStore } from "@store/auth.store";
 import { NarrativeFormModal } from "../components/NarrativeFormModal";
+import { ChainGroupRows } from "../components/ChainGroupRows";
 import type { Narrative, NarrativeStatus } from "@/types";
 import { toast } from "sonner";
 
 type StatusFilter = NarrativeStatus | "all";
 
-const STATUS_TABS: StatusFilter[] = ["all", "draft", "under_review", "approved", "rejected", "archived"];
+const STATUS_TABS: { label: string; value: StatusFilter }[] = [
+    { label: "All", value: "all" },
+    { label: "Draft", value: "draft" },
+    { label: "Under Review", value: "under_review" },
+    { label: "Approved", value: "approved" },
+    { label: "Rejected", value: "rejected" },
+    { label: "Archived", value: "archived" },
+];
 
-const STATUS_TAB_LABELS: Record<StatusFilter, string> = {
-    all: "All",
-    draft: "Draft",
-    under_review: "Under Review",
-    approved: "Approved",
-    rejected: "Rejected",
-    archived: "Archived",
-};
-
-function getNarrativeStatusColor(status: NarrativeStatus): string {
+function getNarrativeStatusBadge(status: NarrativeStatus): BadgeStatus {
     switch (status) {
-        case "draft": return "bg-slate-100 text-slate-700 border border-slate-200";
-        case "under_review": return "bg-amber-100 text-amber-700 border border-amber-200";
-        case "approved": return "bg-emerald-100 text-emerald-700 border border-emerald-200";
-        case "rejected": return "bg-red-100 text-red-700 border border-red-200";
-        case "archived": return "bg-neutral-100 text-neutral-500 border border-neutral-200";
-        default: return "bg-slate-100 text-slate-700";
+        case "draft": return "draft";
+        case "under_review": return "under_review";
+        case "approved": return "approved";
+        case "rejected": return "rejected";
+        case "archived": return "archived";
+        default: return "draft";
     }
 }
 
@@ -58,6 +61,55 @@ function getAudioChipLabel(audioStatus: string | null | undefined): string {
 const CREATOR_EDITABLE: NarrativeStatus[] = ["draft", "rejected"];
 const CREATOR_DELETABLE: NarrativeStatus[] = ["draft", "rejected"];
 
+// ─── Chain grouping ───────────────────────────────────────────────────────────
+
+interface ChainGroup {
+    chain_id: string;
+    /** Label derived from the first member's title (sorted by sequence_order). */
+    label: string;
+    members: Narrative[];
+}
+
+/**
+ * Splits a flat narrative list into multi-member chains and loose rows.
+ * Chains with only one visible member on the current page are demoted to loose
+ * so they don't create a misleading "Chain of 1" header.
+ */
+function groupByChain(narratives: Narrative[]): {
+    chains: ChainGroup[];
+    loose: Narrative[];
+} {
+    const byChain = new Map<string, Narrative[]>();
+    const loose: Narrative[] = [];
+
+    for (const n of narratives) {
+        if (n.chain_id) {
+            const arr = byChain.get(n.chain_id) ?? [];
+            arr.push(n);
+            byChain.set(n.chain_id, arr);
+        } else {
+            loose.push(n);
+        }
+    }
+
+    const chains: ChainGroup[] = [];
+    for (const [chain_id, members] of byChain.entries()) {
+        if (members.length > 1) {
+            members.sort((a, b) => (a.sequence_order ?? 0) - (b.sequence_order ?? 0));
+            chains.push({
+                chain_id,
+                label: members[0]?.title ?? "Untitled Chain",
+                members,
+            });
+        } else {
+            // Lone chain member on this filtered page → render as a loose row
+            loose.push(...members);
+        }
+    }
+
+    return { chains, loose };
+}
+
 export function NarrativesPage() {
     const { user } = useAuthStore();
     const navigate = useNavigate();
@@ -74,11 +126,17 @@ export function NarrativesPage() {
     const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
     const [dropdownPosition, setDropdownPosition] = useState<"bottom" | "top">("bottom");
 
-    // Debounce search
+    // Debounce search (fires automatically while typing)
     React.useEffect(() => {
         const timer = setTimeout(() => setDebouncedSearch(search), 400);
         return () => clearTimeout(timer);
     }, [search]);
+
+    // Explicit submit bypasses debounce and fires immediately
+    const handleSearch = (e: React.FormEvent) => {
+        e.preventDefault();
+        setDebouncedSearch(search);
+    };
 
     // Close dropdown on outside click
     React.useEffect(() => {
@@ -87,7 +145,7 @@ export function NarrativesPage() {
         return () => document.removeEventListener("click", handleClickOutside);
     }, []);
 
-    const { data, isLoading } = useQuery({
+    const { data, isLoading, isError, refetch } = useQuery({
         queryKey: ["creator-narratives", { status: activeTab, search: debouncedSearch }],
         queryFn: () =>
             narrativeService.listNarratives({
@@ -99,6 +157,50 @@ export function NarrativesPage() {
     });
 
     const narratives = data?.items ?? [];
+
+    // ── Attach-name resolution ────────────────────────────────────────────────
+    // Narratives can attach to markers, quests, or regions.  We resolve names
+    // for all three so the ATTACH column never shows a raw ObjectId.
+    // NOTE: page_size is capped at 100 by the backend (>100 → 422).
+
+    const { data: allMarkersData } = useQuery({
+        queryKey: ["creator-markers-all"],
+        queryFn: () => markerService.listMarkers({ mine: true, page_size: 100 }),
+        enabled: !!user,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const { data: allQuestsData } = useQuery({
+        queryKey: ["creator-quests-all"],
+        queryFn: () => questService.getMyQuests({ page_size: 100 }),
+        enabled: !!user,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const { data: allRegionsData } = useQuery({
+        queryKey: ["creator-regions-all"],
+        queryFn: () => regionService.listRegions({ page_size: 100 }),
+        enabled: !!user,
+        staleTime: 10 * 60 * 1000,
+    });
+
+    /**
+     * Combined id→name map covering all three attach types.
+     * Markers use `title`; quests use `title`; regions use `name`.
+     */
+    const attachNameMap = React.useMemo(() => {
+        const map = new Map<string, string>();
+        for (const m of (allMarkersData?.items ?? [])) {
+            if (m.title) map.set(m.id, m.title);
+        }
+        for (const q of (allQuestsData?.items ?? [])) {
+            if (q.title) map.set(q.id, q.title);
+        }
+        for (const r of (allRegionsData?.items ?? [])) {
+            if (r.name) map.set(r.id, r.name);
+        }
+        return map;
+    }, [allMarkersData, allQuestsData, allRegionsData]);
 
     const handleSubmitForReview = (narrativeId: string) => {
         const promise = narrativeService.submitNarrative(narrativeId);
@@ -163,28 +265,21 @@ export function NarrativesPage() {
         <div className="animate-fade-in space-y-4 w-full max-w-6xl mx-auto pb-6 px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-900">My Narratives</h1>
-                    <p className="text-slate-500 mt-1">Manage your narrative content and audio</p>
+                    <h1 className="text-3xl font-display font-bold text-primary-900 tracking-tight">My Narratives</h1>
+                    <p className="text-neutral-500 mt-1">Manage your narrative content and audio</p>
                 </div>
-                <div className="flex items-center gap-3 w-full sm:w-auto">
-                    <Input
-                        placeholder="Search narratives…"
-                        value={search}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
-                        className="w-full sm:w-64"
-                    />
-                    <Button
-                        onClick={() => { setEditTarget(null); setIsModalOpen(true); }}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white whitespace-nowrap"
-                    >
-                        Create New Narrative
-                    </Button>
-                </div>
+                <Button
+                    variant="accent"
+                    onClick={() => { setEditTarget(null); setIsModalOpen(true); }}
+                    className="w-full sm:w-auto"
+                >
+                    Create New Narrative
+                </Button>
             </div>
 
             {/* Delete Confirmation Modal */}
             {isDeleteModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-sm animate-fade-in">
                     <Card className="w-full max-w-md shadow-2xl border-red-100 overflow-hidden animate-scale-up">
                         <div className="p-6">
                             <div className="flex items-center gap-3 text-red-600 mb-4">
@@ -193,9 +288,9 @@ export function NarrativesPage() {
                                 </div>
                                 <h3 className="text-xl font-bold">Delete Narrative?</h3>
                             </div>
-                            <p className="text-slate-600 mb-6">
+                            <p className="text-neutral-600 mb-6">
                                 This action is permanent. To confirm, type{" "}
-                                <span className="font-bold text-slate-900 select-none">CONFIRM</span> below.
+                                <span className="font-bold text-neutral-900 select-none">CONFIRM</span> below.
                             </p>
                             <div className="space-y-4">
                                 <Input
@@ -243,191 +338,252 @@ export function NarrativesPage() {
                 onSaved={handleSaved}
             />
 
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col">
-                {/* Status Tabs */}
-                <div className="flex items-center overflow-x-auto border-b border-slate-200">
-                    {STATUS_TABS.map((tab) => (
-                        <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab)}
-                            className={`px-5 py-4 text-sm font-medium whitespace-nowrap transition-colors relative
-                                ${activeTab === tab
-                                    ? "text-indigo-600 bg-slate-50"
-                                    : "text-slate-600 hover:text-slate-900"
-                                }`}
-                        >
-                            {STATUS_TAB_LABELS[tab]}
-                            {activeTab === tab && (
-                                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600" />
-                            )}
-                        </button>
-                    ))}
-                </div>
+            {/* Filters + Search */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <StatusFilterPills
+                    filters={STATUS_TABS}
+                    active={activeTab}
+                    onChange={setActiveTab}
+                />
+                <SearchBar
+                    value={search}
+                    onChange={setSearch}
+                    onSubmit={handleSearch}
+                    placeholder="Search narratives…"
+                />
+            </div>
 
+            <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm flex flex-col">
                 {/* Table */}
                 <div className="p-0 relative">
                     <div className="w-full overflow-y-auto overflow-x-auto max-h-[60vh] min-h-[300px]">
                         <table className="w-full text-left border-collapse min-w-[900px] table-fixed">
-                            <thead className="sticky top-0 z-20 bg-slate-50 shadow-sm outline outline-1 outline-slate-200">
-                                <tr className="border-b border-slate-200">
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[28%]">Title</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[18%]">Attach</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[14%] text-center">Status</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[14%] text-center">Audio</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[12%] text-center">Created</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[14%] text-right">Actions</th>
+                            <thead className="sticky top-0 z-20 bg-neutral-50 shadow-sm outline outline-1 outline-neutral-200">
+                                <tr className="border-b border-neutral-200">
+                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[36%]">Title</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[16%]">Attach</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[12%] text-center">Status</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[12%] text-center">Audio</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[10%] text-center">Created</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[14%] text-right">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100">
+                            <tbody className="divide-y divide-neutral-100">
                                 {isLoading ? (
+                                    <SkeletonTableRows columns={6} />
+                                ) : isError ? (
                                     <tr>
-                                        <td colSpan={6} className="py-8 text-center text-slate-500">
-                                            Loading narratives…
+                                        <td colSpan={6} className="p-0">
+                                            <ErrorState
+                                                message="We couldn't load your narratives."
+                                                onRetry={() => refetch()}
+                                            />
                                         </td>
                                     </tr>
                                 ) : narratives.length === 0 ? (
                                     <tr>
-                                        <td colSpan={6} className="py-12 text-center">
-                                            <div className="text-slate-400 mb-2">No narratives found</div>
-                                            {activeTab === "all" && (
-                                                <Button
-                                                    variant="outline"
-                                                    className="mt-4 border-dashed border-2"
-                                                    onClick={() => setIsModalOpen(true)}
-                                                >
-                                                    Create Your First Narrative
-                                                </Button>
-                                            )}
+                                        <td colSpan={6} className="p-0">
+                                            <EmptyState
+                                                icon={<BookOpen className="w-7 h-7" />}
+                                                title="No narratives found"
+                                                description={
+                                                    activeTab === "all" && !debouncedSearch
+                                                        ? "Write your first narrative to add story and audio to your markers and quests."
+                                                        : "No narratives match your current filter or search."
+                                                }
+                                                action={
+                                                    activeTab === "all" && !debouncedSearch ? (
+                                                        <Button
+                                                            variant="accent"
+                                                            onClick={() => { setEditTarget(null); setIsModalOpen(true); }}
+                                                        >
+                                                            Create New Narrative
+                                                        </Button>
+                                                    ) : undefined
+                                                }
+                                            />
                                         </td>
                                     </tr>
-                                ) : (
-                                    narratives.map((narrative) => {
-                                        const isEditable = CREATOR_EDITABLE.includes(narrative.status);
-                                        const isDeletable = CREATOR_DELETABLE.includes(narrative.status);
-                                        const isSubmittable = narrative.status === "draft";
+                                ) : (() => {
+                                    const { chains, loose } = groupByChain(narratives);
 
-                                        return (
-                                            <tr
-                                                key={narrative.id}
-                                                className="hover:bg-slate-50/50 transition-colors group"
-                                            >
-                                                <td className="py-4 px-6 font-medium text-slate-900 truncate max-w-[200px]" title={narrative.title}>
-                                                    {narrative.title}
-                                                    {narrative.subtitle && (
-                                                        <div className="text-xs text-slate-400 truncate font-normal mt-0.5">
-                                                            {narrative.subtitle}
-                                                        </div>
-                                                    )}
-                                                </td>
-                                                <td className="py-4 px-6">
-                                                    <div className="flex flex-col gap-0.5">
-                                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-indigo-50 text-indigo-600 border border-indigo-100 w-fit">
-                                                            {narrative.attach_type}
-                                                        </span>
-                                                        <span className="text-xs text-slate-400 truncate max-w-[120px]">
-                                                            {narrative.attach_id}
-                                                        </span>
-                                                    </div>
-                                                </td>
-                                                <td className="py-4 px-6 text-center">
-                                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wider ${getNarrativeStatusColor(narrative.status)}`}>
-                                                        {narrative.status.replace("_", " ")}
-                                                    </span>
-                                                </td>
-                                                <td className="py-4 px-6 text-center">
-                                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${getAudioChipColor(narrative.audio_status)}`}>
-                                                        <Volume2 className="w-3 h-3 shrink-0" />
-                                                        {getAudioChipLabel(narrative.audio_status)}
-                                                    </span>
-                                                </td>
-                                                <td className="py-4 px-6 text-sm text-slate-500 whitespace-nowrap text-center">
-                                                    {narrative.created_at
-                                                        ? new Date(narrative.created_at).toLocaleDateString()
-                                                        : "—"}
-                                                </td>
-                                                <td className="py-4 px-6 text-right relative">
-                                                    <div className="flex items-center justify-end">
-                                                        <div className="relative">
-                                                            <Button
-                                                                variant="ghost"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    const rect = e.currentTarget.getBoundingClientRect();
-                                                                    const spaceBelow = window.innerHeight - rect.bottom;
-                                                                    setDropdownPosition(spaceBelow < 200 ? "top" : "bottom");
-                                                                    setOpenDropdownId(
-                                                                        openDropdownId === narrative.id ? null : narrative.id
-                                                                    );
-                                                                }}
-                                                                className={`p-2 h-9 w-9 border border-transparent rounded-lg flex items-center justify-center transition-colors
-                                                                    ${openDropdownId === narrative.id
-                                                                        ? "bg-neutral-100 text-neutral-900"
-                                                                        : "text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100"
-                                                                    }`}
-                                                            >
-                                                                <MoreVertical className="w-4 h-4" />
-                                                            </Button>
+                                    // Shared dropdown toggle handler (used by both loose rows and ChainGroupRows)
+                                    const handleDropdownToggle = (
+                                        id: string,
+                                        e: React.MouseEvent<HTMLButtonElement>
+                                    ) => {
+                                        e.stopPropagation();
+                                        const rect = e.currentTarget.getBoundingClientRect();
+                                        const spaceBelow = window.innerHeight - rect.bottom;
+                                        setDropdownPosition(spaceBelow < 200 ? "top" : "bottom");
+                                        setOpenDropdownId(openDropdownId === id ? null : id);
+                                    };
 
-                                                            {openDropdownId === narrative.id && (
-                                                                <div
-                                                                    className={`absolute right-0 w-52 bg-white border border-neutral-200 rounded-xl shadow-xl z-[100] py-1.5 animate-fade-in ${
-                                                                        dropdownPosition === "top"
-                                                                            ? "bottom-full mb-1.5"
-                                                                            : "top-full mt-1.5"
-                                                                    }`}
-                                                                    onClick={(e) => e.stopPropagation()}
-                                                                >
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            navigate(`/creator/narratives/view/${narrative.id}`);
-                                                                            setOpenDropdownId(null);
-                                                                        }}
-                                                                        className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-slate-50 flex items-center gap-2 font-medium"
+                                    return (
+                                        <>
+                                            {/* Chain groups first */}
+                                            {chains.map((group) => (
+                                                <ChainGroupRows
+                                                    key={`chain-${group.chain_id}`}
+                                                    chainId={group.chain_id}
+                                                    label={group.label}
+                                                    members={group.members}
+                                                    openDropdownId={openDropdownId}
+                                                    dropdownPosition={dropdownPosition}
+                                                    onDropdownToggle={handleDropdownToggle}
+                                                    markerTitleMap={attachNameMap}
+                                                    onView={(id) => {
+                                                        navigate(`/creator/narratives/view/${id}`);
+                                                        setOpenDropdownId(null);
+                                                    }}
+                                                    onEdit={(n) => {
+                                                        handleEditClick(n);
+                                                        setOpenDropdownId(null);
+                                                    }}
+                                                    onDelete={(id) => {
+                                                        handleDeleteClick(id);
+                                                        setOpenDropdownId(null);
+                                                    }}
+                                                    onSubmit={(id) => {
+                                                        handleSubmitForReview(id);
+                                                        setOpenDropdownId(null);
+                                                    }}
+                                                />
+                                            ))}
+
+                                            {/* Loose rows (unchained, or lone chain members) */}
+                                            {loose.map((narrative) => {
+                                                const isEditable    = CREATOR_EDITABLE.includes(narrative.status);
+                                                const isDeletable   = CREATOR_DELETABLE.includes(narrative.status);
+                                                const isSubmittable = narrative.status === "draft";
+
+                                                return (
+                                                    <tr
+                                                        key={narrative.id}
+                                                        className="hover:bg-neutral-50/50 transition-colors group"
+                                                    >
+                                                        {/* Title — chain-link icon for lone chain members */}
+                                                        <td className="py-4 px-6 font-medium text-neutral-900 truncate max-w-[280px]" title={narrative.title}>
+                                                            <div className="flex items-center gap-1.5">
+                                                                {narrative.chain_id && (
+                                                                    <span
+                                                                        title="Part of a chain (only member visible on this page)"
+                                                                        className="shrink-0"
                                                                     >
-                                                                        View Details
-                                                                    </button>
-                                                                    {isSubmittable && (
-                                                                        <button
-                                                                            onClick={() => {
-                                                                                handleSubmitForReview(narrative.id);
-                                                                                setOpenDropdownId(null);
-                                                                            }}
-                                                                            className="w-full text-left px-4 py-2 text-sm text-indigo-600 hover:bg-indigo-50 flex items-center gap-2 font-medium"
-                                                                        >
-                                                                            Submit for Review
-                                                                        </button>
-                                                                    )}
-                                                                    {isEditable && (
-                                                                        <button
-                                                                            onClick={() => {
-                                                                                handleEditClick(narrative);
-                                                                                setOpenDropdownId(null);
-                                                                            }}
-                                                                            className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-slate-50 flex items-center gap-2 font-medium"
-                                                                        >
-                                                                            Edit
-                                                                        </button>
-                                                                    )}
-                                                                    {isDeletable && (
-                                                                        <button
-                                                                            onClick={() => {
-                                                                                handleDeleteClick(narrative.id);
-                                                                                setOpenDropdownId(null);
-                                                                            }}
-                                                                            className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 font-medium"
-                                                                        >
-                                                                            Delete Narrative
-                                                                        </button>
-                                                                    )}
+                                                                        <Link2 className="h-3.5 w-3.5 text-neutral-400" />
+                                                                    </span>
+                                                                )}
+                                                                <span className="truncate">{narrative.title}</span>
+                                                            </div>
+                                                            {narrative.subtitle && (
+                                                                <div className="text-xs text-neutral-400 truncate font-normal mt-0.5">
+                                                                    {narrative.subtitle}
                                                                 </div>
                                                             )}
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })
-                                )}
+                                                        </td>
+                                                        <td className="py-4 px-6">
+                                                            <div className="flex flex-col gap-0.5">
+                                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-primary-50 text-primary-600 border border-primary-100 w-fit">
+                                                                    {narrative.attach_type}
+                                                                </span>
+                                                                <span className="text-xs text-neutral-600 truncate max-w-[140px]" title={attachNameMap.get(narrative.attach_id) ?? narrative.attach_id}>
+                                                                    {attachNameMap.get(narrative.attach_id) ?? narrative.attach_id}
+                                                                </span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="py-4 px-6 text-center">
+                                                            <Badge status={getNarrativeStatusBadge(narrative.status)} className="text-[11px] uppercase tracking-wider">
+                                                                {narrative.status.replace("_", " ")}
+                                                            </Badge>
+                                                        </td>
+                                                        <td className="py-4 px-6 text-center">
+                                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${getAudioChipColor(narrative.audio_status)}`}>
+                                                                <Volume2 className="w-3 h-3 shrink-0" />
+                                                                {getAudioChipLabel(narrative.audio_status)}
+                                                            </span>
+                                                        </td>
+                                                        <td className="py-4 px-6 text-sm text-neutral-500 whitespace-nowrap text-center">
+                                                            {narrative.created_at
+                                                                ? new Date(narrative.created_at).toLocaleDateString()
+                                                                : "—"}
+                                                        </td>
+                                                        <td className="py-4 px-6 text-right relative">
+                                                            <div className="flex items-center justify-end">
+                                                                <div className="relative">
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        onClick={(e) => handleDropdownToggle(narrative.id, e)}
+                                                                        className={`p-2 h-9 w-9 border border-transparent rounded-lg flex items-center justify-center transition-colors
+                                                                            ${openDropdownId === narrative.id
+                                                                                ? "bg-neutral-100 text-neutral-900"
+                                                                                : "text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100"
+                                                                            }`}
+                                                                    >
+                                                                        <MoreVertical className="w-4 h-4" />
+                                                                    </Button>
+
+                                                                    {openDropdownId === narrative.id && (
+                                                                        <div
+                                                                            className={`absolute right-0 w-52 bg-white border border-neutral-200 rounded-xl shadow-xl z-[100] py-1.5 animate-fade-in ${
+                                                                                dropdownPosition === "top"
+                                                                                    ? "bottom-full mb-1.5"
+                                                                                    : "top-full mt-1.5"
+                                                                            }`}
+                                                                            onClick={(e) => e.stopPropagation()}
+                                                                        >
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    navigate(`/creator/narratives/view/${narrative.id}`);
+                                                                                    setOpenDropdownId(null);
+                                                                                }}
+                                                                                className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 font-medium"
+                                                                            >
+                                                                                View Details
+                                                                            </button>
+                                                                            {isSubmittable && (
+                                                                                <button
+                                                                                    onClick={() => {
+                                                                                        handleSubmitForReview(narrative.id);
+                                                                                        setOpenDropdownId(null);
+                                                                                    }}
+                                                                                    className="w-full text-left px-4 py-2 text-sm text-primary-600 hover:bg-primary-50 flex items-center gap-2 font-medium"
+                                                                                >
+                                                                                    Submit for Review
+                                                                                </button>
+                                                                            )}
+                                                                            {isEditable && (
+                                                                                <button
+                                                                                    onClick={() => {
+                                                                                        handleEditClick(narrative);
+                                                                                        setOpenDropdownId(null);
+                                                                                    }}
+                                                                                    className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 font-medium"
+                                                                                >
+                                                                                    Edit
+                                                                                </button>
+                                                                            )}
+                                                                            {isDeletable && (
+                                                                                <button
+                                                                                    onClick={() => {
+                                                                                        handleDeleteClick(narrative.id);
+                                                                                        setOpenDropdownId(null);
+                                                                                    }}
+                                                                                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 font-medium"
+                                                                                >
+                                                                                    Delete Narrative
+                                                                                </button>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </>
+                                    );
+                                })()}
                             </tbody>
                         </table>
                     </div>

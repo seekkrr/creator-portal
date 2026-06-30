@@ -76,10 +76,10 @@ function createMarkerElement(index: number): HTMLDivElement {
     el.className = "custom-marker";
     el.innerHTML = `
         <div class="relative group">
-            <div class="w-9 h-9 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold shadow-xl border-2 border-white cursor-pointer transform hover:scale-110 transition-all duration-200 hover:shadow-2xl">
+            <div class="w-9 h-9 bg-gradient-to-br from-primary-500 to-primary-700 rounded-full flex items-center justify-center text-white font-bold shadow-xl border-2 border-white cursor-pointer transform hover:scale-110 transition-all duration-200 hover:shadow-2xl">
                 ${index + 1}
             </div>
-            <div class="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-8 border-l-transparent border-r-transparent border-t-purple-600"></div>
+            <div class="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-8 border-l-transparent border-r-transparent border-t-primary-700"></div>
         </div>
     `;
     return el;
@@ -219,8 +219,8 @@ export const WaypointMapComponent = memo(function WaypointMapComponent({
             src.setData(data);
         } else {
             map.addSource(REGION_SRC, { type: "geojson", data });
-            map.addLayer({ id: "region-bbox-fill", type: "fill", slot: "middle", source: REGION_SRC, paint: { "fill-color": "#6366f1", "fill-opacity": 0.05 } });
-            map.addLayer({ id: "region-bbox-line", type: "line", slot: "top", source: REGION_SRC, paint: { "line-color": "#4f46e5", "line-width": 2, "line-opacity": 0.7, "line-dasharray": [2, 1.5] } });
+            map.addLayer({ id: "region-bbox-fill", type: "fill", slot: "middle", source: REGION_SRC, paint: { "fill-color": "#1f6f6a", "fill-opacity": 0.05 } });
+            map.addLayer({ id: "region-bbox-line", type: "line", slot: "top", source: REGION_SRC, paint: { "line-color": "#0d524e", "line-width": 2, "line-opacity": 0.7, "line-dasharray": [2, 1.5] } });
         }
     }, []);
 
@@ -261,7 +261,7 @@ export const WaypointMapComponent = memo(function WaypointMapComponent({
             const popup = new mapboxgl.Popup({ offset: 25, closeButton: false, closeOnClick: false }).setHTML(`
                 <div class="p-2">
                     <p class="font-semibold text-sm">${escapeHtml(p.title ?? "") || "Marker " + (index + 1)}</p>
-                    <p class="text-xs text-indigo-600 mt-1">Right-click to remove</p>
+                    <p class="text-xs text-primary-600 mt-1">Right-click to remove</p>
                 </div>`);
             el.addEventListener("mouseenter", () => popup.setLngLat([p.lng, p.lat]).addTo(map));
             el.addEventListener("mouseleave", () => popup.remove());
@@ -328,7 +328,7 @@ export const WaypointMapComponent = memo(function WaypointMapComponent({
                     slot: "middle",
                     source: ROUTE_SRC,
                     layout: { "line-cap": "round", "line-join": "round" },
-                    paint: { "line-color": "#c7d2fe", "line-width": 6, "line-opacity": 0.4 },
+                    paint: { "line-color": "#a3cecb", "line-width": 6, "line-opacity": 0.4 },
                 });
                 map.addLayer({
                     id: "route-line-core",
@@ -336,7 +336,7 @@ export const WaypointMapComponent = memo(function WaypointMapComponent({
                     slot: "middle",
                     source: ROUTE_SRC,
                     layout: { "line-cap": "round", "line-join": "round" },
-                    paint: { "line-color": "#4338ca", "line-width": 4, "line-dasharray": [0, 2] },
+                    paint: { "line-color": "#084340", "line-width": 4, "line-dasharray": [0, 2] },
                 });
                 map.addLayer({
                     id: "route-arrows",
@@ -353,7 +353,7 @@ export const WaypointMapComponent = memo(function WaypointMapComponent({
                         "text-allow-overlap": true,
                         "text-ignore-placement": true,
                     },
-                    paint: { "text-color": "#4338ca", "text-halo-color": "#ffffff", "text-halo-width": 1.5 },
+                    paint: { "text-color": "#084340", "text-halo-color": "#ffffff", "text-halo-width": 1.5 },
                 });
 
                 // Existing SeekKrr markers as proper pins + labels.
@@ -406,6 +406,12 @@ export const WaypointMapComponent = memo(function WaypointMapComponent({
                 });
 
                 drawRegionBbox(regionBboxRef.current);
+                // Fit the camera to the region boundary on initial load so the
+                // dashed outline is always in frame (not just drawn off-screen).
+                // flyToPoints() handles framing once markers are added.
+                if (regionBboxRef.current) {
+                    fitRegionBounds(regionBboxRef.current);
+                }
                 renderPlaylistPins();
                 updateRouteLine();
                 if (playlistPointsRef.current.length > 0) setTimeout(() => flyToPoints(), 400);
@@ -420,7 +426,7 @@ export const WaypointMapComponent = memo(function WaypointMapComponent({
                 if (hits.length > 0) return;
                 const { lng, lat } = e.lngLat;
                 const ripple = document.createElement("div");
-                ripple.innerHTML = `<div style="width:36px;height:36px;border-radius:50%;background:rgba(99,102,241,0.4);animation:ping 0.6s ease-out forwards"></div>`;
+                ripple.innerHTML = `<div style="width:36px;height:36px;border-radius:50%;background:rgba(31,111,106,0.4);animation:ping 0.6s ease-out forwards"></div>`;
                 new mapboxgl.Marker({ element: ripple }).setLngLat([lng, lat]).addTo(map);
                 setTimeout(() => ripple.remove(), 600);
                 try {
@@ -484,18 +490,21 @@ export const WaypointMapComponent = memo(function WaypointMapComponent({
         refreshExistingMarkers();
     }, [existingMarkers, selectedMarkerIds, refreshExistingMarkers]);
 
-    // Redraw the region boundary when it changes, and on a REAL change (e.g.
-    // expand-to-city) fit the camera to the new bounds so the boundary is visible
-    // — otherwise the bigger boundary stays off-screen past the framed markers.
+    // Redraw the region boundary when it changes, and fit the camera to it when:
+    //   (a) it arrives for the first time AFTER the map was already loaded (prev
+    //       is null but style is ready — the style.load path already handles the
+    //       case where the bbox was known at load time), or
+    //   (b) the region CHANGED to a different bbox (e.g. expand-to-city).
+    // In both cases we want the dashed outline to be fully in frame.
     useEffect(() => {
         const prev = prevRegionBboxRef.current;
         prevRegionBboxRef.current = regionBbox;
         const map = mapRef.current;
         if (!map || !map.isStyleLoaded()) return;
         drawRegionBbox(regionBbox);
-        // Skip the initial set (load already frames the markers); reframe only
-        // when the region actually switched to a different bbox.
-        if (prev !== null && prev !== regionBbox && regionBbox) {
+        // Fit when: bbox just arrived for the first time (prev === null, now non-null)
+        // OR when the bbox changed to a different value (region switch).
+        if (regionBbox && (prev === null || prev !== regionBbox)) {
             fitRegionBounds(regionBbox);
         }
     }, [regionBbox, drawRegionBbox, fitRegionBounds]);

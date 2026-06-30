@@ -37,8 +37,8 @@ export function CollectionFields({ watch, setValue }: CollectionFieldsProps) {
     };
 
     return (
-        <div className="space-y-4 p-4 bg-purple-50/50 rounded-xl border border-purple-100">
-            <h4 className="text-sm font-semibold text-purple-700 uppercase tracking-wider">Collection Items</h4>
+        <div className="space-y-4 p-4 bg-primary-50/50 rounded-xl border border-primary-100">
+            <h4 className="text-sm font-semibold text-primary-700 uppercase tracking-wider">Collection Items</h4>
             <div className="space-y-2">
                 {items.map((item, index) => {
                     const stableKey = itemKeys[index] ?? index;
@@ -65,7 +65,7 @@ export function CollectionFields({ watch, setValue }: CollectionFieldsProps) {
                 <button
                     type="button"
                     onClick={handleAdd}
-                    className="flex items-center gap-1.5 text-sm text-purple-600 hover:text-purple-700 font-medium mt-1"
+                    className="flex items-center gap-1.5 text-sm text-primary-600 hover:text-primary-700 font-medium mt-1"
                 >
                     <Plus className="w-4 h-4" /> Add Item
                 </button>

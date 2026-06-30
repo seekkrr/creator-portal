@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { Check, Loader2 } from "lucide-react";
 import { Card } from "@components/ui";
 import { questService } from "@services/quest.service";
 import { narrativeService } from "@services/narrative.service";
@@ -67,7 +68,7 @@ type WizardFormData = Partial<CreateQuestFormData> & {
   // Optional quest-level narrative (Step 5). Posted to /narratives after the
   // quest is created (its attach_id is the new quest id), never embedded in the
   // quest payload.
-  questNarrative?: { title?: string; content?: string; voice_persona?: string };
+  questNarrative?: { title?: string; content?: string; voice_persona?: string; custom_voice_id?: string };
 };
 
 export function CreateQuestPage() {
@@ -82,6 +83,11 @@ export function CreateQuestPage() {
   // restore (or a remount under React StrictMode) can't be clobbered by a save
   // of the default empty state. Without this the draft resets to step 1 on reload.
   const [hydrated, setHydrated] = useState(false);
+
+  // Draft save indicator: "idle" | "saving" | "saved"
+  type DraftSaveState = "idle" | "saving" | "saved";
+  const [draftSaveState, setDraftSaveState] = useState<DraftSaveState>("idle");
+  const draftSaveTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
   // Fetch quest data if editing
   const { data: existingQuest, isLoading: isLoadingQuest } = useQuery({
@@ -176,7 +182,14 @@ export function CreateQuestPage() {
   // so a remount can't overwrite the saved draft with the default empty state.
   useEffect(() => {
     if (isEditing || !hydrated) return;
+    setDraftSaveState("saving");
     sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ formData, currentStep }));
+    // Briefly flash "Saved ✓" after the write completes.
+    if (draftSaveTimerRef.current) clearTimeout(draftSaveTimerRef.current);
+    draftSaveTimerRef.current = setTimeout(() => setDraftSaveState("saved"), 400);
+    return () => {
+      if (draftSaveTimerRef.current) clearTimeout(draftSaveTimerRef.current);
+    };
   }, [formData, currentStep, isEditing, hydrated]);
 
   const clearSession = () => sessionStorage.removeItem(SESSION_STORAGE_KEY);
@@ -272,6 +285,9 @@ export function CreateQuestPage() {
             attach_id: quest.id,
             ...(qn.content?.trim() ? { content: qn.content.trim() } : {}),
             ...(qn.voice_persona ? { voice_persona: qn.voice_persona as VoicePersona } : {}),
+            ...(qn.voice_persona === "custom" && qn.custom_voice_id
+                ? { custom_voice_id: qn.custom_voice_id }
+                : {}),
             status: "draft",
           });
         } catch (err) {
@@ -352,6 +368,31 @@ export function CreateQuestPage() {
       setCurrentStep(3);
       return;
     }
+
+    // F2: image requirements only enforced on "Submit for Review", never on draft save.
+    if (status === "Under Review") {
+      const playlist = formData.markerPlaylist ?? [];
+      const missingActivity = playlist.some((it) => !it.thingsToDo?.trim());
+      const missingStopImage = playlist.some((it) => !it.thingsToDoImage?.secure_url);
+      const missingGallery = !formData.galleryImages || formData.galleryImages.length === 0;
+
+      if (missingActivity) {
+        toast.error("Add a 'Things to do' description for every stop before submitting for review.");
+        setCurrentStep(4);
+        return;
+      }
+      if (missingStopImage) {
+        toast.error("Add a 'Things to do' image for every stop before submitting for review.");
+        setCurrentStep(4);
+        return;
+      }
+      if (missingGallery) {
+        toast.error("Add at least one gallery image before submitting for review.");
+        setCurrentStep(4);
+        return;
+      }
+    }
+
     questMutation.mutate({ data: formData as CreateQuestFormData, status });
   };
 
@@ -359,8 +400,8 @@ export function CreateQuestPage() {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p className="text-slate-500">Loading quest details...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-neutral-500">Loading quest details...</p>
         </div>
       </div>
     );
@@ -371,28 +412,62 @@ export function CreateQuestPage() {
       {/* Progress Steps */}
       <div className="mb-8">
         <div className="flex items-center justify-between">
-          {ALL_STEPS.map((step) => (
-            <div key={step} className={`flex items-center ${step < LAST_STEP ? "flex-1" : ""}`}>
-              <div className="flex flex-col items-center">
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center font-medium transition-colors ${step === currentStep ? "bg-indigo-600 text-white" : step < currentStep ? "bg-green-500 text-white" : "bg-neutral-200 text-neutral-500"}`}
-                >
-                  {step < currentStep ? "✓" : step}
+          {ALL_STEPS.map((step) => {
+            const isCompleted = step < currentStep;
+            const isCurrent = step === currentStep;
+            // F9: completed steps are interactive buttons; current/future are static.
+            const StepNode = isCompleted ? "button" : "div";
+            return (
+              <div key={step} className={`flex items-center ${step < LAST_STEP ? "flex-1" : ""}`}>
+                <div className="flex flex-col items-center">
+                  <StepNode
+                    {...(isCompleted
+                      ? {
+                          type: "button" as const,
+                          onClick: () => setCurrentStep(step),
+                          title: `Go back to ${stepLabels[step]}`,
+                          className: `w-10 h-10 rounded-full flex items-center justify-center font-medium transition-colors bg-green-500 text-white cursor-pointer hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-1`,
+                        }
+                      : {
+                          className: `w-10 h-10 rounded-full flex items-center justify-center font-medium transition-colors ${isCurrent ? "bg-primary-600 text-white" : "bg-neutral-200 text-neutral-500"}`,
+                        })}
+                  >
+                    {isCompleted ? "✓" : step}
+                  </StepNode>
+                  <span
+                    className={`mt-2 text-xs font-medium ${isCurrent ? "text-primary-600" : isCompleted ? "text-green-600" : "text-neutral-500"}`}
+                  >
+                    {stepLabels[step]}
+                  </span>
                 </div>
-                <span
-                  className={`mt-2 text-xs font-medium ${step === currentStep ? "text-indigo-600" : step < currentStep ? "text-green-600" : "text-neutral-500"}`}
-                >
-                  {stepLabels[step]}
-                </span>
+                {step < LAST_STEP && (
+                  <div
+                    className={`flex-1 h-1 mx-4 rounded ${isCompleted ? "bg-green-500" : "bg-neutral-200"}`}
+                  />
+                )}
               </div>
-              {step < LAST_STEP && (
-                <div
-                  className={`flex-1 h-1 mx-4 rounded ${step < currentStep ? "bg-green-500" : "bg-neutral-200"}`}
-                />
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
+
+        {/* Draft save indicator — only shown when creating (not editing) */}
+        {!isEditing && draftSaveState !== "idle" && (
+          <div className="flex justify-end mt-3">
+            <span className="inline-flex items-center gap-1 text-xs text-neutral-400 transition-opacity duration-300">
+              {draftSaveState === "saving" ? (
+                <>
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Saving draft…
+                </>
+              ) : (
+                <>
+                  <Check className="w-3 h-3 text-green-500" />
+                  Draft saved
+                </>
+              )}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Step Content */}

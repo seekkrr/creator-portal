@@ -218,8 +218,8 @@ export function LocationStep({ defaultValues, onNext }: LocationStepProps) {
                             p-8 lg:p-10
                             ${
                                 activeSection === "location"
-                                    ? "border-slate-900 bg-slate-50/50 shadow-md"
-                                    : "border-slate-200 bg-white hover:border-slate-400 hover:shadow-sm"
+                                    ? "border-neutral-900 bg-neutral-50/50 shadow-md"
+                                    : "border-neutral-200 bg-white hover:border-neutral-400 hover:shadow-sm"
                             }
                         `}
                         onClick={() => {
@@ -230,14 +230,14 @@ export function LocationStep({ defaultValues, onNext }: LocationStepProps) {
                         <div
                             className={`
                                 w-12 h-12 rounded-xl flex items-center justify-center mb-5 transition-colors
-                                ${activeSection === "location" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-500"}
+                                ${activeSection === "location" ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-500"}
                             `}
                         >
                             <MapPin className="w-6 h-6" />
                         </div>
 
                         <div className="flex items-start gap-2 mb-2">
-                            <h2 className="text-2xl lg:text-3xl font-bold text-slate-900">
+                            <h2 className="text-2xl lg:text-3xl font-bold text-neutral-900">
                                 Where is the Quest Located?
                             </h2>
                             <InfoHint
@@ -254,7 +254,7 @@ export function LocationStep({ defaultValues, onNext }: LocationStepProps) {
                                 }
                             />
                         </div>
-                        <p className="text-slate-500 mb-6">Search for a city, area, or landmark</p>
+                        <p className="text-neutral-500 mb-6">Search for a city, area, or landmark</p>
 
                         <div className="flex-1 space-y-4">
                             <RegionSearchSelect
@@ -283,8 +283,8 @@ export function LocationStep({ defaultValues, onNext }: LocationStepProps) {
                                 disabled={isLocating}
                                 className={`
                                     w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl
-                                    bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-medium
-                                    hover:from-indigo-600 hover:to-purple-700
+                                    bg-gradient-to-r from-primary-500 to-primary-700 text-white font-medium
+                                    hover:from-primary-600 hover:to-primary-700
                                     transition-all duration-200 shadow-md hover:shadow-lg
                                     disabled:opacity-70 disabled:cursor-wait
                                 `}
@@ -307,18 +307,18 @@ export function LocationStep({ defaultValues, onNext }: LocationStepProps) {
                     {/* OR Divider */}
                     <div className="flex items-center justify-center lg:px-8">
                         <div className="lg:flex flex-col items-center hidden">
-                            <div className="w-px h-24 bg-gradient-to-b from-transparent via-slate-300 to-transparent" />
-                            <span className="my-4 px-4 py-1.5 rounded-full bg-slate-100 text-slate-600 font-medium text-xs tracking-wide">
+                            <div className="w-px h-24 bg-gradient-to-b from-transparent via-neutral-300 to-transparent" />
+                            <span className="my-4 px-4 py-1.5 rounded-full bg-neutral-100 text-neutral-600 font-medium text-xs tracking-wide">
                                 OR
                             </span>
-                            <div className="w-px h-24 bg-gradient-to-b from-transparent via-slate-300 to-transparent" />
+                            <div className="w-px h-24 bg-gradient-to-b from-transparent via-neutral-300 to-transparent" />
                         </div>
                         <div className="flex lg:hidden items-center w-full gap-4">
-                            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-300 to-transparent" />
-                            <span className="px-4 py-1.5 rounded-full bg-slate-100 text-slate-600 font-medium text-xs tracking-wide">
+                            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-neutral-300 to-transparent" />
+                            <span className="px-4 py-1.5 rounded-full bg-neutral-100 text-neutral-600 font-medium text-xs tracking-wide">
                                 OR
                             </span>
-                            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-300 to-transparent" />
+                            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-neutral-300 to-transparent" />
                         </div>
                     </div>
 
@@ -329,8 +329,8 @@ export function LocationStep({ defaultValues, onNext }: LocationStepProps) {
                             p-8 lg:p-10
                             ${
                                 activeSection === "url"
-                                    ? "border-slate-900 bg-slate-50/50 shadow-md"
-                                    : "border-slate-200 bg-white hover:border-slate-400 hover:shadow-sm"
+                                    ? "border-neutral-900 bg-neutral-50/50 shadow-md"
+                                    : "border-neutral-200 bg-white hover:border-neutral-400 hover:shadow-sm"
                             }
                         `}
                         onClick={() => {
@@ -341,14 +341,14 @@ export function LocationStep({ defaultValues, onNext }: LocationStepProps) {
                         <div
                             className={`
                                 w-12 h-12 rounded-xl flex items-center justify-center mb-5 transition-colors
-                                ${activeSection === "url" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-500"}
+                                ${activeSection === "url" ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-500"}
                             `}
                         >
                             <Link2 className="w-6 h-6" />
                         </div>
 
                         <div className="flex items-start gap-2 mb-2">
-                            <h2 className="text-2xl lg:text-3xl font-bold text-slate-900">
+                            <h2 className="text-2xl lg:text-3xl font-bold text-neutral-900">
                                 Share URL of Reel / Video
                             </h2>
                             <InfoHint
@@ -364,7 +364,7 @@ export function LocationStep({ defaultValues, onNext }: LocationStepProps) {
                                 }
                             />
                         </div>
-                        <p className="text-slate-500 mb-6">
+                        <p className="text-neutral-500 mb-6">
                             Shorts, Instagram Reels, YouTube, Blog links
                         </p>
 
@@ -397,8 +397,9 @@ export function LocationStep({ defaultValues, onNext }: LocationStepProps) {
                         type="button"
                         onClick={handleNextClick}
                         disabled={!canProceed || isResolving}
+                        isLoading={isResolving}
                         variant="outline"
-                        className="rounded-lg px-10 py-3 text-sm font-medium border border-slate-900 text-slate-900 hover:bg-slate-900 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                        className="rounded-lg px-10 py-3 text-sm font-medium border border-neutral-900 text-neutral-900 hover:bg-neutral-900 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                         rightIcon={<ChevronRight className="w-5 h-5" />}
                     >
                         {isResolving ? "Setting region…" : "Next"}

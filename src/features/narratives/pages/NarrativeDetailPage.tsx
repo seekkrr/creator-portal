@@ -4,7 +4,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Edit2, Volume2, AlertCircle } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Button, Card } from "@components/ui";
+import { Button, Card, Badge } from "@components/ui";
+import type { BadgeStatus } from "@components/ui";
 import { narrativeService } from "@services/narrative.service";
 import { NarrativeAudioPanel } from "../components/NarrativeAudioPanel";
 import { NarrativeFormModal } from "../components/NarrativeFormModal";
@@ -12,20 +13,19 @@ import type { Narrative, NarrativeStatus } from "@/types";
 
 const CREATOR_EDITABLE: NarrativeStatus[] = ["draft", "rejected"];
 
+const NARRATIVE_STATUS_BADGE: Record<NarrativeStatus, BadgeStatus> = {
+    draft: "draft",
+    under_review: "under_review",
+    approved: "approved",
+    rejected: "rejected",
+    archived: "archived",
+};
+
 function StatusBadge({ status }: { status: NarrativeStatus }) {
-    const colorMap: Record<NarrativeStatus, string> = {
-        draft: "bg-slate-100 text-slate-700 border border-slate-200",
-        under_review: "bg-amber-100 text-amber-700 border border-amber-200",
-        approved: "bg-emerald-100 text-emerald-700 border border-emerald-200",
-        rejected: "bg-red-100 text-red-700 border border-red-200",
-        archived: "bg-neutral-100 text-neutral-500 border border-neutral-200",
-    };
     return (
-        <span
-            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider ${colorMap[status]}`}
-        >
+        <Badge status={NARRATIVE_STATUS_BADGE[status]} className="uppercase tracking-wider">
             {status.replace("_", " ")}
-        </span>
+        </Badge>
     );
 }
 
@@ -63,7 +63,7 @@ export function NarrativeDetailPage() {
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center min-h-[40vh] text-slate-400">
+            <div className="flex items-center justify-center min-h-[40vh] text-neutral-400">
                 Loading narrative…
             </div>
         );
@@ -115,11 +115,11 @@ export function NarrativeDetailPage() {
                     {/* Title + status */}
                     <div className="flex flex-col sm:flex-row sm:items-start gap-3">
                         <div className="flex-1 min-w-0">
-                            <h1 className="text-2xl font-bold text-slate-900 leading-tight">
+                            <h1 className="text-2xl font-display font-bold text-primary-900 tracking-tight leading-tight">
                                 {narrative.title}
                             </h1>
                             {narrative.subtitle && (
-                                <p className="mt-1 text-slate-500 text-base">{narrative.subtitle}</p>
+                                <p className="mt-1 text-neutral-500 text-base">{narrative.subtitle}</p>
                             )}
                         </div>
                         <StatusBadge status={narrative.status} />
@@ -137,29 +137,29 @@ export function NarrativeDetailPage() {
                     )}
 
                     {/* Attach info */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 py-4 border-y border-slate-100">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 py-4 border-y border-neutral-100">
                         <div>
-                            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                            <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-1">
                                 Attach Type
                             </p>
-                            <span className="inline-flex items-center px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-100 text-xs font-semibold uppercase">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded bg-primary-50 text-primary-700 border border-primary-100 text-xs font-semibold uppercase">
                                 {narrative.attach_type}
                             </span>
                         </div>
                         <div>
-                            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                            <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-1">
                                 Attach ID
                             </p>
-                            <p className="text-sm text-slate-700 font-mono truncate">{narrative.attach_id}</p>
+                            <p className="text-sm text-neutral-700 font-mono truncate">{narrative.attach_id}</p>
                         </div>
                         {narrative.voice_persona && (
                             <div>
-                                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                                <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-1">
                                     Voice Persona
                                 </p>
                                 <div className="flex items-center gap-1.5">
-                                    <Volume2 className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                                    <p className="text-sm text-slate-700 capitalize">
+                                    <Volume2 className="w-3.5 h-3.5 text-primary-500 shrink-0" />
+                                    <p className="text-sm text-neutral-700 capitalize">
                                         {narrative.voice_persona.replace(/_/g, " ")}
                                     </p>
                                 </div>
@@ -167,33 +167,33 @@ export function NarrativeDetailPage() {
                         )}
                         {narrative.sequence_order !== undefined && narrative.sequence_order !== null && (
                             <div>
-                                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                                <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-1">
                                     Sequence
                                 </p>
-                                <p className="text-sm text-slate-700">#{narrative.sequence_order}</p>
+                                <p className="text-sm text-neutral-700">#{narrative.sequence_order}</p>
                             </div>
                         )}
                         <div>
-                            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                            <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-1">
                                 Mandatory
                             </p>
-                            <p className="text-sm text-slate-700">{narrative.is_mandatory ? "Yes" : "No"}</p>
+                            <p className="text-sm text-neutral-700">{narrative.is_mandatory ? "Yes" : "No"}</p>
                         </div>
                         <div>
-                            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                            <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-1">
                                 Unlocked
                             </p>
-                            <p className="text-sm text-slate-700">{narrative.is_unlocked ? "Yes" : "No"}</p>
+                            <p className="text-sm text-neutral-700">{narrative.is_unlocked ? "Yes" : "No"}</p>
                         </div>
                     </div>
 
                     {/* Content */}
                     {narrative.content && (
                         <div>
-                            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+                            <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-3">
                                 Content
                             </p>
-                            <div className="prose prose-slate prose-sm max-w-none rounded-xl bg-slate-50 border border-slate-100 p-5">
+                            <div className="prose prose-neutral prose-sm max-w-none rounded-xl bg-neutral-50 border border-neutral-100 p-5">
                                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                     {narrative.content}
                                 </ReactMarkdown>
@@ -204,7 +204,7 @@ export function NarrativeDetailPage() {
                     {/* Media */}
                     {narrative.media.length > 0 && (
                         <div>
-                            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+                            <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-3">
                                 Media
                             </p>
                             <div className="flex flex-wrap gap-3">
@@ -213,7 +213,7 @@ export function NarrativeDetailPage() {
                                         key={idx}
                                         src={url}
                                         alt={`Narrative media ${idx + 1}`}
-                                        className="w-28 h-28 object-cover rounded-xl border border-slate-200 shadow-sm"
+                                        className="w-28 h-28 object-cover rounded-xl border border-neutral-200 shadow-sm"
                                     />
                                 ))}
                             </div>
@@ -222,7 +222,7 @@ export function NarrativeDetailPage() {
 
                     {/* Audio Panel */}
                     <div>
-                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+                        <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-3">
                             Audio
                         </p>
                         <NarrativeAudioPanel
@@ -232,7 +232,7 @@ export function NarrativeDetailPage() {
                     </div>
 
                     {/* Meta footer */}
-                    <div className="flex items-center gap-4 pt-2 border-t border-slate-100 text-xs text-slate-400">
+                    <div className="flex items-center gap-4 pt-2 border-t border-neutral-100 text-xs text-neutral-400">
                         {narrative.created_at && (
                             <span>
                                 Created{" "}

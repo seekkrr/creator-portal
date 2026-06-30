@@ -10,6 +10,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { ChevronLeft, ChevronRight, SkipForward, BookOpen } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button, Textarea, InfoHint } from "@components/ui";
 
 /** Narrator voices the V2 narrative audio pipeline supports (optional). */
@@ -19,20 +20,31 @@ const VOICE_OPTIONS = [
     { value: "mystery_whisper", label: "Mystery — whisper" },
     { value: "energetic_guide", label: "Energetic guide" },
     { value: "elder_storyteller", label: "Elder storyteller" },
+    { value: "custom", label: "Custom (ElevenLabs voice ID)" },
 ] as const;
+
+const CUSTOM_VOICE_ID_RE = /^[A-Za-z0-9]{20}$/;
 
 const questNarrativeSchema = z
     .object({
         title: z.string().max(200).optional().default(""),
         content: z.string().max(10000).optional().default(""),
         voice_persona: z.string().optional().default(""),
+        custom_voice_id: z.string().optional().default(""),
     })
     // The whole narrative is optional, but if a story is written it needs a title
     // (the backend requires a title on every narrative).
     .refine((d) => !d.content?.trim() || !!d.title?.trim(), {
         message: "Add a title for your narrative",
         path: ["title"],
-    });
+    })
+    .refine(
+        (d) => d.voice_persona !== "custom" || CUSTOM_VOICE_ID_RE.test(d.custom_voice_id ?? ""),
+        {
+            message: "Enter a valid 20-character ElevenLabs voice ID",
+            path: ["custom_voice_id"],
+        },
+    );
 
 export type QuestNarrativeData = z.infer<typeof questNarrativeSchema>;
 
@@ -54,11 +66,13 @@ export function NarrativeStep({ defaultValues, onNext, onBack }: NarrativeStepPr
             title: defaultValues.questNarrative?.title ?? "",
             content: defaultValues.questNarrative?.content ?? "",
             voice_persona: defaultValues.questNarrative?.voice_persona ?? "",
+            custom_voice_id: defaultValues.questNarrative?.custom_voice_id ?? "",
         },
     });
 
     const submit = (data: QuestNarrativeData) => onNext({ questNarrative: data });
-    const skip = () => onNext({ questNarrative: { title: "", content: "", voice_persona: "" } });
+    const skip = () => onNext({ questNarrative: { title: "", content: "", voice_persona: "", custom_voice_id: "" } });
+    const selectedVoice = watch("voice_persona");
     const back = () => onBack?.({ questNarrative: watch() });
 
     return (
@@ -67,19 +81,24 @@ export function NarrativeStep({ defaultValues, onNext, onBack }: NarrativeStepPr
                 <h2 className="text-xl font-semibold text-neutral-900">Quest Narrative</h2>
                 <p className="text-sm text-neutral-500 mt-0.5">
                     Set the scene for the whole quest.
-                    <span className="ml-1 font-medium text-indigo-600">This step is optional.</span>
+                    <span className="ml-1 font-medium text-primary-600">This step is optional.</span>
                 </p>
             </div>
 
             {/* Per-marker narratives live elsewhere — make that explicit. */}
-            <div className="flex items-start gap-3 rounded-xl border border-indigo-100 bg-indigo-50/60 px-4 py-3">
-                <BookOpen className="w-5 h-5 text-indigo-500 flex-shrink-0 mt-0.5" />
+            <div className="flex items-start gap-3 rounded-xl border border-primary-100 bg-primary-50/60 px-4 py-3">
+                <BookOpen className="w-5 h-5 text-primary-500 flex-shrink-0 mt-0.5" />
                 <div className="text-sm">
-                    <p className="font-medium text-indigo-900">Need narratives for specific stops?</p>
-                    <p className="text-indigo-700 mt-0.5">
+                    <p className="font-medium text-primary-900">Need narratives for specific stops?</p>
+                    <p className="text-primary-700 mt-0.5">
                         Per-marker narratives are managed on the dedicated{" "}
-                        <strong>Narratives page</strong> (coming soon). Here you add just one
-                        narrative for the whole quest.
+                        <Link
+                            to="/creator/narratives"
+                            className="font-semibold text-primary-700 underline hover:text-primary-800"
+                        >
+                            Narratives page
+                        </Link>
+                        . Here you add just one narrative for the whole quest.
                     </p>
                 </div>
             </div>
@@ -100,7 +119,7 @@ export function NarrativeStep({ defaultValues, onNext, onBack }: NarrativeStepPr
                     type="text"
                     placeholder="e.g. The Ghats Awaken"
                     {...register("title")}
-                    className="w-full bg-white text-sm border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
+                    className="w-full bg-white text-sm border border-neutral-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
                 />
                 {errors.title && <p className="text-xs text-red-600">{errors.title.message}</p>}
             </div>
@@ -120,7 +139,7 @@ export function NarrativeStep({ defaultValues, onNext, onBack }: NarrativeStepPr
                     id="qn-content"
                     placeholder="e.g. As dawn breaks over Varanasi, the ancient city stirs to life along the sacred Ganga…"
                     {...register("content")}
-                    className="bg-white text-sm border-slate-300 focus:border-slate-900 focus:ring-slate-900 min-h-[140px]"
+                    className="bg-white text-sm border-neutral-300 focus:border-neutral-900 focus:ring-neutral-900 min-h-[140px]"
                 />
             </div>
 
@@ -139,7 +158,7 @@ export function NarrativeStep({ defaultValues, onNext, onBack }: NarrativeStepPr
                 <select
                     id="qn-voice"
                     {...register("voice_persona")}
-                    className="w-full bg-white text-sm border border-slate-300 rounded-xl px-3 py-2.5 focus:outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
+                    className="w-full bg-white text-sm border border-neutral-300 rounded-xl px-3 py-2.5 focus:outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
                 >
                     {VOICE_OPTIONS.map((o) => (
                         <option key={o.value} value={o.value}>
@@ -149,12 +168,30 @@ export function NarrativeStep({ defaultValues, onNext, onBack }: NarrativeStepPr
                 </select>
             </div>
 
+            {selectedVoice === "custom" && (
+                <div className="max-w-xs space-y-1.5">
+                    <label htmlFor="qn-custom-voice" className="text-sm font-medium text-neutral-700">
+                        ElevenLabs voice ID
+                    </label>
+                    <input
+                        id="qn-custom-voice"
+                        type="text"
+                        placeholder="e.g. pNInz6obpgDQGcFmaJgB"
+                        {...register("custom_voice_id")}
+                        className="w-full bg-white text-sm border border-neutral-300 rounded-xl px-3 py-2.5 focus:outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
+                    />
+                    {errors.custom_voice_id && (
+                        <p className="text-xs text-red-600">{errors.custom_voice_id.message}</p>
+                    )}
+                </div>
+            )}
+
             <p className="text-xs text-neutral-500">
                 Saved as a draft — you can refine it or add audio later from the Narratives page.
             </p>
 
             {/* Navigation — Skip and Next both proceed (the narrative is optional). */}
-            <div className="flex justify-between pt-6 border-t border-slate-200">
+            <div className="flex justify-between pt-6 border-t border-neutral-200">
                 <Button
                     type="button"
                     variant="outline"

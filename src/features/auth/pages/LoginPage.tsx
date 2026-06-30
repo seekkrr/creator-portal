@@ -40,10 +40,10 @@ export function LoginPage() {
     return (
         <Card padding="none" shadow="lg" className="grid grid-cols-1 lg:grid-cols-2 overflow-hidden rounded-3xl border-0 h-auto min-h-[30rem] lg:min-h-[37.5rem] shadow-xl lg:shadow-2xl mx-4 lg:mx-0 my-4 lg:my-0">
             {/* Left Column: Illustration */}
-            <div className="relative bg-[#F5F3FF] flex items-center justify-center p-6 lg:p-12 overflow-hidden h-48 lg:h-auto shrink-0">
+            <div className="relative bg-primary-50 flex items-center justify-center p-6 lg:p-12 overflow-hidden h-48 lg:h-auto shrink-0">
                 {/* Background decorative elements */}
-                <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-indigo-100 blur-3xl opacity-50" />
-                <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 rounded-full bg-purple-100 blur-3xl opacity-50" />
+                <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-primary-100 blur-3xl opacity-50" />
+                <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 rounded-full bg-primary-100 blur-3xl opacity-50" />
 
                 <img
                     src="/login-bg.svg"
@@ -63,7 +63,7 @@ export function LoginPage() {
                     </p>
 
                     <div className="bg-white border border-neutral-200 rounded-2xl lg:rounded-[2rem] p-6 lg:p-6 shadow-sm lg:shadow-md shadow-neutral-100/50 w-full flex flex-col items-center">
-                        <h3 className="text-2xl lg:text-[2em] leading-none font-medium text-brand-purple text-center mb-6 lg:mb-6 tracking-wide">Login</h3>
+                        <h3 className="text-2xl lg:text-[2em] leading-none font-display font-semibold text-primary-900 text-center mb-6 lg:mb-6 tracking-tight">Login</h3>
 
                         <div className="w-full flex justify-center">
                             <GoogleLogin

@@ -103,11 +103,16 @@ export function WaypointsStep({ defaultValues, onNext, onBack, onRegionChange }:
     const getPlaylist = useCallback(() => watch("markerPlaylist") ?? [], [watch]);
 
     // ─── Region (bbox / center / parent) ─────────────────────────────────────
+    // Only fetch when regionId is a real MongoDB ObjectId (24-char hex). This
+    // prevents 404 spam when the draft was saved with a placeholder string like
+    // "fake-region-id-manali" from a previous dev/test session.
+    const isRealRegionId = !!regionId && /^[0-9a-f]{24}$/i.test(regionId);
+
     const { data: region } = useQuery({
         queryKey: ["region", regionId],
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         queryFn: () => regionService.getRegion(regionId!),
-        enabled: !!regionId,
+        enabled: isRealRegionId,
         staleTime: 5 * 60 * 1000,
     });
 
@@ -139,7 +144,8 @@ export function WaypointsStep({ defaultValues, onNext, onBack, onRegionChange }:
                 max_lat: bbox!.max_lat,
                 page_size: 100,
             }),
-        enabled: !!bbox,
+        // bbox is derived from region which only loads for real ObjectIds (F1 fix).
+        enabled: !!bbox && isRealRegionId,
         staleTime: 60 * 1000,
     });
     const existingMarkers = useMemo(() => existingPage?.items ?? [], [existingPage]);
@@ -455,7 +461,7 @@ export function WaypointsStep({ defaultValues, onNext, onBack, onRegionChange }:
                             ) : (
                                 <>
                                     <p className="text-amber-900 font-medium">
-                                        {outOfRegion.length} marker{outOfRegion.length !== 1 ? "s" : ""} fall
+                                        {outOfRegion.length} marker{outOfRegion.length !== 1 ? "s" : ""} fall{outOfRegion.length === 1 ? "s" : ""}
                                         outside {region?.name ?? "the selected region"}.
                                     </p>
                                     <p className="text-amber-700 mt-0.5">
@@ -483,11 +489,11 @@ export function WaypointsStep({ defaultValues, onNext, onBack, onRegionChange }:
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
                                     placeholder="Search existing markers…"
-                                    className="w-full pl-9 pr-9 py-2.5 bg-white border border-neutral-300 rounded-lg text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 transition-colors"
+                                    className="w-full pl-9 pr-9 py-2.5 bg-white border border-neutral-300 rounded-lg text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-500 transition-colors"
                                     aria-label="Search existing markers"
                                 />
                                 {isSearching && (
-                                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-500 animate-spin" />
+                                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-500 animate-spin" />
                                 )}
                             </div>
 
@@ -566,14 +572,21 @@ export function WaypointsStep({ defaultValues, onNext, onBack, onRegionChange }:
                             </div>
 
                             {markerPlaylist.length === 0 ? (
-                                <Card padding="lg" className="text-center bg-neutral-50 border-dashed">
-                                    <MapPin className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
-                                    <p className="text-sm font-medium text-neutral-600">No markers yet</p>
-                                    <p className="text-xs text-neutral-400 mt-1">
+                                <Card padding="lg" className="text-center bg-primary-50 border-2 border-dashed border-primary-300">
+                                    <div className="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center mx-auto mb-3">
+                                        <MapPin className="w-6 h-6 text-primary-600" />
+                                    </div>
+                                    <p className="text-sm font-semibold text-neutral-800">No stops added yet</p>
+                                    <p className="text-xs text-neutral-500 mt-1 max-w-[220px] mx-auto">
                                         {isLoadingMarkers
                                             ? "Loading markers in this region…"
-                                            : "Click a teal marker on the map, search above, or click the map to add one."}
+                                            : "Add at least 2 stops to build the route. Search above or click the map."}
                                     </p>
+                                    {!isLoadingMarkers && (
+                                        <span className="inline-flex items-center gap-1 mt-3 text-xs font-medium text-accent-500 bg-white border border-accent-400 rounded-full px-3 py-1">
+                                            <Plus className="w-3 h-3" /> Use the search or map to add stops
+                                        </span>
+                                    )}
                                 </Card>
                             ) : (
                                 <div className="space-y-2 max-h-[560px] overflow-y-auto pr-1">
@@ -592,15 +605,15 @@ export function WaypointsStep({ defaultValues, onNext, onBack, onRegionChange }:
                                         >
                                             <Card
                                                 padding="sm"
-                                                className={`cursor-grab active:cursor-grabbing hover:shadow-md hover:border-indigo-200 transition-all duration-150 ${
-                                                    dragOverIndex === index ? "border-indigo-400 bg-indigo-50" : ""
+                                                className={`cursor-grab active:cursor-grabbing hover:shadow-md hover:border-primary-200 transition-all duration-150 ${
+                                                    dragOverIndex === index ? "border-primary-400 bg-primary-50" : ""
                                                 }`}
                                             >
                                                 <div className="flex items-start gap-2">
                                                     <div className="flex-shrink-0 text-neutral-300 group-hover:text-neutral-500 transition-colors pt-1">
                                                         <GripVertical className="w-4 h-4" />
                                                     </div>
-                                                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center text-sm font-bold flex-shrink-0 shadow-sm">
+                                                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 text-white flex items-center justify-center text-sm font-bold flex-shrink-0 shadow-sm">
                                                         {index + 1}
                                                     </div>
                                                     <div className="flex-1 min-w-0">
@@ -617,7 +630,7 @@ export function WaypointsStep({ defaultValues, onNext, onBack, onRegionChange }:
                                                                 onChange={(e) => setNewMarkerTitle(index, e.target.value)}
                                                                 onMouseDown={(e) => e.stopPropagation()}
                                                                 placeholder="Name this stop"
-                                                                className="w-full text-sm font-medium text-neutral-900 bg-transparent border-b border-dashed border-neutral-300 focus:border-indigo-500 focus:outline-none py-0.5"
+                                                                className="w-full text-sm font-medium text-neutral-900 bg-transparent border-b border-dashed border-neutral-300 focus:border-primary-500 focus:outline-none py-0.5"
                                                             />
                                                         )}
                                                         <div className="flex items-center gap-2 mt-0.5">
@@ -625,7 +638,7 @@ export function WaypointsStep({ defaultValues, onNext, onBack, onRegionChange }:
                                                                 className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 ${
                                                                     item.marker_id
                                                                         ? "bg-teal-100 text-teal-700"
-                                                                        : "bg-indigo-100 text-indigo-700"
+                                                                        : "bg-primary-100 text-primary-700"
                                                                 }`}
                                                             >
                                                                 {item.marker_id ? "Reused" : "New"}
@@ -661,7 +674,7 @@ export function WaypointsStep({ defaultValues, onNext, onBack, onRegionChange }:
                                                             type="checkbox"
                                                             checked={item.is_required}
                                                             onChange={() => toggleRequired(index)}
-                                                            className="w-3.5 h-3.5 rounded border-neutral-300 text-indigo-600 focus:ring-indigo-500"
+                                                            className="w-3.5 h-3.5 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
                                                         />
                                                         <span className="text-xs text-neutral-600">
                                                             Required stop
@@ -706,7 +719,9 @@ export function WaypointsStep({ defaultValues, onNext, onBack, onRegionChange }:
                             regionBbox={region?.bbox ?? null}
                             height="560px"
                         />
-                        {!isLoadingMarkers && existingMarkers.length === 0 && (
+                        {/* F7: only show zero-state hint when playlist is also empty, so it
+                            disappears once the creator has added stops. */}
+                        {!isLoadingMarkers && existingMarkers.length === 0 && markerPlaylist.length === 0 && (
                             <p className="mt-2 text-xs text-neutral-500">
                                 No existing markers in {region?.name ?? "this region"} yet — click the map or
                                 search a place to add the first ones.

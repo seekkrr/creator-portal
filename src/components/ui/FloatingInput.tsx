@@ -33,10 +33,10 @@ export const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
                     className={`
                         relative rounded-xl border transition-all duration-200
                         ${highlightOnFocus && isFocused
-                            ? "border-slate-900 shadow-sm"
+                            ? "border-primary-600 shadow-sm ring-2 ring-primary-500 ring-offset-2"
                             : hasError
                                 ? "border-red-400"
-                                : "border-slate-300 hover:border-slate-400"
+                                : "border-neutral-300 hover:border-neutral-400"
                         }
                         bg-white
                     `}
@@ -52,10 +52,10 @@ export const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
                                 : "top-1/2 -translate-y-1/2 text-sm"
                             }
                             ${isFocused
-                                ? "text-slate-900"
+                                ? "text-primary-700"
                                 : hasError
                                     ? "text-red-500"
-                                    : "text-slate-500"
+                                    : "text-neutral-500"
                             }
                         `}
                     >
@@ -64,7 +64,7 @@ export const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
 
                     <div className="relative flex items-center">
                         {leftIcon && (
-                            <div className={`absolute left-3.5 flex items-center pointer-events-none transition-colors ${isFocused ? "text-slate-800" : "text-slate-400"}`}>
+                            <div className={`absolute left-3.5 flex items-center pointer-events-none transition-colors ${isFocused ? "text-neutral-800" : "text-neutral-400"}`}>
                                 {leftIcon}
                             </div>
                         )}
@@ -79,11 +79,11 @@ export const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
                             onBlur={handleBlur}
                             className={`
                                 w-full px-4 py-3 bg-transparent
-                                text-slate-900 text-sm placeholder:text-slate-400
+                                text-neutral-900 text-sm placeholder:text-neutral-400
                                 focus:outline-none rounded-xl
                                 ${leftIcon ? "pl-11" : ""}
                                 ${rightIcon ? "pr-11" : ""}
-                                disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400
+                                disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:text-neutral-400
                                 ${className}
                             `}
                             placeholder={isActive ? props.placeholder : ""}
@@ -91,7 +91,7 @@ export const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
                         />
 
                         {rightIcon && (
-                            <div className="absolute right-3.5 flex items-center text-slate-400">
+                            <div className="absolute right-3.5 flex items-center text-neutral-400">
                                 {rightIcon}
                             </div>
                         )}
@@ -104,7 +104,7 @@ export const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
                     </p>
                 )}
                 {helperText && !error && (
-                    <p className="mt-1.5 text-xs text-slate-500">{helperText}</p>
+                    <p className="mt-1.5 text-xs text-neutral-500">{helperText}</p>
                 )}
             </div>
         );

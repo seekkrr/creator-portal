@@ -139,7 +139,7 @@ export function MapComponent({
                     type: "fill",
                     slot: "middle",
                     source: "region-bbox",
-                    paint: { "fill-color": "#6366f1", "fill-opacity": 0.1 },
+                    paint: { "fill-color": "#1f6f6a", "fill-opacity": 0.1 },
                 });
                 map.addLayer({
                     id: "region-bbox-line",
@@ -147,7 +147,7 @@ export function MapComponent({
                     slot: "top",
                     source: "region-bbox",
                     paint: {
-                        "line-color": "#4f46e5",
+                        "line-color": "#0d524e",
                         "line-width": 2.5,
                         "line-opacity": 0.9,
                         "line-dasharray": [2, 1.5],
@@ -187,10 +187,10 @@ export function MapComponent({
             el.className = "custom-marker";
             el.innerHTML = `
                 <div class="relative group">
-                    <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold shadow-xl border-3 border-white cursor-pointer transform hover:scale-110 transition-all duration-200 hover:shadow-2xl">
+                    <div class="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-700 rounded-full flex items-center justify-center text-white font-bold shadow-xl border-3 border-white cursor-pointer transform hover:scale-110 transition-all duration-200 hover:shadow-2xl">
                         ${index + 1}
                     </div>
-                    <div class="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-8 border-l-transparent border-r-transparent border-t-purple-600"></div>
+                    <div class="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-8 border-l-transparent border-r-transparent border-t-primary-700"></div>
                 </div>
             `;
 
@@ -317,7 +317,7 @@ export function MapComponent({
             map.on("click", async (e) => {
                 const { lng, lat } = e.lngLat;
                 const rippleEl = document.createElement("div");
-                rippleEl.innerHTML = `<div class="w-8 h-8 rounded-full bg-indigo-500/50 animate-ping"></div>`;
+                rippleEl.innerHTML = `<div class="w-8 h-8 rounded-full bg-primary-500/50 animate-ping"></div>`;
                 const rippleMarker = new mapboxgl.Marker({ element: rippleEl })
                     .setLngLat([lng, lat])
                     .addTo(map);

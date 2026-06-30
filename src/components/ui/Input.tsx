@@ -39,12 +39,12 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               bg-white border rounded-lg
               text-neutral-900 placeholder:text-neutral-400
               transition-colors duration-150
-              focus:outline-none focus:ring-2 focus:ring-offset-0
+              focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
               ${leftIcon ? "pl-10" : ""}
               ${rightIcon ? "pr-10" : ""}
               ${hasError
-                                ? "border-red-500 focus:border-red-500 focus:ring-red-200"
-                                : "border-neutral-300 focus:border-indigo-500 focus:ring-indigo-200"
+                                ? "border-red-500 focus:border-red-500 focus-visible:ring-red-400"
+                                : "border-neutral-300 focus:border-primary-500 focus-visible:ring-primary-500"
                             }
               disabled:bg-neutral-100 disabled:cursor-not-allowed
               ${className}

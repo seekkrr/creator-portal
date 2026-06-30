@@ -32,7 +32,7 @@ export function App() {
         return (
             <div className="min-h-screen flex items-center justify-center bg-neutral-50">
                 <div className="text-center">
-                    <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                    <div className="w-12 h-12 border-4 border-primary-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
                     <p className="text-neutral-600">Loading...</p>
                 </div>
             </div>
@@ -42,7 +42,7 @@ export function App() {
     return (
         <GoogleOAuthProvider clientId={config.googleClientId}>
             <QueryClientProvider client={queryClient}>
-                <RouterProvider router={router} />
+                <RouterProvider router={router} future={{ v7_startTransition: true }} />
                 <Toaster
                 position="top-right"
                 toastOptions={{

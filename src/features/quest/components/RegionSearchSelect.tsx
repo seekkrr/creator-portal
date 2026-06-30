@@ -37,7 +37,7 @@ function CandidateChip({ candidate }: { candidate: MapboxRegionCandidate }) {
     }
     const isHotspot = candidate.suggested_type === "hotspot";
     return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100 text-xs font-medium whitespace-nowrap">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary-50 text-primary-700 border border-primary-100 text-xs font-medium whitespace-nowrap">
             {isHotspot ? <Tent className="w-3 h-3" /> : <Building2 className="w-3 h-3" />}
             New {isHotspot ? "hotspot" : "city"}
             {isHotspot && candidate.parent_city?.name ? ` · ${candidate.parent_city.name}` : ""}
@@ -175,8 +175,8 @@ export function RegionSearchSelect({
                         <CheckCircle2 className="w-5 h-5" />
                     </span>
                     <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-slate-900 truncate">{value.name}</p>
-                        <p className="text-xs text-slate-500 flex items-center gap-1">
+                        <p className="text-sm font-semibold text-neutral-900 truncate">{value.name}</p>
+                        <p className="text-xs text-neutral-500 flex items-center gap-1">
                             {isHotspot ? <Tent className="w-3 h-3" /> : <Building2 className="w-3 h-3" />}
                             {isHotspot ? "Hotspot" : "City"} · region set
                         </p>
@@ -184,7 +184,7 @@ export function RegionSearchSelect({
                     <button
                         type="button"
                         onClick={handleClear}
-                        className="flex-shrink-0 text-xs font-medium text-slate-500 hover:text-slate-800 underline-offset-2 hover:underline"
+                        className="flex-shrink-0 text-xs font-medium text-neutral-500 hover:text-neutral-800 underline-offset-2 hover:underline"
                     >
                         Change
                     </button>
@@ -200,16 +200,16 @@ export function RegionSearchSelect({
                     relative rounded-xl border transition-all duration-200 bg-white
                     ${
                         highlightOnFocus && isFocused
-                            ? "border-slate-900 shadow-sm"
+                            ? "border-neutral-900 shadow-sm"
                             : shownError
                               ? "border-red-400"
-                              : "border-slate-300 hover:border-slate-400"
+                              : "border-neutral-300 hover:border-neutral-400"
                     }
                 `}
             >
                 <div className="relative flex items-center">
                     <div
-                        className={`absolute left-3.5 flex items-center pointer-events-none transition-colors ${isFocused ? "text-slate-800" : "text-slate-400"}`}
+                        className={`absolute left-3.5 flex items-center pointer-events-none transition-colors ${isFocused ? "text-neutral-800" : "text-neutral-400"}`}
                     >
                         <MapPin className="w-5 h-5" />
                     </div>
@@ -227,21 +227,21 @@ export function RegionSearchSelect({
                         }}
                         aria-label={label}
                         placeholder={label}
-                        className="w-full pl-11 pr-11 py-3 bg-transparent text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none rounded-xl disabled:opacity-60"
+                        className="w-full pl-11 pr-11 py-3 bg-transparent text-neutral-900 text-sm placeholder:text-neutral-400 focus:outline-none rounded-xl disabled:opacity-60"
                     />
 
                     <div className="absolute right-3.5 flex items-center gap-2">
                         {isLoading && (
-                            <Loader2 className="w-4 h-4 animate-spin text-slate-500" />
+                            <Loader2 className="w-4 h-4 animate-spin text-neutral-500" />
                         )}
                         {query && !isLoading && (
                             <button
                                 type="button"
                                 onClick={handleClear}
                                 aria-label="Clear"
-                                className="p-0.5 hover:bg-slate-100 rounded-full transition-colors"
+                                className="p-0.5 hover:bg-neutral-100 rounded-full transition-colors"
                             >
-                                <X className="w-4 h-4 text-slate-400" />
+                                <X className="w-4 h-4 text-neutral-400" />
                             </button>
                         )}
                     </div>
@@ -249,23 +249,23 @@ export function RegionSearchSelect({
             </div>
 
             {showDropdown && suggestions.length > 0 && (
-                <div className="absolute z-50 w-full mt-1.5 bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden max-h-80 overflow-y-auto">
+                <div className="absolute z-50 w-full mt-1.5 bg-white rounded-xl border border-neutral-200 shadow-lg overflow-hidden max-h-80 overflow-y-auto">
                     {suggestions.map((candidate) => (
                         <button
                             key={candidate.mapbox_id}
                             type="button"
                             onClick={() => handleSelect(candidate)}
-                            className="w-full px-4 py-3 text-left hover:bg-slate-50 transition-colors flex items-start gap-3 border-b border-slate-100 last:border-0"
+                            className="w-full px-4 py-3 text-left hover:bg-neutral-50 transition-colors flex items-start gap-3 border-b border-neutral-100 last:border-0"
                         >
-                            <MapPin className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
+                            <MapPin className="w-4 h-4 text-neutral-400 flex-shrink-0 mt-0.5" />
                             {/* Name + address get the full row width; the status chip
                                 drops to its own line below so nothing gets squeezed. */}
                             <div className="flex-1 min-w-0">
-                                <p className="text-slate-900 text-sm font-medium truncate">
+                                <p className="text-neutral-900 text-sm font-medium truncate">
                                     {candidate.name}
                                 </p>
                                 {(candidate.place_formatted ?? candidate.full_address) && (
-                                    <p className="text-slate-500 text-xs truncate">
+                                    <p className="text-neutral-500 text-xs truncate">
                                         {candidate.place_formatted ?? candidate.full_address}
                                     </p>
                                 )}
@@ -279,7 +279,7 @@ export function RegionSearchSelect({
             )}
 
             {showDropdown && !isLoading && suggestions.length === 0 && query.trim().length >= 2 && (
-                <div className="absolute z-50 w-full mt-1.5 bg-white rounded-xl border border-slate-200 shadow-lg px-4 py-3 text-sm text-slate-500">
+                <div className="absolute z-50 w-full mt-1.5 bg-white rounded-xl border border-neutral-200 shadow-lg px-4 py-3 text-sm text-neutral-500">
                     No places found for “{query.trim()}”.
                 </div>
             )}

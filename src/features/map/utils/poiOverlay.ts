@@ -21,7 +21,7 @@ const POI_CLASS_CIRCLE_COLOR: ExpressionSpecification = [
     ['hotel', 'lodging'], '#3b82f6',
     ['shop', 'grocery'], '#10b981',
     ['bank'], '#0ea5e9',
-    ['school', 'college'], '#6366f1',
+    ['school', 'college'], '#1f6f6a',
     ['park'], '#22c55e',
     ['monument', 'museum', 'attraction', 'landmark'], '#ec4899',
     '#64748b',

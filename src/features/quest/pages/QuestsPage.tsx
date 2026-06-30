@@ -1,15 +1,22 @@
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { Edit2, MoreVertical, AlertTriangle, BadgeCheck } from "lucide-react";
-import { Card, Button, Input } from "@components/ui";
+import { Edit2, MoreVertical, AlertTriangle, BadgeCheck, Compass } from "lucide-react";
+import { Card, Button, Input, Badge, EmptyState, ErrorState, SkeletonTableRows, StatusFilterPills, SearchBar } from "@components/ui";
+import type { BadgeStatus } from "@components/ui";
 import { questService } from "@services/quest.service";
 import { useAuthStore } from "@store/auth.store";
 import type { QuestStatus } from "@/types";
 import { toast } from "sonner";
 
 type Tab = QuestStatus;
-const TABS: Tab[] = ["Draft", "Under Review", "Changes Requested", "Published", "Rejected"];
+const TABS: { label: string; value: Tab }[] = [
+    { label: "Draft", value: "Draft" },
+    { label: "Under Review", value: "Under Review" },
+    { label: "Changes Requested", value: "Changes Requested" },
+    { label: "Published", value: "Published" },
+    { label: "Rejected", value: "Rejected" },
+];
 
 export function QuestsPage() {
     const { user, creator } = useAuthStore();
@@ -18,9 +25,11 @@ export function QuestsPage() {
     // Active creators may manage every quest state and submit for review — the portal
     // login gate already guarantees active status. is_verified is a badge, not a gate.
     const isVerified = !!creator?.is_verified;
-    const availableTabs = TABS;
+    const availableTabs = TABS.map((t) => t.value);
 
     const [activeTab, setActiveTab] = useState<Tab>("Draft");
+    const [search, setSearch] = useState("");
+    const [searchInput, setSearchInput] = useState("");
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [confirmText, setConfirmText] = useState("");
     const [questToDelete, setQuestToDelete] = useState<string | null>(null);
@@ -42,11 +51,16 @@ export function QuestsPage() {
         }
     }, [availableTabs, activeTab]);
 
-    const { data, isLoading, refetch } = useQuery({
+    const { data, isLoading, isError, refetch } = useQuery({
         queryKey: ["creator-quests", activeTab],
         queryFn: () => questService.getMyQuests({ status: activeTab }),
         enabled: !!user,
     });
+
+    const handleSearch = (e: React.FormEvent) => {
+        e.preventDefault();
+        setSearch(searchInput);
+    };
 
     const handleSubmitForReview = async (questId: string) => {
         const promise = questService.submitQuest(questId);
@@ -96,17 +110,23 @@ export function QuestsPage() {
         }
     };
 
-    const quests = data?.items || [];
+    const allQuests = data?.items || [];
+    const quests = search
+        ? allQuests.filter((q) =>
+              (q.title ?? "").toLowerCase().includes(search.toLowerCase())
+          )
+        : allQuests;
 
-    const getStatusColor = (status: QuestStatus) => {
+    /** Map server-side Title-Case QuestStatus → Badge status prop. */
+    const questStatusToBadgeStatus = (status: QuestStatus): BadgeStatus => {
         switch (status) {
-            case "Published": return "bg-emerald-100 text-emerald-700 border border-emerald-200";
-            case "Under Review": return "bg-amber-100 text-amber-700 border border-amber-200";
-            case "Changes Requested": return "bg-orange-100 text-orange-700 border border-orange-200";
-            case "Rejected": return "bg-red-100 text-red-700 border border-red-200";
-            case "Draft": return "bg-slate-100 text-slate-700 border border-slate-200";
-            case "Archived": return "bg-neutral-100 text-neutral-500 border border-neutral-200";
-            default: return "bg-slate-100 text-slate-700";
+            case "Published":          return "approved";
+            case "Under Review":       return "under_review";
+            case "Changes Requested":  return "changes_requested";
+            case "Rejected":           return "rejected";
+            case "Archived":           return "archived";
+            case "Draft":
+            default:                   return "draft";
         }
     };
 
@@ -115,18 +135,19 @@ export function QuestsPage() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <div className="flex items-center gap-3">
-                        <h1 className="text-3xl font-bold text-slate-900">My Quests</h1>
+                        <h1 className="text-3xl font-display font-bold text-primary-900 tracking-tight">My Quests</h1>
                         {isVerified && (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100 text-xs font-semibold">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary-50 text-primary-700 border border-primary-100 text-xs font-semibold">
                                 <BadgeCheck className="w-3.5 h-3.5" /> Verified
                             </span>
                         )}
                     </div>
-                    <p className="text-slate-500 mt-1">Manage your quest creations and drafts</p>
+                    <p className="text-neutral-500 mt-1">Manage your quest creations and drafts</p>
                 </div>
                 <Button
+                    variant="accent"
                     onClick={() => navigate("/creator/quest/create")}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white w-full sm:w-auto"
+                    className="w-full sm:w-auto"
                 >
                     Create New Quest
                 </Button>
@@ -134,7 +155,7 @@ export function QuestsPage() {
 
             {/* Delete Confirmation Modal */}
             {isDeleteModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-sm animate-fade-in">
                     <Card className="w-full max-w-md shadow-2xl border-red-100 overflow-hidden animate-scale-up">
                         <div className="p-6">
                             <div className="flex items-center gap-3 text-red-600 mb-4">
@@ -144,8 +165,8 @@ export function QuestsPage() {
                                 <h3 className="text-xl font-bold">Delete Quest?</h3>
                             </div>
 
-                            <p className="text-slate-600 mb-6">
-                                This action will archive your quest. To confirm, please type <span className="font-bold text-slate-900 select-none">CONFIRM</span> below.
+                            <p className="text-neutral-600 mb-6">
+                                This action will archive your quest. To confirm, please type <span className="font-bold text-neutral-900 select-none">CONFIRM</span> below.
                             </p>
 
                             <div className="space-y-4">
@@ -184,59 +205,70 @@ export function QuestsPage() {
                 </div>
             )}
 
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col">
-                <div className="flex items-center overflow-x-auto border-b border-slate-200">
-                    {availableTabs.map((tab) => (
-                        <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab)}
-                            className={`px-6 py-4 text-sm font-medium whitespace-nowrap transition-colors relative
-                                ${activeTab === tab
-                                    ? "text-indigo-600 bg-slate-50"
-                                    : "text-slate-600 hover:text-slate-900"
-                                }
-                            `}
-                        >
-                            {tab}
-                            {activeTab === tab && (
-                                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600" />
-                            )}
-                        </button>
-                    ))}
-                </div>
+            {/* Filters + Search */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <StatusFilterPills
+                    filters={TABS}
+                    active={activeTab}
+                    onChange={setActiveTab}
+                />
+                <SearchBar
+                    value={searchInput}
+                    onChange={setSearchInput}
+                    onSubmit={handleSearch}
+                    placeholder="Search quests…"
+                />
+            </div>
 
+            <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm flex flex-col">
                 <div className="p-0 relative">
                     <div className="w-full overflow-y-auto overflow-x-auto max-h-[60vh] min-h-[300px]">
                         <table className="w-full text-left border-collapse min-w-[900px] table-fixed">
-                            <thead className="sticky top-0 z-20 bg-slate-50 shadow-sm outline outline-1 outline-slate-200">
-                                <tr className="border-b border-slate-200">
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[35%]">Title</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[20%] text-center">Status</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[15%] text-center">Created</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[10%] text-center">Views</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[20%] text-right">Actions</th>
+                            <thead className="sticky top-0 z-20 bg-neutral-50 shadow-sm outline outline-1 outline-neutral-200">
+                                <tr className="border-b border-neutral-200">
+                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[35%]">Title</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[20%] text-center">Status</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[15%] text-center">Created</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[10%] text-center">Views</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[20%] text-right">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100">
+                            <tbody className="divide-y divide-neutral-100">
                                 {isLoading ? (
+                                    <SkeletonTableRows columns={5} />
+                                ) : isError ? (
                                     <tr>
-                                        <td colSpan={5} className="py-8 text-center text-slate-500">
-                                            Loading quests...
+                                        <td colSpan={5} className="p-0">
+                                            <ErrorState
+                                                message="We couldn't load your quests."
+                                                onRetry={() => refetch()}
+                                            />
                                         </td>
                                     </tr>
                                 ) : quests.length === 0 ? (
                                     <tr>
-                                        <td colSpan={5} className="py-12 text-center">
-                                            <div className="text-slate-400 mb-2">No quests found in this category</div>
-                                            {activeTab === "Draft" && (
-                                                <Button
-                                                    variant="outline"
-                                                    className="mt-4 border-dashed border-2"
-                                                    onClick={() => navigate("/creator/quest/create")}
-                                                >
-                                                    Start a New Quest
-                                                </Button>
-                                            )}
+                                        <td colSpan={5} className="p-0">
+                                            <EmptyState
+                                                icon={<Compass className="w-7 h-7" />}
+                                                title="No quests here yet"
+                                                description={
+                                                    search
+                                                        ? `No quests match "${search}" in the "${activeTab}" stage.`
+                                                        : activeTab === "Draft"
+                                                        ? "Start building your first quest — add markers, narratives and tasks to bring it to life."
+                                                        : `You don't have any quests in the "${activeTab}" stage right now.`
+                                                }
+                                                action={
+                                                    activeTab === "Draft" ? (
+                                                        <Button
+                                                            variant="accent"
+                                                            onClick={() => navigate("/creator/quest/create")}
+                                                        >
+                                                            Create New Quest
+                                                        </Button>
+                                                    ) : undefined
+                                                }
+                                            />
                                         </td>
                                     </tr>
                                 ) : (
@@ -246,19 +278,19 @@ export function QuestsPage() {
                                         return (
                                             <React.Fragment key={quest.id}>
                                                 {/* Desktop View */}
-                                                <tr className="hidden md:table-row hover:bg-slate-50/50 transition-colors group">
-                                                    <td className="py-4 px-6 font-medium text-slate-900 truncate max-w-[200px]" title={title}>
+                                                <tr className="hidden md:table-row hover:bg-neutral-50/50 transition-colors group">
+                                                    <td className="py-4 px-6 font-medium text-neutral-900 truncate max-w-[200px]" title={title}>
                                                         {title}
                                                     </td>
                                                     <td className="py-4 px-6 text-center">
-                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wider ${getStatusColor(quest.status as QuestStatus)}`}>
+                                                        <Badge status={questStatusToBadgeStatus(quest.status as QuestStatus)} className="text-[11px] uppercase tracking-wider">
                                                             {quest.status}
-                                                        </span>
+                                                        </Badge>
                                                     </td>
-                                                    <td className="py-4 px-6 text-sm text-slate-500 whitespace-nowrap text-center">
+                                                    <td className="py-4 px-6 text-sm text-neutral-500 whitespace-nowrap text-center">
                                                         {quest.created_at ? new Date(quest.created_at).toLocaleDateString() : "—"}
                                                     </td>
-                                                    <td className="py-4 px-6 text-sm text-slate-500 whitespace-nowrap text-center">
+                                                    <td className="py-4 px-6 text-sm text-neutral-500 whitespace-nowrap text-center">
                                                         {quest.view_count || 0}
                                                     </td>
                                                     <td className="py-4 px-6 text-right relative">
@@ -268,7 +300,7 @@ export function QuestsPage() {
                                                                     variant="primary"
                                                                     size="sm"
                                                                     onClick={() => navigate(`/creator/quest/edit/${quest.id}`)}
-                                                                    className="h-9 px-4 bg-indigo-50 text-indigo-700 border border-indigo-100 hover:bg-indigo-600 hover:text-white rounded-lg font-medium shadow-none transition-colors mr-3 flex items-center whitespace-nowrap flex-shrink-0"
+                                                                    className="h-9 px-4 bg-primary-50 text-primary-700 border border-primary-100 hover:bg-primary-600 hover:text-white rounded-lg font-medium shadow-none transition-colors mr-3 flex items-center whitespace-nowrap flex-shrink-0"
                                                                 >
                                                                     <div className="flex items-center gap-1.5 px-0.5 min-w-max">
                                                                         <Edit2 className="w-4 h-4 shrink-0" /> Edit
@@ -303,14 +335,14 @@ export function QuestsPage() {
                                                                     >
                                                                         <button
                                                                             onClick={() => { navigate(`/creator/quest/view/${quest.id}`); setOpenDropdownId(null); }}
-                                                                            className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-slate-50 flex items-center gap-2 font-medium"
+                                                                            className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 font-medium"
                                                                         >
                                                                             View Details
                                                                         </button>
                                                                         {['Draft', 'Changes Requested'].includes(quest.status as string) && (
                                                                             <button
                                                                                 onClick={() => { handleSubmitForReview(quest.id); setOpenDropdownId(null); }}
-                                                                                className="w-full text-left px-4 py-2 text-sm text-indigo-600 hover:bg-indigo-50 flex items-center gap-2 font-medium"
+                                                                                className="w-full text-left px-4 py-2 text-sm text-primary-600 hover:bg-primary-50 flex items-center gap-2 font-medium"
                                                                             >
                                                                                 Submit for Review
                                                                             </button>
@@ -331,9 +363,9 @@ export function QuestsPage() {
                                                 </tr>
 
                                                 {/* Mobile View */}
-                                                <div className="md:hidden p-5 border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                                                <div className="md:hidden p-5 border-b border-neutral-100 hover:bg-neutral-50 transition-colors">
                                                     <div className="flex justify-between items-start mb-3">
-                                                        <div className="font-semibold text-slate-900 pr-8 text-base">
+                                                        <div className="font-semibold text-neutral-900 pr-8 text-base">
                                                             {title}
                                                         </div>
                                                         <div className="relative">
@@ -352,13 +384,13 @@ export function QuestsPage() {
                                                                     className="absolute right-0 top-full mt-1 w-44 bg-white border border-neutral-200 rounded-xl shadow-xl z-50 py-1.5 animate-fade-in"
                                                                     onClick={(e) => e.stopPropagation()}
                                                                 >
-                                                                    <button onClick={() => { navigate(`/creator/quest/view/${quest.id}`); setOpenDropdownId(null); }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-neutral-700 hover:bg-slate-50">View Details</button>
+                                                                    <button onClick={() => { navigate(`/creator/quest/view/${quest.id}`); setOpenDropdownId(null); }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50">View Details</button>
                                                                     {['Draft', 'Changes Requested'].includes(quest.status as string) && (
-                                                                        <button onClick={() => { handleSubmitForReview(quest.id); setOpenDropdownId(null); }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-indigo-600 hover:bg-indigo-50">Submit Review</button>
+                                                                        <button onClick={() => { handleSubmitForReview(quest.id); setOpenDropdownId(null); }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-primary-600 hover:bg-primary-50">Submit Review</button>
                                                                     )}
 {quest.status !== 'Published' && (
     <>
-        <button onClick={() => { navigate(`/creator/quest/edit/${quest.id}`); setOpenDropdownId(null); }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-neutral-700 hover:bg-slate-50">Edit Quest</button>
+        <button onClick={() => { navigate(`/creator/quest/edit/${quest.id}`); setOpenDropdownId(null); }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50">Edit Quest</button>
         <button onClick={() => { handleQuestDelete(quest.id); setOpenDropdownId(null); }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50">Delete</button>
     </>
 )}
@@ -367,11 +399,11 @@ export function QuestsPage() {
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center gap-3 mb-4">
-                                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${getStatusColor(quest.status as QuestStatus)}`}>
+                                                        <Badge status={questStatusToBadgeStatus(quest.status as QuestStatus)} className="text-[10px] uppercase">
                                                             {quest.status}
-                                                        </span>
-                                                        <span className="text-xs font-medium text-slate-500">{quest.created_at ? new Date(quest.created_at).toLocaleDateString() : "—"}</span>
-                                                        <span className="text-xs font-medium text-slate-500 text-right ms-auto">{quest.view_count || 0} views</span>
+                                                        </Badge>
+                                                        <span className="text-xs font-medium text-neutral-500">{quest.created_at ? new Date(quest.created_at).toLocaleDateString() : "—"}</span>
+                                                        <span className="text-xs font-medium text-neutral-500 text-right ms-auto">{quest.view_count || 0} views</span>
                                                     </div>
                                                     {['Draft', 'Changes Requested'].includes(quest.status as string) && (
                                                         <Button
@@ -379,7 +411,7 @@ export function QuestsPage() {
                                                             fullWidth
                                                             size="sm"
                                                             onClick={() => navigate(`/creator/quest/edit/${quest.id}`)}
-                                                            className="text-sm h-10 font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100 hover:bg-indigo-600 hover:text-white mb-2 shadow-none rounded-xl"
+                                                            className="text-sm h-10 font-semibold bg-primary-50 text-primary-700 border border-primary-100 hover:bg-primary-600 hover:text-white mb-2 shadow-none rounded-xl"
                                                         >
                                                             Edit Quest
                                                         </Button>

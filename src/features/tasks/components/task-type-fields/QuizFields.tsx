@@ -54,8 +54,8 @@ export function QuizFields({ register, watch, setValue, errors }: QuizFieldsProp
     };
 
     return (
-        <div className="space-y-4 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100">
-            <h4 className="text-sm font-semibold text-indigo-700 uppercase tracking-wider">Quiz Configuration</h4>
+        <div className="space-y-4 p-4 bg-primary-50/50 rounded-xl border border-primary-100">
+            <h4 className="text-sm font-semibold text-primary-700 uppercase tracking-wider">Quiz Configuration</h4>
 
             <Input
                 label="Question"
@@ -82,8 +82,8 @@ export function QuizFields({ register, watch, setValue, errors }: QuizFieldsProp
                                 onClick={() => handleSetCorrect(optionVal)}
                                 className={`shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors
                                     ${isCorrect
-                                        ? "border-indigo-600 bg-indigo-600"
-                                        : "border-neutral-300 hover:border-indigo-400"
+                                        ? "border-primary-600 bg-primary-600"
+                                        : "border-neutral-300 hover:border-primary-400"
                                     }
                                 `}
                                 title="Set as correct answer"
@@ -113,7 +113,7 @@ export function QuizFields({ register, watch, setValue, errors }: QuizFieldsProp
                 <button
                     type="button"
                     onClick={handleAddOption}
-                    className="flex items-center gap-1.5 text-sm text-indigo-600 hover:text-indigo-700 font-medium mt-1"
+                    className="flex items-center gap-1.5 text-sm text-primary-600 hover:text-primary-700 font-medium mt-1"
                 >
                     <Plus className="w-4 h-4" /> Add Option
                 </button>

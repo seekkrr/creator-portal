@@ -119,11 +119,15 @@ export function DetailsStep({ defaultValues, onNext, onBack }: DetailsStepProps)
 
     // Pull the resolved region to draw its boundary (bbox) + center the preview.
     const regionId = defaultValues.regionId;
+    // Guard: only fetch when regionId looks like a real MongoDB ObjectId (24-char
+    // hex). A placeholder such as "fake-region-id-manali" from a stale draft would
+    // cause a 404 and silently leave regionBbox null — matching WaypointsStep.
+    const isRealRegionId = !!regionId && /^[0-9a-f]{24}$/i.test(regionId);
     const { data: region } = useQuery({
         queryKey: ["region", regionId],
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         queryFn: () => regionService.getRegion(regionId!),
-        enabled: !!regionId,
+        enabled: isRealRegionId,
         staleTime: 5 * 60 * 1000,
     });
 
@@ -210,15 +214,15 @@ export function DetailsStep({ defaultValues, onNext, onBack }: DetailsStepProps)
                                             onClick={() => toggleTheme(opt.value)}
                                             className={`px-3 py-2 rounded-lg border-2 transition-all text-sm inline-flex items-center gap-1.5 ${
                                                 active
-                                                    ? "border-indigo-500 bg-indigo-50 text-indigo-900"
-                                                    : "border-neutral-200 hover:border-neutral-300"
+                                                    ? "border-primary-600 bg-primary-600 text-white shadow-sm"
+                                                    : "border-neutral-200 bg-white text-neutral-700 hover:border-neutral-300 hover:bg-neutral-50"
                                             }`}
                                         >
                                             <span>{opt.icon}</span>
                                             {opt.label}
                                             {/* fixed-width check slot so chips don't reflow on toggle */}
                                             <span className="w-3.5 inline-flex justify-center">
-                                                {active && <Check className="w-3.5 h-3.5 text-indigo-600" />}
+                                                {active && <Check className="w-3.5 h-3.5 text-white" />}
                                             </span>
                                         </button>
                                     );
@@ -247,7 +251,7 @@ export function DetailsStep({ defaultValues, onNext, onBack }: DetailsStepProps)
                                         onClick={() => setValue("difficulty", level.value)}
                                         className={`px-4 py-2 rounded-lg border-2 transition-all ${
                                             difficulty === level.value
-                                                ? "border-indigo-500 bg-indigo-50"
+                                                ? "border-primary-500 bg-primary-50"
                                                 : "border-neutral-200 hover:border-neutral-300"
                                         }`}
                                     >
@@ -291,9 +295,9 @@ export function DetailsStep({ defaultValues, onNext, onBack }: DetailsStepProps)
                         />
                         <p className="mt-2 text-sm text-neutral-500 flex items-center gap-1.5">
                             {regionKind === "hotspot" ? (
-                                <Tent className="w-4 h-4 text-indigo-500" />
+                                <Tent className="w-4 h-4 text-primary-500" />
                             ) : (
-                                <Building2 className="w-4 h-4 text-indigo-500" />
+                                <Building2 className="w-4 h-4 text-primary-500" />
                             )}
                             {regionLabel ? (
                                 <>

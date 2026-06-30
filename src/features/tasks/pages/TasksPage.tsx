@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { AlertTriangle, MoreVertical, Plus, Eye, Edit2, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
-import { Card, Button, Input } from "@components/ui";
+import { AlertTriangle, MoreVertical, Plus, Eye, Edit2, Trash2, ToggleLeft, ToggleRight, ListChecks } from "lucide-react";
+import { Card, Button, Input, EmptyState, ErrorState, SkeletonTableRows, SearchBar, StatusFilterPills } from "@components/ui";
 import { taskService } from "@services/task.service";
+import { markerService } from "@services/marker.service";
 import type { TaskType } from "@/types";
 import { toast } from "sonner";
 import { TaskFormModal } from "../components/TaskFormModal";
@@ -13,10 +14,10 @@ import { TASK_TYPES, TASK_TYPE_LABELS } from "../schemas/task.schema";
 const TYPE_BADGE_COLORS: Record<TaskType, string> = {
     photo_challenge: "bg-emerald-100 text-emerald-700 border border-emerald-200",
     qr_scan: "bg-amber-100 text-amber-700 border border-amber-200",
-    quiz: "bg-indigo-100 text-indigo-700 border border-indigo-200",
-    collection: "bg-purple-100 text-purple-700 border border-purple-200",
+    quiz: "bg-primary-100 text-primary-700 border border-primary-200",
+    collection: "bg-primary-100 text-primary-700 border border-primary-200",
     social: "bg-pink-100 text-pink-700 border border-pink-200",
-    checkin: "bg-slate-100 text-slate-700 border border-slate-200",
+    checkin: "bg-neutral-100 text-neutral-700 border border-neutral-200",
 };
 
 export function TasksPage() {
@@ -24,6 +25,8 @@ export function TasksPage() {
     const queryClient = useQueryClient();
 
     const [typeFilter, setTypeFilter] = useState<TaskType | "">("");
+    const [search, setSearch] = useState("");
+    const [searchInput, setSearchInput] = useState("");
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [editTask, setEditTask] = useState<TaskConfig | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -38,11 +41,26 @@ export function TasksPage() {
         return () => document.removeEventListener("click", handleClickOutside);
     }, []);
 
-    const { data, isLoading } = useQuery({
+    const { data, isLoading, isError, refetch } = useQuery({
         queryKey: ["creator-tasks", { task_type: typeFilter }],
         queryFn: () =>
             taskService.listTaskConfigs({ mine: true, task_type: typeFilter || undefined }),
     });
+
+    // Resolve marker ids → titles for the MARKER column.
+    // page_size capped at 100 by the backend (>100 → 422).
+    const { data: markersData } = useQuery({
+        queryKey: ["creator-markers-all"],
+        queryFn: () => markerService.listMarkers({ mine: true, page_size: 100 }),
+        staleTime: 5 * 60 * 1000,
+    });
+    const markerTitleMap = React.useMemo(() => {
+        const map = new Map<string, string>();
+        for (const m of (markersData?.items ?? [])) {
+            if (m.title) map.set(m.id, m.title);
+        }
+        return map;
+    }, [markersData]);
 
     const toggleActiveMutation = useMutation({
         mutationFn: (taskId: string) => taskService.toggleActive(taskId),
@@ -85,18 +103,29 @@ export function TasksPage() {
         }
     };
 
-    const tasks = data?.items ?? [];
+    const handleSearch = (e: React.FormEvent) => {
+        e.preventDefault();
+        setSearch(searchInput);
+    };
+
+    const allTasks = data?.items ?? [];
+    const tasks = search
+        ? allTasks.filter((t) =>
+              (t.title ?? "").toLowerCase().includes(search.toLowerCase())
+          )
+        : allTasks;
 
     return (
         <div className="animate-fade-in space-y-4 w-full max-w-6xl mx-auto pb-6 px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-900">My Tasks</h1>
-                    <p className="text-slate-500 mt-1">Manage your task configurations</p>
+                    <h1 className="text-3xl font-display font-bold text-primary-900 tracking-tight">My Tasks</h1>
+                    <p className="text-neutral-500 mt-1">Manage your task configurations</p>
                 </div>
                 <Button
+                    variant="accent"
                     onClick={() => setIsCreateModalOpen(true)}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white w-full sm:w-auto"
+                    className="w-full sm:w-auto"
                     leftIcon={<Plus className="w-4 h-4" />}
                 >
                     Create New Task
@@ -105,7 +134,7 @@ export function TasksPage() {
 
             {/* Delete Confirmation Modal */}
             {isDeleteModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-sm animate-fade-in">
                     <Card className="w-full max-w-md shadow-2xl border-red-100 overflow-hidden animate-scale-up">
                         <div className="p-6">
                             <div className="flex items-center gap-3 text-red-600 mb-4">
@@ -114,9 +143,9 @@ export function TasksPage() {
                                 </div>
                                 <h3 className="text-xl font-bold">Delete Task?</h3>
                             </div>
-                            <p className="text-slate-600 mb-6">
+                            <p className="text-neutral-600 mb-6">
                                 This action will delete your task. To confirm, please type{" "}
-                                <span className="font-bold text-slate-900 select-none">CONFIRM</span> below.
+                                <span className="font-bold text-neutral-900 select-none">CONFIRM</span> below.
                             </p>
                             <div className="space-y-4">
                                 <Input
@@ -170,67 +199,78 @@ export function TasksPage() {
                 />
             )}
 
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col">
-                {/* Type Filter */}
-                <div className="flex items-center gap-2 overflow-x-auto px-4 py-3 border-b border-slate-200">
-                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider shrink-0">Type:</span>
-                    <button
-                        onClick={() => setTypeFilter("")}
-                        className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors whitespace-nowrap
-                            ${typeFilter === "" ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
-                    >
-                        All
-                    </button>
-                    {TASK_TYPES.map((t) => (
-                        <button
-                            key={t}
-                            onClick={() => setTypeFilter(t)}
-                            className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors whitespace-nowrap
-                                ${typeFilter === t ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
-                        >
-                            {TASK_TYPE_LABELS[t]}
-                        </button>
-                    ))}
-                </div>
+            {/* Filters + Search */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <StatusFilterPills<TaskType | "">
+                    filters={[
+                        { label: "All", value: "" },
+                        ...TASK_TYPES.map((t) => ({ label: TASK_TYPE_LABELS[t], value: t })),
+                    ]}
+                    active={typeFilter}
+                    onChange={setTypeFilter}
+                />
+                <SearchBar
+                    value={searchInput}
+                    onChange={setSearchInput}
+                    onSubmit={handleSearch}
+                    placeholder="Search tasks…"
+                />
+            </div>
 
+            <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm flex flex-col">
                 <div className="p-0 relative">
                     <div className="w-full overflow-y-auto overflow-x-auto max-h-[60vh] min-h-[300px]">
                         <table className="w-full text-left border-collapse min-w-[900px] table-fixed">
-                            <thead className="sticky top-0 z-20 bg-slate-50 shadow-sm outline outline-1 outline-slate-200">
-                                <tr className="border-b border-slate-200">
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[28%]">Title</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[14%] text-center">Type</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[18%]">Marker</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[10%] text-center">Points</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[10%] text-center">Active</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[10%] text-center">Created</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider w-[10%] text-right">Actions</th>
+                            <thead className="sticky top-0 z-20 bg-neutral-50 shadow-sm outline outline-1 outline-neutral-200">
+                                <tr className="border-b border-neutral-200">
+                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[28%]">Title</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[14%] text-center">Type</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[18%]">Marker</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[10%] text-center">Points</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[10%] text-center">Active</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[10%] text-center">Created</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-neutral-500 uppercase tracking-wider w-[10%] text-right">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100">
+                            <tbody className="divide-y divide-neutral-100">
                                 {isLoading ? (
+                                    <SkeletonTableRows columns={7} />
+                                ) : isError ? (
                                     <tr>
-                                        <td colSpan={7} className="py-8 text-center text-slate-500">
-                                            Loading tasks...
+                                        <td colSpan={7} className="p-0">
+                                            <ErrorState
+                                                message="We couldn't load your tasks."
+                                                onRetry={() => refetch()}
+                                            />
                                         </td>
                                     </tr>
                                 ) : tasks.length === 0 ? (
                                     <tr>
-                                        <td colSpan={7} className="py-12 text-center">
-                                            <div className="text-slate-400 mb-2">No tasks found</div>
-                                            <Button
-                                                variant="outline"
-                                                className="mt-4 border-dashed border-2"
-                                                onClick={() => setIsCreateModalOpen(true)}
-                                            >
-                                                Create Your First Task
-                                            </Button>
+                                        <td colSpan={7} className="p-0">
+                                            <EmptyState
+                                                icon={<ListChecks className="w-7 h-7" />}
+                                                title="No tasks found"
+                                                description={
+                                                    search || typeFilter
+                                                        ? "No tasks match your current filters. Try adjusting the type or search."
+                                                        : "Create your first task to give explorers something to do at your markers."
+                                                }
+                                                action={
+                                                    <Button
+                                                        variant="accent"
+                                                        onClick={() => setIsCreateModalOpen(true)}
+                                                        leftIcon={<Plus className="w-4 h-4" />}
+                                                    >
+                                                        Create New Task
+                                                    </Button>
+                                                }
+                                            />
                                         </td>
                                     </tr>
                                 ) : (
                                     tasks.map((task) => (
-                                        <tr key={task.id} className="hover:bg-slate-50/50 transition-colors group">
-                                            <td className="py-4 px-6 font-medium text-slate-900 truncate max-w-[200px]" title={task.title}>
+                                        <tr key={task.id} className="hover:bg-neutral-50/50 transition-colors group">
+                                            <td className="py-4 px-6 font-medium text-neutral-900 truncate max-w-[200px]" title={task.title}>
                                                 {task.title}
                                             </td>
                                             <td className="py-4 px-6 text-center">
@@ -238,16 +278,16 @@ export function TasksPage() {
                                                     {TASK_TYPE_LABELS[task.task_type]}
                                                 </span>
                                             </td>
-                                            <td className="py-4 px-6 text-sm text-slate-500 truncate max-w-[140px]" title={task.marker_id}>
-                                                {task.marker_id.slice(-8)}
+                                            <td className="py-4 px-6 text-sm text-neutral-500 truncate max-w-[140px]" title={markerTitleMap.get(task.marker_id) ?? task.marker_id}>
+                                                {markerTitleMap.get(task.marker_id) ?? task.marker_id}
                                             </td>
-                                            <td className="py-4 px-6 text-sm text-slate-700 font-semibold text-center">
+                                            <td className="py-4 px-6 text-sm text-neutral-700 font-semibold text-center">
                                                 {task.base_points}
                                             </td>
                                             <td className="py-4 px-6 text-center">
                                                 <button
                                                     onClick={() => handleToggleActive(task.id)}
-                                                    className={`inline-flex items-center transition-colors ${task.is_active ? "text-emerald-600 hover:text-emerald-700" : "text-slate-400 hover:text-slate-600"}`}
+                                                    className={`inline-flex items-center transition-colors ${task.is_active ? "text-emerald-600 hover:text-emerald-700" : "text-neutral-400 hover:text-neutral-600"}`}
                                                     title={task.is_active ? "Click to deactivate" : "Click to activate"}
                                                 >
                                                     {task.is_active
@@ -256,7 +296,7 @@ export function TasksPage() {
                                                     }
                                                 </button>
                                             </td>
-                                            <td className="py-4 px-6 text-sm text-slate-500 whitespace-nowrap text-center">
+                                            <td className="py-4 px-6 text-sm text-neutral-500 whitespace-nowrap text-center">
                                                 {task.created_at ? new Date(task.created_at).toLocaleDateString() : "—"}
                                             </td>
                                             <td className="py-4 px-6 text-right relative">
@@ -284,13 +324,13 @@ export function TasksPage() {
                                                             >
                                                                 <button
                                                                     onClick={() => { navigate(`/creator/tasks/view/${task.id}`); setOpenDropdownId(null); }}
-                                                                    className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-slate-50 flex items-center gap-2 font-medium"
+                                                                    className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 font-medium"
                                                                 >
                                                                     <Eye className="w-4 h-4" /> View Details
                                                                 </button>
                                                                 <button
                                                                     onClick={() => { setEditTask(task); setOpenDropdownId(null); }}
-                                                                    className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-slate-50 flex items-center gap-2 font-medium"
+                                                                    className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 font-medium"
                                                                 >
                                                                     <Edit2 className="w-4 h-4" /> Edit
                                                                 </button>

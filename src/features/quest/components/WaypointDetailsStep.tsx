@@ -22,18 +22,20 @@ import type { CloudinaryAsset } from "@/types";
 import { VideoWalkthroughModal, VideoHelpButton } from "@components/VideoWalkthroughModal";
 import { WALKTHROUGH_VIDEOS } from "@config/walkthroughVideos";
 
-// Local resolver schema: requires things-to-do text + image per stop, and ≥1
-// gallery image. `.passthrough()` keeps the rest of the playlist item intact.
+// Local resolver schema for draft/proceed: thingsToDo text is recommended but
+// optional (min 0), images are optional. Images are only enforced on "Submit for
+// Review" (checked in CreateQuestPage.handleSubmit — F2 fix). `.passthrough()`
+// keeps the rest of the playlist item (marker_id, new_marker, _display, …) intact.
 const detailsItemSchema = z
     .object({
-        thingsToDo: z.string().min(1, "Describe what to do at this stop"),
-        thingsToDoImage: cloudinaryAssetSchema,
+        thingsToDo: z.string().optional(),
+        thingsToDoImage: cloudinaryAssetSchema.optional(),
     })
     .passthrough();
 
 const waypointDetailsStepSchema = z.object({
     markerPlaylist: z.array(detailsItemSchema),
-    galleryImages: z.array(cloudinaryAssetSchema).min(1, "Add at least one quest image"),
+    galleryImages: z.array(cloudinaryAssetSchema).optional(),
 });
 
 type WaypointDetailsFormData = {
@@ -155,8 +157,8 @@ export function WaypointDetailsStep({ defaultValues, onNext, onBack }: WaypointD
                                     key={`${item.marker_id ?? "new"}-${item._display?.lng ?? 0}-${item._display?.lat ?? 0}-${index}`}
                                     className={`
                                         border rounded-2xl transition-all duration-200 shadow-sm overflow-hidden
-                                        ${hasError ? "border-red-300 bg-red-50/10" : "border-slate-200 bg-white"}
-                                        ${isOpen ? "ring-1 ring-slate-900 border-slate-900 shadow-md" : "hover:border-slate-400"}
+                                        ${hasError ? "border-red-300 bg-red-50/10" : "border-neutral-200 bg-white"}
+                                        ${isOpen ? "ring-1 ring-neutral-900 border-neutral-900 shadow-md" : "hover:border-neutral-400"}
                                     `}
                                 >
                                     <button
@@ -168,14 +170,14 @@ export function WaypointDetailsStep({ defaultValues, onNext, onBack }: WaypointD
                                             <div className={`
                                                 flex items-center justify-center w-8 h-8 rounded-full border-2 font-bold text-sm transition-colors shrink-0
                                                 ${isOpen
-                                                    ? "bg-slate-900 border-slate-900 text-white"
-                                                    : "bg-white border-slate-300 text-slate-500"
+                                                    ? "bg-neutral-900 border-neutral-900 text-white"
+                                                    : "bg-white border-neutral-300 text-neutral-500"
                                                 }
                                             `}>
                                                 {index + 1}
                                             </div>
                                             <div>
-                                                <span className={`font-semibold text-base block ${isOpen ? "text-slate-900" : "text-slate-600"}`}>
+                                                <span className={`font-semibold text-base block ${isOpen ? "text-neutral-900" : "text-neutral-600"}`}>
                                                     {title}
                                                 </span>
                                                 {hasError && (
@@ -186,23 +188,24 @@ export function WaypointDetailsStep({ defaultValues, onNext, onBack }: WaypointD
                                             </div>
                                         </div>
                                         {isOpen ? (
-                                            <ChevronUp className="w-5 h-5 text-slate-900" />
+                                            <ChevronUp className="w-5 h-5 text-neutral-900" />
                                         ) : (
-                                            <ChevronDown className="w-5 h-5 text-slate-400" />
+                                            <ChevronDown className="w-5 h-5 text-neutral-400" />
                                         )}
                                     </button>
 
                                     <div className={`grid transition-all duration-300 ease-in-out ${isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
                                         <div className="overflow-hidden">
-                                            <div className="px-5 py-5 border-t border-slate-100 bg-slate-50/50 space-y-6">
+                                            <div className="px-5 py-5 border-t border-neutral-100 bg-neutral-50/50 space-y-6">
                                                 {/* Things to do */}
                                                 <div className="space-y-2">
                                                     <div className="flex items-center gap-1.5">
                                                         <label
                                                             htmlFor={`markerPlaylist.${index}.thingsToDo`}
-                                                            className="text-sm font-semibold text-slate-900"
+                                                            className="text-sm font-semibold text-neutral-900"
                                                         >
-                                                            Things to do <span className="text-red-500">*</span>
+                                                            Things to do
+                                                            <span className="ml-1 text-xs font-normal text-neutral-400">(required to submit)</span>
                                                         </label>
                                                         <InfoHint
                                                             side="top"
@@ -214,16 +217,17 @@ export function WaypointDetailsStep({ defaultValues, onNext, onBack }: WaypointD
                                                         placeholder="e.g. Count the pillars in the main hall and snap a photo of the carved ceiling…"
                                                         {...register(`markerPlaylist.${index}.thingsToDo`)}
                                                         error={itemErrors?.thingsToDo?.message}
-                                                        className="bg-white text-sm border-slate-200 focus:border-slate-900 focus:ring-slate-900 min-h-[100px]"
+                                                        className="bg-white text-sm border-neutral-200 focus:border-neutral-900 focus:ring-neutral-900 min-h-[100px]"
                                                     />
                                                 </div>
 
                                                 {/* Things to do image (single) */}
                                                 <div className="space-y-2">
                                                     <div className="flex items-center gap-1.5">
-                                                        <label className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-                                                            <ImageIcon className="w-4 h-4 text-indigo-500" />
-                                                            Things to do image <span className="text-red-500">*</span>
+                                                        <label className="text-sm font-semibold text-neutral-900 flex items-center gap-2">
+                                                            <ImageIcon className="w-4 h-4 text-primary-500" />
+                                                            Things to do image
+                                                            <span className="text-xs font-normal text-neutral-400">(required to submit)</span>
                                                         </label>
                                                         <InfoHint
                                                             side="top"
@@ -231,7 +235,7 @@ export function WaypointDetailsStep({ defaultValues, onNext, onBack }: WaypointD
                                                         />
                                                     </div>
                                                     {thingsToDoImage ? (
-                                                        <div className="relative group w-32 h-32 rounded-lg overflow-hidden border border-slate-200 bg-white shadow-sm">
+                                                        <div className="relative group w-32 h-32 rounded-lg overflow-hidden border border-neutral-200 bg-white shadow-sm">
                                                             <img
                                                                 src={thingsToDoImage.secure_url}
                                                                 alt="Things to do"
@@ -240,7 +244,7 @@ export function WaypointDetailsStep({ defaultValues, onNext, onBack }: WaypointD
                                                             <button
                                                                 type="button"
                                                                 onClick={() => setThingsToDoImage(index, undefined)}
-                                                                className="absolute top-1 right-1 p-1 bg-white/90 backdrop-blur rounded-full text-slate-600 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all shadow-sm"
+                                                                className="absolute top-1 right-1 p-1 bg-white/90 backdrop-blur rounded-full text-neutral-600 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all shadow-sm"
                                                                 aria-label="Remove things to do image"
                                                             >
                                                                 <X className="w-3 h-3" />
@@ -272,7 +276,7 @@ export function WaypointDetailsStep({ defaultValues, onNext, onBack }: WaypointD
 
                     {/* Right Column: Sticky Map */}
                     <div className="order-1 lg:order-2 lg:sticky lg:top-6">
-                        <div className="rounded-2xl overflow-hidden shadow-lg border border-slate-200 bg-white">
+                        <div className="rounded-2xl overflow-hidden shadow-lg border border-neutral-200 bg-white">
                             <WaypointMapComponent
                                 center={mapCenter}
                                 playlistPoints={playlistPoints}
@@ -285,11 +289,12 @@ export function WaypointDetailsStep({ defaultValues, onNext, onBack }: WaypointD
                 </div>
 
                 {/* Additional Gallery Images */}
-                <div className="pt-8 border-t border-slate-200">
+                <div className="pt-8 border-t border-neutral-200">
                     <div className="space-y-4">
                         <div className="flex items-center gap-1.5">
-                            <h3 className="text-lg font-semibold text-slate-900">
-                                Additional Gallery images <span className="text-red-500">*</span>
+                            <h3 className="text-lg font-semibold text-neutral-900">
+                                Additional Gallery images
+                                <span className="ml-1 text-sm font-normal text-neutral-400">(required to submit)</span>
                             </h3>
                             <InfoHint
                                 side="top"
@@ -299,7 +304,7 @@ export function WaypointDetailsStep({ defaultValues, onNext, onBack }: WaypointD
 
                         <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
                             {(galleryImages ?? []).map((img) => (
-                                <div key={img.public_id} className="relative group aspect-square rounded-lg overflow-hidden border border-slate-200 bg-white shadow-sm">
+                                <div key={img.public_id} className="relative group aspect-square rounded-lg overflow-hidden border border-neutral-200 bg-white shadow-sm">
                                     <img
                                         src={img.secure_url}
                                         alt="Gallery"
@@ -308,7 +313,7 @@ export function WaypointDetailsStep({ defaultValues, onNext, onBack }: WaypointD
                                     <button
                                         type="button"
                                         onClick={() => handleGalleryRemove(img.public_id)}
-                                        className="absolute top-1 right-1 p-1 bg-white/90 backdrop-blur rounded-full text-slate-600 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all shadow-md"
+                                        className="absolute top-1 right-1 p-1 bg-white/90 backdrop-blur rounded-full text-neutral-600 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all shadow-md"
                                         aria-label="Remove gallery image"
                                     >
                                         <X className="w-3 h-3" />
@@ -333,7 +338,7 @@ export function WaypointDetailsStep({ defaultValues, onNext, onBack }: WaypointD
                     </div>
                 </div>
 
-                <div className="flex justify-between pt-6 border-t border-slate-200">
+                <div className="flex justify-between pt-6 border-t border-neutral-200">
                     <Button
                         type="button"
                         variant="outline"
