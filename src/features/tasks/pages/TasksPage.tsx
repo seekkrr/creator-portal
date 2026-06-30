@@ -183,37 +183,36 @@ export function TasksPage() {
                 />
             )}
 
-            <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm flex flex-col">
-                {/* Type Filter + Search */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 px-4 py-3 border-b border-neutral-200">
-                    <div className="flex items-center gap-2 overflow-x-auto flex-wrap">
-                        <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider shrink-0">Type:</span>
+            {/* Filters + Search */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <div className="flex items-center gap-1 flex-wrap">
+                    <button
+                        onClick={() => setTypeFilter("")}
+                        className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors
+                            ${typeFilter === "" ? "bg-primary-600 text-white" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
+                    >
+                        All
+                    </button>
+                    {TASK_TYPES.map((t) => (
                         <button
-                            onClick={() => setTypeFilter("")}
-                            className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors whitespace-nowrap
-                                ${typeFilter === "" ? "bg-primary-600 text-white" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
+                            key={t}
+                            onClick={() => setTypeFilter(t)}
+                            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors
+                                ${typeFilter === t ? "bg-primary-600 text-white" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
                         >
-                            All
+                            {TASK_TYPE_LABELS[t]}
                         </button>
-                        {TASK_TYPES.map((t) => (
-                            <button
-                                key={t}
-                                onClick={() => setTypeFilter(t)}
-                                className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors whitespace-nowrap
-                                    ${typeFilter === t ? "bg-primary-600 text-white" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
-                            >
-                                {TASK_TYPE_LABELS[t]}
-                            </button>
-                        ))}
-                    </div>
-                    <SearchBar
-                        value={searchInput}
-                        onChange={setSearchInput}
-                        onSubmit={handleSearch}
-                        placeholder="Search tasks…"
-                    />
+                    ))}
                 </div>
+                <SearchBar
+                    value={searchInput}
+                    onChange={setSearchInput}
+                    onSubmit={handleSearch}
+                    placeholder="Search tasks…"
+                />
+            </div>
 
+            <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm flex flex-col">
                 <div className="p-0 relative">
                     <div className="w-full overflow-y-auto overflow-x-auto max-h-[60vh] min-h-[300px]">
                         <table className="w-full text-left border-collapse min-w-[900px] table-fixed">
