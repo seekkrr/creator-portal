@@ -139,7 +139,7 @@ export function RegionSearchSelect({
                 name: candidate.name,
                 type: candidate.suggested_type,
                 center: candidate.center,
-                pending_payload: candidate.resolve_payload,
+                pending_payload: candidate.resolve_payload ?? undefined,
             });
         }
     };

@@ -738,8 +738,13 @@ export interface MapboxRegionCandidate {
     overlaps: RegionMatchRef[];
     /** for hotspots, the enclosing city (from Mapbox context). */
     parent_city: { name: string | null; mapbox_id: string | null } | null;
-    /** ready-to-POST body for `POST /regions/resolve-or-create`. */
-    resolve_payload: ResolveOrCreateRegionPayload;
+    /**
+     * Ready-to-POST body for `POST /regions/resolve-or-create`. Null for
+     * candidates that are already existing SeekKrr regions (blended in by name,
+     * or matched by id/overlap) — those reuse `existing_region` directly and
+     * never resolve-or-create.
+     */
+    resolve_payload: ResolveOrCreateRegionPayload | null;
 }
 
 /** The region a creator settled on in the quest builder. */
