@@ -406,6 +406,12 @@ export const WaypointMapComponent = memo(function WaypointMapComponent({
                 });
 
                 drawRegionBbox(regionBboxRef.current);
+                // Fit the camera to the region boundary on initial load so the
+                // dashed outline is always in frame (not just drawn off-screen).
+                // flyToPoints() handles framing once markers are added.
+                if (regionBboxRef.current) {
+                    fitRegionBounds(regionBboxRef.current);
+                }
                 renderPlaylistPins();
                 updateRouteLine();
                 if (playlistPointsRef.current.length > 0) setTimeout(() => flyToPoints(), 400);
@@ -484,18 +490,21 @@ export const WaypointMapComponent = memo(function WaypointMapComponent({
         refreshExistingMarkers();
     }, [existingMarkers, selectedMarkerIds, refreshExistingMarkers]);
 
-    // Redraw the region boundary when it changes, and on a REAL change (e.g.
-    // expand-to-city) fit the camera to the new bounds so the boundary is visible
-    // — otherwise the bigger boundary stays off-screen past the framed markers.
+    // Redraw the region boundary when it changes, and fit the camera to it when:
+    //   (a) it arrives for the first time AFTER the map was already loaded (prev
+    //       is null but style is ready — the style.load path already handles the
+    //       case where the bbox was known at load time), or
+    //   (b) the region CHANGED to a different bbox (e.g. expand-to-city).
+    // In both cases we want the dashed outline to be fully in frame.
     useEffect(() => {
         const prev = prevRegionBboxRef.current;
         prevRegionBboxRef.current = regionBbox;
         const map = mapRef.current;
         if (!map || !map.isStyleLoaded()) return;
         drawRegionBbox(regionBbox);
-        // Skip the initial set (load already frames the markers); reframe only
-        // when the region actually switched to a different bbox.
-        if (prev !== null && prev !== regionBbox && regionBbox) {
+        // Fit when: bbox just arrived for the first time (prev === null, now non-null)
+        // OR when the bbox changed to a different value (region switch).
+        if (regionBbox && (prev === null || prev !== regionBbox)) {
             fitRegionBounds(regionBbox);
         }
     }, [regionBbox, drawRegionBbox, fitRegionBounds]);

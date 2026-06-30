@@ -119,11 +119,15 @@ export function DetailsStep({ defaultValues, onNext, onBack }: DetailsStepProps)
 
     // Pull the resolved region to draw its boundary (bbox) + center the preview.
     const regionId = defaultValues.regionId;
+    // Guard: only fetch when regionId looks like a real MongoDB ObjectId (24-char
+    // hex). A placeholder such as "fake-region-id-manali" from a stale draft would
+    // cause a 404 and silently leave regionBbox null — matching WaypointsStep.
+    const isRealRegionId = !!regionId && /^[0-9a-f]{24}$/i.test(regionId);
     const { data: region } = useQuery({
         queryKey: ["region", regionId],
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         queryFn: () => regionService.getRegion(regionId!),
-        enabled: !!regionId,
+        enabled: isRealRegionId,
         staleTime: 5 * 60 * 1000,
     });
 
