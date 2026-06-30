@@ -461,7 +461,7 @@ export function WaypointsStep({ defaultValues, onNext, onBack, onRegionChange }:
                             ) : (
                                 <>
                                     <p className="text-amber-900 font-medium">
-                                        {outOfRegion.length} marker{outOfRegion.length !== 1 ? "s" : ""} fall
+                                        {outOfRegion.length} marker{outOfRegion.length !== 1 ? "s" : ""} fall{outOfRegion.length === 1 ? "s" : ""}
                                         outside {region?.name ?? "the selected region"}.
                                     </p>
                                     <p className="text-amber-700 mt-0.5">
