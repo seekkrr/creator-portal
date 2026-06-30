@@ -10,6 +10,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { ChevronLeft, ChevronRight, SkipForward, BookOpen } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button, Textarea, InfoHint } from "@components/ui";
 
 /** Narrator voices the V2 narrative audio pipeline supports (optional). */
@@ -78,8 +79,13 @@ export function NarrativeStep({ defaultValues, onNext, onBack }: NarrativeStepPr
                     <p className="font-medium text-primary-900">Need narratives for specific stops?</p>
                     <p className="text-primary-700 mt-0.5">
                         Per-marker narratives are managed on the dedicated{" "}
-                        <strong>Narratives page</strong> (coming soon). Here you add just one
-                        narrative for the whole quest.
+                        <Link
+                            to="/creator/narratives"
+                            className="font-semibold text-primary-700 underline hover:text-primary-800"
+                        >
+                            Narratives page
+                        </Link>
+                        . Here you add just one narrative for the whole quest.
                     </p>
                 </div>
             </div>
