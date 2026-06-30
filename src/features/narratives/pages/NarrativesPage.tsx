@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { MoreVertical, AlertTriangle, Volume2, Link2, BookOpen } from "lucide-react";
-import { Card, Button, Input, Badge, EmptyState, ErrorState, SkeletonTableRows } from "@components/ui";
+import { Card, Button, Input, Badge, EmptyState, ErrorState, SkeletonTableRows, StatusFilterPills } from "@components/ui";
 import type { BadgeStatus } from "@components/ui";
 import { narrativeService } from "@services/narrative.service";
 import { markerService } from "@services/marker.service";
@@ -14,16 +14,14 @@ import { toast } from "sonner";
 
 type StatusFilter = NarrativeStatus | "all";
 
-const STATUS_TABS: StatusFilter[] = ["all", "draft", "under_review", "approved", "rejected", "archived"];
-
-const STATUS_TAB_LABELS: Record<StatusFilter, string> = {
-    all: "All",
-    draft: "Draft",
-    under_review: "Under Review",
-    approved: "Approved",
-    rejected: "Rejected",
-    archived: "Archived",
-};
+const STATUS_TABS: { label: string; value: StatusFilter }[] = [
+    { label: "All", value: "all" },
+    { label: "Draft", value: "draft" },
+    { label: "Under Review", value: "under_review" },
+    { label: "Approved", value: "approved" },
+    { label: "Rejected", value: "rejected" },
+    { label: "Archived", value: "archived" },
+];
 
 function getNarrativeStatusBadge(status: NarrativeStatus): BadgeStatus {
     switch (status) {
@@ -310,27 +308,14 @@ export function NarrativesPage() {
                 onSaved={handleSaved}
             />
 
-            <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm flex flex-col">
-                {/* Status Tabs */}
-                <div className="flex items-center overflow-x-auto border-b border-neutral-200">
-                    {STATUS_TABS.map((tab) => (
-                        <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab)}
-                            className={`px-5 py-4 text-sm font-medium whitespace-nowrap transition-colors relative
-                                ${activeTab === tab
-                                    ? "text-primary-600 bg-neutral-50"
-                                    : "text-neutral-600 hover:text-neutral-900"
-                                }`}
-                        >
-                            {STATUS_TAB_LABELS[tab]}
-                            {activeTab === tab && (
-                                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600" />
-                            )}
-                        </button>
-                    ))}
-                </div>
+            {/* Status Filter Pills */}
+            <StatusFilterPills
+                filters={STATUS_TABS}
+                active={activeTab}
+                onChange={setActiveTab}
+            />
 
+            <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm flex flex-col">
                 {/* Table */}
                 <div className="p-0 relative">
                     <div className="w-full overflow-y-auto overflow-x-auto max-h-[60vh] min-h-[300px]">

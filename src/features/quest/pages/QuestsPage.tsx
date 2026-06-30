@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Edit2, MoreVertical, AlertTriangle, BadgeCheck, Compass } from "lucide-react";
-import { Card, Button, Input, Badge, EmptyState, ErrorState, SkeletonTableRows } from "@components/ui";
+import { Card, Button, Input, Badge, EmptyState, ErrorState, SkeletonTableRows, StatusFilterPills } from "@components/ui";
 import type { BadgeStatus } from "@components/ui";
 import { questService } from "@services/quest.service";
 import { useAuthStore } from "@store/auth.store";
@@ -10,7 +10,13 @@ import type { QuestStatus } from "@/types";
 import { toast } from "sonner";
 
 type Tab = QuestStatus;
-const TABS: Tab[] = ["Draft", "Under Review", "Changes Requested", "Published", "Rejected"];
+const TABS: { label: string; value: Tab }[] = [
+    { label: "Draft", value: "Draft" },
+    { label: "Under Review", value: "Under Review" },
+    { label: "Changes Requested", value: "Changes Requested" },
+    { label: "Published", value: "Published" },
+    { label: "Rejected", value: "Rejected" },
+];
 
 export function QuestsPage() {
     const { user, creator } = useAuthStore();
@@ -19,7 +25,7 @@ export function QuestsPage() {
     // Active creators may manage every quest state and submit for review — the portal
     // login gate already guarantees active status. is_verified is a badge, not a gate.
     const isVerified = !!creator?.is_verified;
-    const availableTabs = TABS;
+    const availableTabs = TABS.map((t) => t.value);
 
     const [activeTab, setActiveTab] = useState<Tab>("Draft");
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -187,27 +193,14 @@ export function QuestsPage() {
                 </div>
             )}
 
-            <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm flex flex-col">
-                <div className="flex items-center overflow-x-auto border-b border-neutral-200">
-                    {availableTabs.map((tab) => (
-                        <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab)}
-                            className={`px-6 py-4 text-sm font-medium whitespace-nowrap transition-colors relative
-                                ${activeTab === tab
-                                    ? "text-primary-600 bg-neutral-50"
-                                    : "text-neutral-600 hover:text-neutral-900"
-                                }
-                            `}
-                        >
-                            {tab}
-                            {activeTab === tab && (
-                                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600" />
-                            )}
-                        </button>
-                    ))}
-                </div>
+            {/* Status Filter Pills */}
+            <StatusFilterPills
+                filters={TABS}
+                active={activeTab}
+                onChange={setActiveTab}
+            />
 
+            <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm flex flex-col">
                 <div className="p-0 relative">
                     <div className="w-full overflow-y-auto overflow-x-auto max-h-[60vh] min-h-[300px]">
                         <table className="w-full text-left border-collapse min-w-[900px] table-fixed">

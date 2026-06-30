@@ -10,3 +10,4 @@ export { Skeleton, SkeletonText, SkeletonCard, SkeletonTableRows } from "./Skele
 export { Tooltip, InfoHint } from "./Tooltip";
 export { EmptyState } from "./EmptyState";
 export { ErrorState } from "./ErrorState";
+export { StatusFilterPills } from "./StatusFilterPills";
