@@ -112,9 +112,14 @@ export function MarkerDetailPage() {
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-1">
-                            <Badge status={marker.status === "pending" ? "under_review" : marker.status === "hidden" ? "archived" : marker.status as "approved" | "rejected"}>
+                            <Badge status={marker.status === "pending" ? "under_review" : marker.status as "approved" | "rejected"}>
                                 {marker.status}
                             </Badge>
+                            {marker.hidden && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-neutral-100 text-neutral-600 border border-neutral-200">
+                                    Hidden
+                                </span>
+                            )}
                             {marker.is_locked && (
                                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider bg-neutral-100 text-neutral-500 border border-neutral-200">
                                     <Lock className="w-3 h-3" /> Locked

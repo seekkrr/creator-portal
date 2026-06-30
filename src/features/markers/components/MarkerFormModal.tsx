@@ -83,6 +83,7 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
     const [tagInput, setTagInput] = useState("");
     const [uploadingMedia, setUploadingMedia] = useState(false);
     const [uploadingTtdImage, setUploadingTtdImage] = useState(false);
+    const [hidden, setHidden] = useState<boolean>(initial?.hidden ?? false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const ttdImageInputRef = useRef<HTMLInputElement>(null);
 
@@ -149,8 +150,10 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
         if (!open) return;
         if (mode === "edit" && initial) {
             reset({ ...DEFAULT_VALUES, ...markerToFormData(initial) });
+            setHidden(initial.hidden ?? false);
         } else {
             reset(DEFAULT_VALUES);
+            setHidden(false);
         }
         setTagInput("");
     }, [open, mode, initial, reset]);
@@ -175,7 +178,7 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
     const onSubmit = async (data: MarkerFormData) => {
         if (mode === "create") {
             try {
-                const promise = createMutation.mutateAsync(toCreatePayload(data));
+                const promise = createMutation.mutateAsync({ ...toCreatePayload(data), hidden });
                 toast.promise(promise, {
                     loading: "Creating marker…",
                     success: "Marker created!",
@@ -192,7 +195,7 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
             try {
                 const promise = updateMutation.mutateAsync({
                     id: initial.id,
-                    payload: toUpdatePayload(data),
+                    payload: { ...toUpdatePayload(data), hidden },
                 });
                 toast.promise(promise, {
                     loading: "Saving marker…",
@@ -341,6 +344,16 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
                                         rows={3}
                                     />
                                 </div>
+
+                                <label className="flex items-center gap-2 text-sm text-neutral-700">
+                                    <input
+                                        type="checkbox"
+                                        checked={hidden}
+                                        onChange={(e) => setHidden(e.target.checked)}
+                                        className="rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
+                                    />
+                                    Hidden (quest-only — not shown in public discovery)
+                                </label>
                             </div>
                         </section>
 

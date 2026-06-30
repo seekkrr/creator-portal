@@ -18,7 +18,12 @@ const STATUS_FILTERS: { label: string; value: StatusFilter }[] = [
     { label: "Approved", value: "approved" },
     { label: "Pending", value: "pending" },
     { label: "Rejected", value: "rejected" },
+];
+
+const VISIBILITY_FILTERS: { label: string; value: "all" | "hidden" | "visible" }[] = [
+    { label: "All", value: "all" },
     { label: "Hidden", value: "hidden" },
+    { label: "Visible", value: "visible" },
 ];
 
 export function MarkersPage() {
@@ -36,6 +41,7 @@ export function MarkersPage() {
     const canDelete = (status: MarkerStatus) => isStaff || status !== "approved";
 
     const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+    const [visibility, setVisibility] = useState<"all" | "hidden" | "visible">("all");
     const [search, setSearch] = useState("");
     const [searchInput, setSearchInput] = useState("");
 
@@ -60,11 +66,12 @@ export function MarkersPage() {
     }, []);
 
     const { data, isLoading, isError, refetch } = useQuery({
-        queryKey: ["creator-markers", { status: statusFilter, search }],
+        queryKey: ["creator-markers", { status: statusFilter, visibility, search }],
         queryFn: () =>
             markerService.listMarkers({
                 mine: true,
                 status: statusFilter !== "all" ? statusFilter : undefined,
+                hidden: visibility === "all" ? undefined : visibility === "hidden",
                 search: search || undefined,
             }),
         enabled: !!user,
@@ -206,6 +213,11 @@ export function MarkersPage() {
                     active={statusFilter}
                     onChange={setStatusFilter}
                 />
+                <StatusFilterPills
+                    filters={VISIBILITY_FILTERS}
+                    active={visibility}
+                    onChange={setVisibility}
+                />
                 <SearchBar
                     value={searchInput}
                     onChange={setSearchInput}
@@ -290,9 +302,16 @@ export function MarkersPage() {
                                                 {marker.category ?? "—"}
                                             </td>
                                             <td className="py-4 px-6 text-center">
-                                                <Badge status={marker.status === "pending" ? "under_review" : marker.status === "hidden" ? "archived" : marker.status as "approved" | "rejected"}>
-                                                    {marker.status}
-                                                </Badge>
+                                                <div className="inline-flex items-center gap-1.5">
+                                                    <Badge status={marker.status === "pending" ? "under_review" : marker.status as "approved" | "rejected"}>
+                                                        {marker.status}
+                                                    </Badge>
+                                                    {marker.hidden && (
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-neutral-100 text-neutral-600 border border-neutral-200">
+                                                            Hidden
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="py-4 px-6 text-sm text-neutral-500 whitespace-nowrap text-center">
                                                 {marker.created_at

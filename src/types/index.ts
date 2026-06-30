@@ -483,7 +483,7 @@ export type UpdateQuestPayload = Partial<Omit<CreateQuestPayload, "region_id" | 
 // Marker Types (V2)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type MarkerStatus = "approved" | "pending" | "hidden" | "rejected";
+export type MarkerStatus = "approved" | "pending" | "rejected";
 export type MarkerSource = "creator_created" | "user_submitted" | "admin_created" | "imported";
 
 export interface MarkerCenterDistance {
@@ -516,6 +516,7 @@ export interface Marker {
     things_to_do_text: string | null;
     things_to_do_image_url: string | null;
     region_id: string | null;
+    hidden: boolean;
     status: MarkerStatus;
     source: MarkerSource | null;
     created_by: string | null;
@@ -549,6 +550,7 @@ export interface CreateMarkerPayload {
     closes_at?: string;
     region_id?: string;
     properties?: Record<string, unknown>;
+    hidden?: boolean;
 }
 
 /** Body for `PUT /markers/{id}` (UpdateMarkerBody) — location is immutable; region_id
@@ -738,8 +740,13 @@ export interface MapboxRegionCandidate {
     overlaps: RegionMatchRef[];
     /** for hotspots, the enclosing city (from Mapbox context). */
     parent_city: { name: string | null; mapbox_id: string | null } | null;
-    /** ready-to-POST body for `POST /regions/resolve-or-create`. */
-    resolve_payload: ResolveOrCreateRegionPayload;
+    /**
+     * Ready-to-POST body for `POST /regions/resolve-or-create`. Null for
+     * candidates that are already existing SeekKrr regions (blended in by name,
+     * or matched by id/overlap) — those reuse `existing_region` directly and
+     * never resolve-or-create.
+     */
+    resolve_payload: ResolveOrCreateRegionPayload | null;
 }
 
 /** The region a creator settled on in the quest builder. */
