@@ -776,7 +776,8 @@ export type VoicePersona =
     | "historian_warm"
     | "mystery_whisper"
     | "energetic_guide"
-    | "elder_storyteller";
+    | "elder_storyteller"
+    | "custom";
 
 export interface Narrative {
     id: string;
@@ -788,6 +789,7 @@ export interface Narrative {
     trigger_location: GeoPoint | null;
     trigger_radius_m: number | null;
     voice_persona: VoicePersona | null;
+    custom_voice_id: string | null;
     media: string[];
     is_mandatory: boolean;
     is_unlocked: boolean;
@@ -817,6 +819,7 @@ export interface CreateNarrativePayload {
     trigger_location?: GeoPoint;
     trigger_radius_m?: number;
     voice_persona?: VoicePersona;
+    custom_voice_id?: string;
     media?: string[];
     is_mandatory?: boolean;
     is_unlocked?: boolean;

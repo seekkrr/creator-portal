@@ -69,6 +69,7 @@ export function NarrativeFormModal({
             content: "",
             subtitle: "",
             voice_persona: undefined,
+            custom_voice_id: "",
             media: [],
             is_mandatory: false,
             is_unlocked: false,
@@ -86,6 +87,7 @@ export function NarrativeFormModal({
                 content: initial.content ?? "",
                 subtitle: initial.subtitle ?? "",
                 voice_persona: initial.voice_persona ?? undefined,
+                custom_voice_id: initial.custom_voice_id ?? "",
                 media: initial.media ?? [],
                 is_mandatory: initial.is_mandatory,
                 is_unlocked: initial.is_unlocked,
@@ -100,6 +102,7 @@ export function NarrativeFormModal({
                 content: "",
                 subtitle: "",
                 voice_persona: undefined,
+                custom_voice_id: "",
                 media: [],
                 is_mandatory: false,
                 is_unlocked: false,
@@ -113,6 +116,7 @@ export function NarrativeFormModal({
     const attachId = watch("attach_id");
     const attachType = watch("attach_type");
     const content = watch("content") ?? "";
+    const selectedPersona = watch("voice_persona");
 
     // In edit mode, resolve the human-readable name of the attached target so
     // AttachTargetSelect can display "Marker: Colosseum" instead of "marker: 64f3a2b…".
@@ -470,11 +474,12 @@ export function NarrativeFormModal({
                                     className="w-full px-4 py-2.5 bg-white border border-neutral-300 rounded-lg text-neutral-900 focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-500 transition-colors disabled:bg-neutral-100"
                                 >
                                     <option value="">No voice persona</option>
-                                    {VOICE_PERSONAS.map((p) => (
+                                    {VOICE_PERSONAS.filter((p) => p !== "custom").map((p) => (
                                         <option key={p} value={p}>
                                             {VOICE_PERSONA_LABELS[p] ?? p}
                                         </option>
                                     ))}
+                                    <option value="custom">Custom (ElevenLabs voice ID)</option>
                                 </select>
                             )}
                         />
@@ -482,6 +487,26 @@ export function NarrativeFormModal({
                             <p className="mt-1.5 text-sm text-red-600">{errors.voice_persona.message}</p>
                         )}
                     </div>
+
+                    {/* Custom ElevenLabs voice ID */}
+                    {selectedPersona === "custom" && (
+                        <div className="w-full">
+                            <label className="block text-sm font-medium text-neutral-700 mb-1.5">
+                                ElevenLabs voice ID
+                            </label>
+                            <input
+                                {...register("custom_voice_id")}
+                                placeholder="e.g. pNInz6obpgDQGcFmaJgB"
+                                className="w-full px-4 py-2.5 bg-white border border-neutral-300 rounded-lg text-neutral-900 focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-500 transition-colors"
+                            />
+                            <p className="mt-1.5 text-xs text-neutral-500">
+                                The 20-character voice ID from your ElevenLabs voice library.
+                            </p>
+                            {errors.custom_voice_id && (
+                                <p className="mt-1.5 text-sm text-red-600">{errors.custom_voice_id.message}</p>
+                            )}
+                        </div>
+                    )}
 
                     {/* Media upload */}
                     <div className="w-full space-y-2">

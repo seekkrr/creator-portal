@@ -22,7 +22,7 @@ interface ReviewStepProps {
     // later steps collect (gallery + quest narrative) so Review reflects everything.
     formData: Partial<CreateQuestFormData> & {
         galleryImages?: CloudinaryAsset[];
-        questNarrative?: { title?: string; content?: string; voice_persona?: string };
+        questNarrative?: { title?: string; content?: string; voice_persona?: string; custom_voice_id?: string };
     };
     onBack: () => void;
     onSubmit: (status: QuestStatus) => void;

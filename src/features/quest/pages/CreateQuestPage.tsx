@@ -68,7 +68,7 @@ type WizardFormData = Partial<CreateQuestFormData> & {
   // Optional quest-level narrative (Step 5). Posted to /narratives after the
   // quest is created (its attach_id is the new quest id), never embedded in the
   // quest payload.
-  questNarrative?: { title?: string; content?: string; voice_persona?: string };
+  questNarrative?: { title?: string; content?: string; voice_persona?: string; custom_voice_id?: string };
 };
 
 export function CreateQuestPage() {
@@ -285,6 +285,9 @@ export function CreateQuestPage() {
             attach_id: quest.id,
             ...(qn.content?.trim() ? { content: qn.content.trim() } : {}),
             ...(qn.voice_persona ? { voice_persona: qn.voice_persona as VoicePersona } : {}),
+            ...(qn.voice_persona === "custom" && qn.custom_voice_id
+                ? { custom_voice_id: qn.custom_voice_id }
+                : {}),
             status: "draft",
           });
         } catch (err) {
