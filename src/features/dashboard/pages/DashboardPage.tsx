@@ -390,7 +390,7 @@ export function DashboardPage() {
 
                 <div className="bg-white p-6 rounded-2xl border border-neutral-100 shadow-sm hover:shadow-md transition-all">
                     <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-violet-50 rounded-xl flex items-center justify-center text-violet-600">
+                        <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
                             <BookOpen className="w-6 h-6" />
                         </div>
                         <div>
