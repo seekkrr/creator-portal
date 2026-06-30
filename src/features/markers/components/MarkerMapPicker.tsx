@@ -11,14 +11,20 @@ export interface LngLat {
 interface MarkerMapPickerProps {
     value: LngLat | null;
     onChange: (lngLat: LngLat) => void;
+    /**
+     * Preferred center for the map when no pin has been placed yet.
+     * Falls back to the MapComponent default (Bangalore) when undefined.
+     */
+    defaultCenter?: LngLat;
 }
 
 /**
  * Presentational map picker.
  * - Click anywhere on the map → places a single pin and calls onChange.
  * - Search selects a location → centers the map + places a pin.
+ * - When no value is set, centers on `defaultCenter` if provided.
  */
-export function MarkerMapPicker({ value, onChange }: MarkerMapPickerProps) {
+export function MarkerMapPicker({ value, onChange, defaultCenter }: MarkerMapPickerProps) {
     const handleMapClick = useCallback(
         (loc: MapMarkerLocation) => {
             onChange({ lng: loc.longitude, lat: loc.latitude });
@@ -37,9 +43,9 @@ export function MarkerMapPicker({ value, onChange }: MarkerMapPickerProps) {
         ? [{ longitude: value.lng, latitude: value.lat }]
         : [];
 
-    const center = value
-        ? { lng: value.lng, lat: value.lat }
-        : undefined;
+    // Pin position drives the center when set; otherwise use caller-supplied
+    // defaultCenter (creator's region) or let MapComponent fall back to Bangalore.
+    const center = value ?? defaultCenter;
 
     return (
         <div className="space-y-2">

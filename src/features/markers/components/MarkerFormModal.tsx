@@ -1,13 +1,14 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { X, Upload, Loader2, AlertTriangle } from "lucide-react";
 import { Card, Button, Input, Textarea } from "@components/ui";
 import { markerService } from "@services/marker.service";
 import { cloudinaryService } from "@services/cloudinary.service";
 import { MarkerMapPicker } from "./MarkerMapPicker";
+import type { LngLat } from "./MarkerMapPicker";
 import { MarkerRegionSelect } from "./MarkerRegionSelect";
 import { markerFormSchema, toCreatePayload, toUpdatePayload, MARKER_CATEGORIES } from "../schemas/marker.schema";
 import type { MarkerFormData } from "../schemas/marker.schema";
@@ -84,6 +85,52 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
     const [uploadingTtdImage, setUploadingTtdImage] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const ttdImageInputRef = useRef<HTMLInputElement>(null);
+
+    // --- Smart default map center for Create mode (F14) ---
+    // Priority: (1) most recent creator marker, (2) browser geolocation, (3) Bangalore fallback.
+    const [geoCenter, setGeoCenter] = useState<LngLat | undefined>(undefined);
+
+    // Fetch creator's own markers once per session to find a representative location.
+    const { data: ownMarkersData } = useQuery({
+        queryKey: ["markers", "mine", "map-default"],
+        queryFn: () => markerService.listMarkers({ mine: true, page_size: 1 }),
+        staleTime: 5 * 60_000,
+        // Only run when in create mode and the modal is open
+        enabled: mode === "create" && open,
+    });
+
+    // Derive the most recent marker's center (backend returns newest-first by default).
+    const recentMarkerCenter: LngLat | undefined = (() => {
+        const m = ownMarkersData?.items?.[0];
+        const coords = m?.location?.coordinates;
+        if (Array.isArray(coords) && coords.length === 2) {
+            return { lng: coords[0] as number, lat: coords[1] as number };
+        }
+        return undefined;
+    })();
+
+    // Attempt browser geolocation once when modal opens in create mode and no
+    // marker-based center is available yet.
+    useEffect(() => {
+        if (!open || mode !== "create" || recentMarkerCenter) return;
+        if (!navigator.geolocation) return;
+        let cancelled = false;
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                if (!cancelled) {
+                    setGeoCenter({ lng: pos.coords.longitude, lat: pos.coords.latitude });
+                }
+            },
+            () => { /* permission denied or unavailable — silently fall back */ },
+            { timeout: 5000, maximumAge: 60_000 }
+        );
+        return () => { cancelled = true; };
+    }, [open, mode, recentMarkerCenter]);
+
+    // The effective default center passed to the map picker (create mode only).
+    // Edit mode always centers on the existing marker's location (driven by `value`).
+    const smartDefaultCenter: LngLat | undefined =
+        mode === "create" ? (recentMarkerCenter ?? geoCenter) : undefined;
 
     const {
         register,
@@ -318,6 +365,7 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
                                     setValue("longitude", lng, { shouldValidate: true });
                                     setValue("latitude", lat, { shouldValidate: true });
                                 }}
+                                defaultCenter={smartDefaultCenter}
                             />
                             {errors.longitude && (
                                 <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
