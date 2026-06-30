@@ -19,6 +19,8 @@ export interface ListMarkersParams {
     search?: string;
     page?: number;
     page_size?: number;
+    /** true = hidden only, false = visible only, undefined = both. */
+    hidden?: boolean;
 }
 
 export const markerService = {
