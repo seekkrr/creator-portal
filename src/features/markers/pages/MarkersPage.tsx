@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { MoreVertical, AlertTriangle, Search, Plus, MapPin } from "lucide-react";
-import { Card, Button, Input, Badge, EmptyState, ErrorState, SkeletonTableRows } from "@components/ui";
+import { MoreVertical, AlertTriangle, Plus, MapPin } from "lucide-react";
+import { Card, Button, Input, Badge, EmptyState, ErrorState, SkeletonTableRows, SearchBar } from "@components/ui";
 import { markerService } from "@services/marker.service";
 import { useAuthStore } from "@store/auth.store";
 import { ALLOWED_CREATOR_ROLES } from "@/types";
@@ -216,21 +216,12 @@ export function MarkersPage() {
                         </button>
                     ))}
                 </div>
-                <form onSubmit={handleSearch} className="flex gap-2 sm:ml-auto w-full sm:w-auto">
-                    <div className="relative flex-1 sm:flex-none sm:w-60">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                        <input
-                            type="text"
-                            value={searchInput}
-                            onChange={(e) => setSearchInput(e.target.value)}
-                            placeholder="Search markers…"
-                            className="w-full pl-9 pr-4 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
-                        />
-                    </div>
-                    <Button type="submit" variant="outline" size="sm">
-                        Search
-                    </Button>
-                </form>
+                <SearchBar
+                    value={searchInput}
+                    onChange={setSearchInput}
+                    onSubmit={handleSearch}
+                    placeholder="Search markers…"
+                />
             </div>
 
             {/* Table */}

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { MoreVertical, AlertTriangle, Volume2, Link2, BookOpen } from "lucide-react";
-import { Card, Button, Input, Badge, EmptyState, ErrorState, SkeletonTableRows, StatusFilterPills } from "@components/ui";
+import { Card, Button, Input, Badge, EmptyState, ErrorState, SkeletonTableRows, StatusFilterPills, SearchBar } from "@components/ui";
 import type { BadgeStatus } from "@components/ui";
 import { narrativeService } from "@services/narrative.service";
 import { markerService } from "@services/marker.service";
@@ -124,11 +124,17 @@ export function NarrativesPage() {
     const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
     const [dropdownPosition, setDropdownPosition] = useState<"bottom" | "top">("bottom");
 
-    // Debounce search
+    // Debounce search (fires automatically while typing)
     React.useEffect(() => {
         const timer = setTimeout(() => setDebouncedSearch(search), 400);
         return () => clearTimeout(timer);
     }, [search]);
+
+    // Explicit submit bypasses debounce and fires immediately
+    const handleSearch = (e: React.FormEvent) => {
+        e.preventDefault();
+        setDebouncedSearch(search);
+    };
 
     // Close dropdown on outside click
     React.useEffect(() => {
@@ -230,21 +236,13 @@ export function NarrativesPage() {
                     <h1 className="text-3xl font-display font-bold text-primary-900 tracking-tight">My Narratives</h1>
                     <p className="text-neutral-500 mt-1">Manage your narrative content and audio</p>
                 </div>
-                <div className="flex items-center gap-3 w-full sm:w-auto">
-                    <Input
-                        placeholder="Search narratives…"
-                        value={search}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
-                        className="w-full sm:w-64"
-                    />
-                    <Button
-                        variant="accent"
-                        onClick={() => { setEditTarget(null); setIsModalOpen(true); }}
-                        className="whitespace-nowrap"
-                    >
-                        Create New Narrative
-                    </Button>
-                </div>
+                <Button
+                    variant="accent"
+                    onClick={() => { setEditTarget(null); setIsModalOpen(true); }}
+                    className="w-full sm:w-auto"
+                >
+                    Create New Narrative
+                </Button>
             </div>
 
             {/* Delete Confirmation Modal */}
@@ -308,12 +306,20 @@ export function NarrativesPage() {
                 onSaved={handleSaved}
             />
 
-            {/* Status Filter Pills */}
-            <StatusFilterPills
-                filters={STATUS_TABS}
-                active={activeTab}
-                onChange={setActiveTab}
-            />
+            {/* Filters + Search */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <StatusFilterPills
+                    filters={STATUS_TABS}
+                    active={activeTab}
+                    onChange={setActiveTab}
+                />
+                <SearchBar
+                    value={search}
+                    onChange={setSearch}
+                    onSubmit={handleSearch}
+                    placeholder="Search narratives…"
+                />
+            </div>
 
             <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm flex flex-col">
                 {/* Table */}

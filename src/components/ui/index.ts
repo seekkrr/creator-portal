@@ -11,3 +11,4 @@ export { Tooltip, InfoHint } from "./Tooltip";
 export { EmptyState } from "./EmptyState";
 export { ErrorState } from "./ErrorState";
 export { StatusFilterPills } from "./StatusFilterPills";
+export { SearchBar } from "./SearchBar";

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { AlertTriangle, MoreVertical, Plus, Eye, Edit2, Trash2, ToggleLeft, ToggleRight, ListChecks } from "lucide-react";
-import { Card, Button, Input, EmptyState, ErrorState, SkeletonTableRows } from "@components/ui";
+import { Card, Button, Input, EmptyState, ErrorState, SkeletonTableRows, SearchBar } from "@components/ui";
 import { taskService } from "@services/task.service";
 import type { TaskType } from "@/types";
 import { toast } from "sonner";
@@ -24,6 +24,8 @@ export function TasksPage() {
     const queryClient = useQueryClient();
 
     const [typeFilter, setTypeFilter] = useState<TaskType | "">("");
+    const [search, setSearch] = useState("");
+    const [searchInput, setSearchInput] = useState("");
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [editTask, setEditTask] = useState<TaskConfig | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -85,7 +87,17 @@ export function TasksPage() {
         }
     };
 
-    const tasks = data?.items ?? [];
+    const handleSearch = (e: React.FormEvent) => {
+        e.preventDefault();
+        setSearch(searchInput);
+    };
+
+    const allTasks = data?.items ?? [];
+    const tasks = search
+        ? allTasks.filter((t) =>
+              (t.title ?? "").toLowerCase().includes(search.toLowerCase())
+          )
+        : allTasks;
 
     return (
         <div className="animate-fade-in space-y-4 w-full max-w-6xl mx-auto pb-6 px-4 sm:px-6 lg:px-8">
@@ -172,26 +184,34 @@ export function TasksPage() {
             )}
 
             <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm flex flex-col">
-                {/* Type Filter */}
-                <div className="flex items-center gap-2 overflow-x-auto px-4 py-3 border-b border-neutral-200">
-                    <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider shrink-0">Type:</span>
-                    <button
-                        onClick={() => setTypeFilter("")}
-                        className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors whitespace-nowrap
-                            ${typeFilter === "" ? "bg-primary-600 text-white" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
-                    >
-                        All
-                    </button>
-                    {TASK_TYPES.map((t) => (
+                {/* Type Filter + Search */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 px-4 py-3 border-b border-neutral-200">
+                    <div className="flex items-center gap-2 overflow-x-auto flex-wrap">
+                        <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider shrink-0">Type:</span>
                         <button
-                            key={t}
-                            onClick={() => setTypeFilter(t)}
+                            onClick={() => setTypeFilter("")}
                             className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors whitespace-nowrap
-                                ${typeFilter === t ? "bg-primary-600 text-white" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
+                                ${typeFilter === "" ? "bg-primary-600 text-white" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
                         >
-                            {TASK_TYPE_LABELS[t]}
+                            All
                         </button>
-                    ))}
+                        {TASK_TYPES.map((t) => (
+                            <button
+                                key={t}
+                                onClick={() => setTypeFilter(t)}
+                                className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors whitespace-nowrap
+                                    ${typeFilter === t ? "bg-primary-600 text-white" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
+                            >
+                                {TASK_TYPE_LABELS[t]}
+                            </button>
+                        ))}
+                    </div>
+                    <SearchBar
+                        value={searchInput}
+                        onChange={setSearchInput}
+                        onSubmit={handleSearch}
+                        placeholder="Search tasks…"
+                    />
                 </div>
 
                 <div className="p-0 relative">
@@ -227,8 +247,8 @@ export function TasksPage() {
                                                 icon={<ListChecks className="w-7 h-7" />}
                                                 title="No tasks found"
                                                 description={
-                                                    typeFilter
-                                                        ? "No tasks match this type filter. Try a different type or create a new task."
+                                                    search || typeFilter
+                                                        ? "No tasks match your current filters. Try adjusting the type or search."
                                                         : "Create your first task to give explorers something to do at your markers."
                                                 }
                                                 action={

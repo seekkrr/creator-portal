@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Edit2, MoreVertical, AlertTriangle, BadgeCheck, Compass } from "lucide-react";
-import { Card, Button, Input, Badge, EmptyState, ErrorState, SkeletonTableRows, StatusFilterPills } from "@components/ui";
+import { Card, Button, Input, Badge, EmptyState, ErrorState, SkeletonTableRows, StatusFilterPills, SearchBar } from "@components/ui";
 import type { BadgeStatus } from "@components/ui";
 import { questService } from "@services/quest.service";
 import { useAuthStore } from "@store/auth.store";
@@ -28,6 +28,8 @@ export function QuestsPage() {
     const availableTabs = TABS.map((t) => t.value);
 
     const [activeTab, setActiveTab] = useState<Tab>("Draft");
+    const [search, setSearch] = useState("");
+    const [searchInput, setSearchInput] = useState("");
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [confirmText, setConfirmText] = useState("");
     const [questToDelete, setQuestToDelete] = useState<string | null>(null);
@@ -54,6 +56,11 @@ export function QuestsPage() {
         queryFn: () => questService.getMyQuests({ status: activeTab }),
         enabled: !!user,
     });
+
+    const handleSearch = (e: React.FormEvent) => {
+        e.preventDefault();
+        setSearch(searchInput);
+    };
 
     const handleSubmitForReview = async (questId: string) => {
         const promise = questService.submitQuest(questId);
@@ -103,7 +110,12 @@ export function QuestsPage() {
         }
     };
 
-    const quests = data?.items || [];
+    const allQuests = data?.items || [];
+    const quests = search
+        ? allQuests.filter((q) =>
+              (q.title ?? "").toLowerCase().includes(search.toLowerCase())
+          )
+        : allQuests;
 
     /** Map server-side Title-Case QuestStatus → Badge status prop. */
     const questStatusToBadgeStatus = (status: QuestStatus): BadgeStatus => {
@@ -193,12 +205,20 @@ export function QuestsPage() {
                 </div>
             )}
 
-            {/* Status Filter Pills */}
-            <StatusFilterPills
-                filters={TABS}
-                active={activeTab}
-                onChange={setActiveTab}
-            />
+            {/* Filters + Search */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <StatusFilterPills
+                    filters={TABS}
+                    active={activeTab}
+                    onChange={setActiveTab}
+                />
+                <SearchBar
+                    value={searchInput}
+                    onChange={setSearchInput}
+                    onSubmit={handleSearch}
+                    placeholder="Search quests…"
+                />
+            </div>
 
             <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm flex flex-col">
                 <div className="p-0 relative">
@@ -232,7 +252,9 @@ export function QuestsPage() {
                                                 icon={<Compass className="w-7 h-7" />}
                                                 title="No quests here yet"
                                                 description={
-                                                    activeTab === "Draft"
+                                                    search
+                                                        ? `No quests match "${search}" in the "${activeTab}" stage.`
+                                                        : activeTab === "Draft"
                                                         ? "Start building your first quest — add markers, narratives and tasks to bring it to life."
                                                         : `You don't have any quests in the "${activeTab}" stage right now.`
                                                 }
