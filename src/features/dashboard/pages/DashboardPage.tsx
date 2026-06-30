@@ -1,10 +1,14 @@
 import { Link } from "react-router-dom";
 import { useAuthStore } from "@store/auth.store";
 import { useCreatorStats } from "@hooks/useCreatorStats";
-import { MapPin, Compass, Trophy, Clock, Play, BadgeCheck, AlertTriangle } from "lucide-react";
+import { MapPin, Compass, Trophy, Clock, Play, BadgeCheck, AlertTriangle, BookOpen, Navigation, FileText } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { WALKTHROUGH_VIDEOS } from "@config/walkthroughVideos";
 import { Button } from "@components/ui";
+import { markerService } from "@services/marker.service";
+import { narrativeService } from "@services/narrative.service";
+import { questService } from "@services/quest.service";
 
 // ... (StackedHeroCards remains same)
 
@@ -148,6 +152,33 @@ function HowToVideoPlayer() {
     );
 }
 
+// --- Resume Draft Cue ---
+// Reads the quest_creation_form sessionStorage key written by CreateQuestPage.
+// Returns null when no draft exists (cue is hidden).
+interface WizardDraftInfo {
+    title: string | null;
+    step: number;
+    totalSteps: number;
+}
+function useWizardDraft(): WizardDraftInfo | null {
+    const [draft, setDraft] = useState<WizardDraftInfo | null>(null);
+    useEffect(() => {
+        try {
+            const raw = sessionStorage.getItem("quest_creation_form");
+            if (!raw) return;
+            const parsed = JSON.parse(raw) as { formData?: { title?: string }; currentStep?: number };
+            setDraft({
+                title: parsed.formData?.title ?? null,
+                step: parsed.currentStep ?? 1,
+                totalSteps: 6,
+            });
+        } catch {
+            // ignore
+        }
+    }, []);
+    return draft;
+}
+
 export function DashboardPage() {
     const { user, creator } = useAuthStore();
 
@@ -160,6 +191,33 @@ export function DashboardPage() {
     // banners are defensive — they should only ever surface on a stale session.
     const status = creator?.status;
     const isBlocked = status === "suspended" || status === "rejected";
+
+    // Draft resume cue (sessionStorage wizard draft)
+    const wizardDraft = useWizardDraft();
+
+    // Content counts — markers, narratives, quests (my own, all statuses).
+    // page_size=1 is enough: we only need the total count from the response.
+    const { data: markerData } = useQuery({
+        queryKey: ["markers", "mine", "dashboard"],
+        queryFn: () => markerService.listMarkers({ mine: true, page_size: 1 }),
+        staleTime: 60_000,
+    });
+    const { data: narrativeData } = useQuery({
+        queryKey: ["narratives", "mine", "dashboard"],
+        queryFn: () => narrativeService.listNarratives({ mine: true, page_size: 1 }),
+        staleTime: 60_000,
+    });
+    const { data: myQuestData } = useQuery({
+        queryKey: ["quests", "me", "dashboard"],
+        queryFn: () => questService.getMyQuests({ page_size: 1 }),
+        staleTime: 60_000,
+    });
+
+    const markerCount = markerData?.total ?? 0;
+    const narrativeCount = narrativeData?.total ?? 0;
+    const myQuestCount = myQuestData?.total ?? 0;
+    // "has content" = at least one marker, narrative, or quest exists
+    const hasContent = markerCount > 0 || narrativeCount > 0 || myQuestCount > 0;
 
     return (
         <div className="animate-fade-in font-sans space-y-4 lg:space-y-6">
@@ -218,6 +276,31 @@ export function DashboardPage() {
                 </div>
             ))}
 
+            {/* Resume Draft Cue — shown only when a wizard draft exists in sessionStorage */}
+            {wizardDraft && (
+                <Link to="/creator/quest/create" className="block">
+                    <div className="p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 bg-primary-50 border border-primary-200 hover:border-primary-400 hover:bg-primary-100 transition-colors cursor-pointer">
+                        <div className="flex items-center gap-3 flex-1">
+                            <div className="w-9 h-9 bg-primary-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <FileText className="w-5 h-5 text-white" />
+                            </div>
+                            <div>
+                                <p className="font-semibold text-primary-900 text-sm">
+                                    Continue your draft
+                                    {wizardDraft.title ? ` — ${wizardDraft.title}` : ""}
+                                </p>
+                                <p className="text-xs text-primary-700 mt-0.5">
+                                    Step {wizardDraft.step} of {wizardDraft.totalSteps} · Pick up where you left off
+                                </p>
+                            </div>
+                        </div>
+                        <span className="flex-shrink-0 px-4 py-2 rounded-full bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition-colors whitespace-nowrap">
+                            Resume
+                        </span>
+                    </div>
+                </Link>
+            )}
+
             {/* Hero Section */}
             <div className="flex flex-col lg:flex-row gap-8 lg:gap-24 items-center justify-between mt-4">
                 <div className="space-y-4 sm:space-y-6 lg:space-y-8 xl:space-y-10 max-w-2xl flex-1">
@@ -238,11 +321,13 @@ export function DashboardPage() {
 
                     <div className="pt-1 lg:pt-2">
                         <p className="text-lg lg:text-xl font-medium text-neutral-900 mb-3 sm:mb-4 lg:mb-6 xl:mb-8">
-                            What's the wait then, create your first Quest today
+                            {hasContent
+                                ? "Keep building your journeys"
+                                : "What's the wait then, create your first Quest today"}
                         </p>
                         <Link to="/creator/quest/create">
                             <Button variant="accent" size="lg" className="rounded-full text-lg lg:text-xl tracking-wide px-8 py-3 lg:px-10 lg:py-4 hover:scale-105 transition-transform">
-                                Create Quest
+                                {hasContent ? "Create Quest" : "Create Quest"}
                             </Button>
                         </Link>
                     </div>
@@ -254,7 +339,7 @@ export function DashboardPage() {
             </div>
 
             {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 lg:gap-6">
                 <div className="bg-white p-6 rounded-2xl border border-neutral-100 shadow-sm hover:shadow-md transition-all">
                     <div className="flex items-center gap-4">
                         <div className="w-12 h-12 bg-primary-50 rounded-xl flex items-center justify-center text-primary-600">
@@ -287,6 +372,30 @@ export function DashboardPage() {
                         <div>
                             <p className="text-sm font-medium text-neutral-500 uppercase tracking-wider">Total Earnings</p>
                             <p className="text-3xl font-bold text-neutral-900">₹{stats.total_earnings.toLocaleString()}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-white p-6 rounded-2xl border border-neutral-100 shadow-sm hover:shadow-md transition-all">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-teal-50 rounded-xl flex items-center justify-center text-teal-600">
+                            <Navigation className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium text-neutral-500 uppercase tracking-wider">Markers</p>
+                            <p className="text-3xl font-bold text-neutral-900">{markerCount}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-white p-6 rounded-2xl border border-neutral-100 shadow-sm hover:shadow-md transition-all">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-violet-50 rounded-xl flex items-center justify-center text-violet-600">
+                            <BookOpen className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium text-neutral-500 uppercase tracking-wider">Narratives</p>
+                            <p className="text-3xl font-bold text-neutral-900">{narrativeCount}</p>
                         </div>
                     </div>
                 </div>
