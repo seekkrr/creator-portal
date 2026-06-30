@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { MoreVertical, AlertTriangle, Plus, MapPin } from "lucide-react";
-import { Card, Button, Input, Badge, EmptyState, ErrorState, SkeletonTableRows, SearchBar } from "@components/ui";
+import { Card, Button, Input, Badge, EmptyState, ErrorState, SkeletonTableRows, SearchBar, StatusFilterPills } from "@components/ui";
 import { markerService } from "@services/marker.service";
 import { useAuthStore } from "@store/auth.store";
 import { ALLOWED_CREATOR_ROLES } from "@/types";
@@ -201,21 +201,11 @@ export function MarkersPage() {
 
             {/* Filters + Search */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                <div className="flex items-center gap-1 flex-wrap">
-                    {STATUS_FILTERS.map((f) => (
-                        <button
-                            key={f.value}
-                            onClick={() => setStatusFilter(f.value)}
-                            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors
-                                ${statusFilter === f.value
-                                    ? "bg-primary-600 text-white"
-                                    : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
-                                }`}
-                        >
-                            {f.label}
-                        </button>
-                    ))}
-                </div>
+                <StatusFilterPills
+                    filters={STATUS_FILTERS}
+                    active={statusFilter}
+                    onChange={setStatusFilter}
+                />
                 <SearchBar
                     value={searchInput}
                     onChange={setSearchInput}

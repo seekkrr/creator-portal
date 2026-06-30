@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { AlertTriangle, MoreVertical, Plus, Eye, Edit2, Trash2, ToggleLeft, ToggleRight, ListChecks } from "lucide-react";
-import { Card, Button, Input, EmptyState, ErrorState, SkeletonTableRows, SearchBar } from "@components/ui";
+import { Card, Button, Input, EmptyState, ErrorState, SkeletonTableRows, SearchBar, StatusFilterPills } from "@components/ui";
 import { taskService } from "@services/task.service";
 import { markerService } from "@services/marker.service";
 import type { TaskType } from "@/types";
@@ -201,25 +201,14 @@ export function TasksPage() {
 
             {/* Filters + Search */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                <div className="flex items-center gap-1 flex-wrap">
-                    <button
-                        onClick={() => setTypeFilter("")}
-                        className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors
-                            ${typeFilter === "" ? "bg-primary-600 text-white" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
-                    >
-                        All
-                    </button>
-                    {TASK_TYPES.map((t) => (
-                        <button
-                            key={t}
-                            onClick={() => setTypeFilter(t)}
-                            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors
-                                ${typeFilter === t ? "bg-primary-600 text-white" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
-                        >
-                            {TASK_TYPE_LABELS[t]}
-                        </button>
-                    ))}
-                </div>
+                <StatusFilterPills<TaskType | "">
+                    filters={[
+                        { label: "All", value: "" },
+                        ...TASK_TYPES.map((t) => ({ label: TASK_TYPE_LABELS[t], value: t })),
+                    ]}
+                    active={typeFilter}
+                    onChange={setTypeFilter}
+                />
                 <SearchBar
                     value={searchInput}
                     onChange={setSearchInput}
