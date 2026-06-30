@@ -6,6 +6,8 @@ import { Card, Button, Input, Badge, EmptyState, ErrorState, SkeletonTableRows, 
 import type { BadgeStatus } from "@components/ui";
 import { narrativeService } from "@services/narrative.service";
 import { markerService } from "@services/marker.service";
+import { questService } from "@services/quest.service";
+import { regionService } from "@services/region.service";
 import { useAuthStore } from "@store/auth.store";
 import { NarrativeFormModal } from "../components/NarrativeFormModal";
 import { ChainGroupRows } from "../components/ChainGroupRows";
@@ -156,19 +158,49 @@ export function NarrativesPage() {
 
     const narratives = data?.items ?? [];
 
+    // ── Attach-name resolution ────────────────────────────────────────────────
+    // Narratives can attach to markers, quests, or regions.  We resolve names
+    // for all three so the ATTACH column never shows a raw ObjectId.
+    // NOTE: page_size is capped at 100 by the backend (>100 → 422).
+
     const { data: allMarkersData } = useQuery({
         queryKey: ["creator-markers-all"],
-        queryFn: () => markerService.listMarkers({ mine: true, page_size: 200 }),
+        queryFn: () => markerService.listMarkers({ mine: true, page_size: 100 }),
         enabled: !!user,
         staleTime: 5 * 60 * 1000,
     });
-    const markerTitleMap = React.useMemo(() => {
+
+    const { data: allQuestsData } = useQuery({
+        queryKey: ["creator-quests-all"],
+        queryFn: () => questService.getMyQuests({ page_size: 100 }),
+        enabled: !!user,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const { data: allRegionsData } = useQuery({
+        queryKey: ["creator-regions-all"],
+        queryFn: () => regionService.listRegions({ page_size: 100 }),
+        enabled: !!user,
+        staleTime: 10 * 60 * 1000,
+    });
+
+    /**
+     * Combined id→name map covering all three attach types.
+     * Markers use `title`; quests use `title`; regions use `name`.
+     */
+    const attachNameMap = React.useMemo(() => {
         const map = new Map<string, string>();
         for (const m of (allMarkersData?.items ?? [])) {
-            map.set(m.id, m.title);
+            if (m.title) map.set(m.id, m.title);
+        }
+        for (const q of (allQuestsData?.items ?? [])) {
+            if (q.title) map.set(q.id, q.title);
+        }
+        for (const r of (allRegionsData?.items ?? [])) {
+            if (r.name) map.set(r.id, r.name);
         }
         return map;
-    }, [allMarkersData]);
+    }, [allMarkersData, allQuestsData, allRegionsData]);
 
     const handleSubmitForReview = (narrativeId: string) => {
         const promise = narrativeService.submitNarrative(narrativeId);
@@ -399,7 +431,7 @@ export function NarrativesPage() {
                                                     openDropdownId={openDropdownId}
                                                     dropdownPosition={dropdownPosition}
                                                     onDropdownToggle={handleDropdownToggle}
-                                                    markerTitleMap={markerTitleMap}
+                                                    markerTitleMap={attachNameMap}
                                                     onView={(id) => {
                                                         navigate(`/creator/narratives/view/${id}`);
                                                         setOpenDropdownId(null);
@@ -454,8 +486,8 @@ export function NarrativesPage() {
                                                                 <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-primary-50 text-primary-600 border border-primary-100 w-fit">
                                                                     {narrative.attach_type}
                                                                 </span>
-                                                                <span className="text-xs text-neutral-600 truncate max-w-[140px]" title={markerTitleMap.get(narrative.attach_id) ?? narrative.attach_id}>
-                                                                    {markerTitleMap.get(narrative.attach_id) ?? narrative.attach_id}
+                                                                <span className="text-xs text-neutral-600 truncate max-w-[140px]" title={attachNameMap.get(narrative.attach_id) ?? narrative.attach_id}>
+                                                                    {attachNameMap.get(narrative.attach_id) ?? narrative.attach_id}
                                                                 </span>
                                                             </div>
                                                         </td>

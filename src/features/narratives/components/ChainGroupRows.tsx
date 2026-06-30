@@ -14,6 +14,7 @@ export interface ChainGroupRowsProps {
     openDropdownId: string | null;
     dropdownPosition: "bottom" | "top";
     onDropdownToggle: (id: string, e: React.MouseEvent<HTMLButtonElement>) => void;
+    /** id→name map covering markers, quests, and regions. */
     markerTitleMap: Map<string, string>;
     onView: (id: string) => void;
     onEdit: (narrative: Narrative) => void;

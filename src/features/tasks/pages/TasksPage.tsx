@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { AlertTriangle, MoreVertical, Plus, Eye, Edit2, Trash2, ToggleLeft, ToggleRight, ListChecks } from "lucide-react";
 import { Card, Button, Input, EmptyState, ErrorState, SkeletonTableRows, SearchBar } from "@components/ui";
 import { taskService } from "@services/task.service";
+import { markerService } from "@services/marker.service";
 import type { TaskType } from "@/types";
 import { toast } from "sonner";
 import { TaskFormModal } from "../components/TaskFormModal";
@@ -45,6 +46,21 @@ export function TasksPage() {
         queryFn: () =>
             taskService.listTaskConfigs({ mine: true, task_type: typeFilter || undefined }),
     });
+
+    // Resolve marker ids → titles for the MARKER column.
+    // page_size capped at 100 by the backend (>100 → 422).
+    const { data: markersData } = useQuery({
+        queryKey: ["creator-markers-all"],
+        queryFn: () => markerService.listMarkers({ mine: true, page_size: 100 }),
+        staleTime: 5 * 60 * 1000,
+    });
+    const markerTitleMap = React.useMemo(() => {
+        const map = new Map<string, string>();
+        for (const m of (markersData?.items ?? [])) {
+            if (m.title) map.set(m.id, m.title);
+        }
+        return map;
+    }, [markersData]);
 
     const toggleActiveMutation = useMutation({
         mutationFn: (taskId: string) => taskService.toggleActive(taskId),
@@ -273,8 +289,8 @@ export function TasksPage() {
                                                     {TASK_TYPE_LABELS[task.task_type]}
                                                 </span>
                                             </td>
-                                            <td className="py-4 px-6 text-sm text-neutral-500 truncate max-w-[140px]" title={task.marker_id}>
-                                                {task.marker_id.slice(-8)}
+                                            <td className="py-4 px-6 text-sm text-neutral-500 truncate max-w-[140px]" title={markerTitleMap.get(task.marker_id) ?? task.marker_id}>
+                                                {markerTitleMap.get(task.marker_id) ?? task.marker_id}
                                             </td>
                                             <td className="py-4 px-6 text-sm text-neutral-700 font-semibold text-center">
                                                 {task.base_points}
