@@ -468,6 +468,8 @@ export interface CreateQuestPayload {
     max_expense?: number;
     best_month_start?: string;
     best_month_end?: string;
+    /** Recommended start time, 24-hour "HH:MM". */
+    start_time?: string;
     marker_playlist?: PlaylistItemInput[];
     cloudinary_assets?: QuestAssetInput[];
     reel_urls?: string[];
