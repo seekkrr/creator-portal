@@ -10,6 +10,9 @@ import {
     Flag,
     ListChecks,
     Info,
+    CalendarRange,
+    Wallet,
+    Sunrise,
 } from "lucide-react";
 import { Button, Card, Badge } from "@components/ui";
 import { WaypointMapComponent, type PlaylistPoint } from "@features/map";
@@ -65,7 +68,20 @@ export function ReviewStep({ formData, onBack, onSubmit, isSubmitting }: ReviewS
         city,
         latitude,
         longitude,
+        bestMonthStart,
+        bestMonthEnd,
+        minExpense,
+        maxExpense,
+        startTime,
     } = formData;
+
+    // Trip-planning metadata, formatted the same way the mobile quest page reads them.
+    const bestTimeText =
+        bestMonthStart && bestMonthEnd ? `${bestMonthStart} – ${bestMonthEnd}` : null;
+    const expenseText =
+        typeof minExpense === "number" && typeof maxExpense === "number"
+            ? `₹${minExpense} – ₹${maxExpense}`
+            : null;
 
     // Submission is allowed for any active creator (the portal login gate guarantees
     // active status). is_verified is a trust badge, never a submission gate.
@@ -119,6 +135,24 @@ export function ReviewStep({ formData, onBack, onSubmit, isSubmitting }: ReviewS
                         <span className="inline-flex items-center gap-1.5 text-neutral-600">
                             <Clock className="w-4 h-4" />
                             {duration} min
+                        </span>
+                    )}
+                    {bestTimeText && (
+                        <span className="inline-flex items-center gap-1.5 text-neutral-600">
+                            <CalendarRange className="w-4 h-4 text-primary-500" />
+                            {bestTimeText}
+                        </span>
+                    )}
+                    {expenseText && (
+                        <span className="inline-flex items-center gap-1.5 text-neutral-600">
+                            <Wallet className="w-4 h-4 text-primary-500" />
+                            {expenseText}
+                        </span>
+                    )}
+                    {startTime && (
+                        <span className="inline-flex items-center gap-1.5 text-neutral-600">
+                            <Sunrise className="w-4 h-4 text-primary-500" />
+                            Start by {startTime}
                         </span>
                     )}
                     <span className="inline-flex items-center gap-1.5 text-neutral-600">

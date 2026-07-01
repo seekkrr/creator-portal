@@ -51,6 +51,27 @@ const difficultyOptions: {
     { value: "expert", label: "Expert", color: "danger" },
 ];
 
+// Best-time is stored as month names (matches how the mobile app renders the
+// "Best Time" range, e.g. "October - March"). Empty = not set.
+const MONTHS = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+] as const;
+
+// Native <select> styled to match the shared <Input> control.
+const selectCls =
+    "w-full px-4 py-2.5 bg-white border border-neutral-300 rounded-lg text-neutral-900 " +
+    "transition-colors duration-150 focus:outline-none focus:border-primary-500 " +
+    "focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500";
+
+// Empty number inputs yield "" (or null); coerce to `undefined` so optional
+// numeric fields validate instead of failing as NaN.
+const toOptionalNumber = (v: unknown): number | undefined => {
+    if (v === "" || v === null || v === undefined) return undefined;
+    const n = Number(v);
+    return Number.isNaN(n) ? undefined : n;
+};
+
 /**
  * Field label with an inline "?" help hint, matching the location step.
  * Renders a real <label> when it points at a single control (`htmlFor`), or a
@@ -100,6 +121,11 @@ export function DetailsStep({ defaultValues, onNext, onBack }: DetailsStepProps)
             theme: defaultValues.theme ?? ["adventure"],
             difficulty: defaultValues.difficulty ?? "moderate",
             duration: defaultValues.duration ?? 60,
+            bestMonthStart: defaultValues.bestMonthStart ?? "",
+            bestMonthEnd: defaultValues.bestMonthEnd ?? "",
+            minExpense: defaultValues.minExpense,
+            maxExpense: defaultValues.maxExpense,
+            startTime: defaultValues.startTime ?? "",
         },
     });
 
@@ -278,6 +304,91 @@ export function DetailsStep({ defaultValues, onNext, onBack }: DetailsStepProps)
                                 type="number"
                                 placeholder="60"
                                 error={errors.duration?.message}
+                            />
+                        </div>
+
+                        {/* Best Time (month range) */}
+                        <div>
+                            <FieldLabel
+                                id="best-time-label"
+                                hint="The ideal months to take this quest (weather, crowds, festivals). Shown to explorers as a range, e.g. 'October – March'. Optional."
+                            >
+                                Best Time
+                                <span className="ml-1 font-normal text-neutral-400">· optional</span>
+                            </FieldLabel>
+                            <div role="group" aria-labelledby="best-time-label" className="grid grid-cols-2 gap-3">
+                                <select
+                                    aria-label="Best time — from month"
+                                    className={selectCls}
+                                    {...register("bestMonthStart")}
+                                >
+                                    <option value="">From…</option>
+                                    {MONTHS.map((m) => (
+                                        <option key={m} value={m}>
+                                            {m}
+                                        </option>
+                                    ))}
+                                </select>
+                                <select
+                                    aria-label="Best time — to month"
+                                    className={selectCls}
+                                    {...register("bestMonthEnd")}
+                                >
+                                    <option value="">To…</option>
+                                    {MONTHS.map((m) => (
+                                        <option key={m} value={m}>
+                                            {m}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Expenses (per-person cost range, INR) */}
+                        <div>
+                            <FieldLabel
+                                id="expenses-label"
+                                hint="Rough per-person spend for the quest — entry fees, food, transport (in ₹). Shown as a range, e.g. '₹500 – ₹2000'. Optional."
+                            >
+                                Expenses (₹ per person)
+                                <span className="ml-1 font-normal text-neutral-400">· optional</span>
+                            </FieldLabel>
+                            <div role="group" aria-labelledby="expenses-label" className="grid grid-cols-2 gap-3">
+                                <Input
+                                    aria-label="Minimum expense"
+                                    type="number"
+                                    min={0}
+                                    placeholder="Min"
+                                    leftIcon={<span className="text-neutral-400">₹</span>}
+                                    error={errors.minExpense?.message}
+                                    {...register("minExpense", { setValueAs: toOptionalNumber })}
+                                />
+                                <Input
+                                    aria-label="Maximum expense"
+                                    type="number"
+                                    min={0}
+                                    placeholder="Max"
+                                    leftIcon={<span className="text-neutral-400">₹</span>}
+                                    error={errors.maxExpense?.message}
+                                    {...register("maxExpense", { setValueAs: toOptionalNumber })}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Start By (recommended start time) */}
+                        <div>
+                            <FieldLabel
+                                htmlFor="quest-start-time"
+                                hint="The recommended time of day to begin, in 24-hour HH:MM (e.g. 09:00). Helps explorers plan around opening hours and daylight. Optional."
+                            >
+                                Start By
+                                <span className="ml-1 font-normal text-neutral-400">· optional</span>
+                            </FieldLabel>
+                            <Input
+                                id="quest-start-time"
+                                type="time"
+                                error={errors.startTime?.message}
+                                {...register("startTime")}
                             />
                         </div>
                     </div>

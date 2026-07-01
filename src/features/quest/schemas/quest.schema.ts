@@ -60,6 +60,20 @@ export const detailsStepSchema = z.object({
     theme: z.array(z.enum(DETAILS_THEMES)).min(1, "Select at least one theme"),
     difficulty: z.enum(["easy", "moderate", "hard", "expert"] as const) satisfies z.ZodType<QuestDifficulty>,
     duration: z.number().min(30).max(1440).optional(),
+    // Trip-planning metadata (all optional). Maps to the V2 quest model:
+    //   bestMonthStart/bestMonthEnd → best_month_start / best_month_end (month names)
+    //   minExpense/maxExpense       → min_expense / max_expense (per-person cost range)
+    //   startTime                   → start_time (recommended start, 24-hour HH:MM)
+    // Empty number inputs come through as `undefined` via setValueAs (see DetailsStep).
+    bestMonthStart: z.string().optional(),
+    bestMonthEnd: z.string().optional(),
+    minExpense: z.number().min(0, "Must be 0 or more").optional(),
+    maxExpense: z.number().min(0, "Must be 0 or more").optional(),
+    startTime: z
+        .string()
+        .regex(/^([01][0-9]|2[0-3]):[0-5][0-9]$/, "Use 24-hour HH:MM")
+        .optional()
+        .or(z.literal("")),
 });
 
 export type DetailsStepData = z.infer<typeof detailsStepSchema>;
@@ -154,6 +168,9 @@ export const defaultFormValues: Partial<CreateQuestFormData> = {
     theme: ["adventure"],
     difficulty: "moderate",
     duration: 60,
+    bestMonthStart: "",
+    bestMonthEnd: "",
+    startTime: "",
     markerPlaylist: [],
     galleryImages: [],
 };

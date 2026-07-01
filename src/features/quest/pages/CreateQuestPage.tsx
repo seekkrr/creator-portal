@@ -144,6 +144,11 @@ export function CreateQuestPage() {
         theme: themes.length > 0 ? themes : ["adventure"],
         difficulty: existingQuest.difficulty ?? "moderate",
         duration: existingQuest.duration_minutes ?? 60,
+        bestMonthStart: existingQuest.best_month_start ?? "",
+        bestMonthEnd: existingQuest.best_month_end ?? "",
+        minExpense: existingQuest.min_expense ?? undefined,
+        maxExpense: existingQuest.max_expense ?? undefined,
+        startTime: existingQuest.start_time ?? "",
         regionId,
         regionName,
         city: regionName,
@@ -233,12 +238,21 @@ export function CreateQuestPage() {
       secure_url: a.secure_url,
     }));
 
+    // Trip-planning metadata (all optional): only include set values so drafts
+    // don't post empty strings/NaN. Maps to the V2 quest model fields.
+    const startTime = data.startTime?.trim();
+
     return {
       title: data.title,
       description: data.description,
       theme: data.theme,
       difficulty: data.difficulty,
       duration_minutes: data.duration,
+      ...(data.bestMonthStart ? { best_month_start: data.bestMonthStart } : {}),
+      ...(data.bestMonthEnd ? { best_month_end: data.bestMonthEnd } : {}),
+      ...(typeof data.minExpense === "number" ? { min_expense: data.minExpense } : {}),
+      ...(typeof data.maxExpense === "number" ? { max_expense: data.maxExpense } : {}),
+      ...(startTime ? { start_time: startTime } : {}),
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       region_id: data.regionId!,
       marker_playlist,
