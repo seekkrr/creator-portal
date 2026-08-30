@@ -14,7 +14,7 @@ export interface User {
     contact_id?: string;
     security_id?: string;
     profile_id?: string;
-    role: Array<"user" | "admin" | "super_admin" | "creator" | "moderator" | "finance">;
+    role: Array<"user" | "admin" | "super_admin" | "creator" | "moderator" | "finance" | "business">;
     status: "active" | "suspended" | "deleted";
     is_creator: boolean;
     email?: string; // returned by /auth/verify (to_self_dict)

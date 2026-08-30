@@ -79,6 +79,18 @@ const PayoutAccountsPage = lazyRetry(() =>
     }))
 );
 
+const BusinessDashboardPage = lazyRetry(() =>
+    import("@features/business/BusinessDashboard").then((m) => ({
+        default: m.BusinessDashboard,
+    }))
+);
+
+const BusinessApplicationPage = lazyRetry(() =>
+    import("@features/business/BusinessApplicationPage").then((m) => ({
+        default: m.BusinessApplicationPage,
+    }))
+);
+
 export const router = createBrowserRouter(
     [
     {
@@ -257,6 +269,22 @@ export const router = createBrowserRouter(
                                 element: (
                                     <SuspenseWrapper>
                                         <PayoutAccountsPage />
+                                    </SuspenseWrapper>
+                                ),
+                            },
+                            {
+                                path: "business",
+                                element: (
+                                    <SuspenseWrapper>
+                                        <BusinessDashboardPage />
+                                    </SuspenseWrapper>
+                                ),
+                            },
+                            {
+                                path: "business/apply",
+                                element: (
+                                    <SuspenseWrapper>
+                                        <BusinessApplicationPage />
                                     </SuspenseWrapper>
                                 ),
                             },

@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Footer } from "@components/ui";
 
 export function DashboardLayout() {
-    const { logout } = useAuthStore();
+    const { user, logout } = useAuthStore();
     const navigate = useNavigate();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -27,6 +27,14 @@ export function DashboardLayout() {
                         {/* Desktop Navigation — creator workflow tabs only.
                             Terms / Privacy / Contact live in the footer. */}
                         <nav className="hidden md:flex items-center gap-8 ml-auto">
+                            {user?.role?.includes("business") && (
+                                <Link
+                                    to="/creator/business"
+                                    className="text-base font-semibold text-primary-600 hover:text-primary-800 transition-colors"
+                                >
+                                    Business Dashboard
+                                </Link>
+                            )}
                             <Link
                                 to="/creator/quests"
                                 className="text-base font-normal text-neutral-600 hover:text-neutral-900 transition-colors"
@@ -95,6 +103,15 @@ export function DashboardLayout() {
                 {isMobileMenuOpen && (
                     <div className="md:hidden border-t border-neutral-200 bg-white">
                         <div className="px-4 py-4 space-y-4">
+                            {user?.role?.includes("business") && (
+                                <Link
+                                    to="/creator/business"
+                                    className="block text-base font-semibold text-primary-600 hover:text-primary-800"
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                >
+                                    Business Dashboard
+                                </Link>
+                            )}
                             <Link
                                 to="/creator/quests"
                                 className="block text-base font-normal text-neutral-600 hover:text-neutral-900"
