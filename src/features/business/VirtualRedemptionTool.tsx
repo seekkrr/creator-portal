@@ -9,7 +9,7 @@ interface Props {
     secretCode: string; // the business's own secret code to pass to the backend
 }
 
-export const VirtualRedemptionTool: React.FC<Props> = ({ markerId, secretCode }) => {
+export const VirtualRedemptionTool: React.FC<Props> = ({ secretCode }) => {
     const [code, setCode] = useState("");
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);

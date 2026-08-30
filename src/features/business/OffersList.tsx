@@ -77,7 +77,7 @@ export const OffersList: React.FC<OffersListProps> = ({ markerId }) => {
                     <div className="flex items-center space-x-6">
                         {/* Status Indicator */}
                         <div className="flex flex-col items-center justify-center space-y-2">
-                            <Badge variant={offer.is_active ? "success" : "neutral"}>
+                            <Badge variant={offer.is_active ? "success" : "default"}>
                                 {offer.is_active ? "Active" : "Paused"}
                             </Badge>
                         </div>

@@ -22,7 +22,7 @@ export const BusinessDashboard: React.FC = () => {
             try {
                 const res = await markerService.listMarkers({ mine: true });
                 if (res.items.length > 0) {
-                    setMarker(res.items[0]);
+                    setMarker(res.items[0] ?? null);
                 }
             } catch (err) {
                 console.error("Failed to fetch business marker", err);

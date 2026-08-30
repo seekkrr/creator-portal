@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { offerService } from "@/services/offer.service";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -25,7 +25,7 @@ interface FormValues {
 export const OfferForm: React.FC<OfferFormProps> = ({ markerId, onClose, onSuccess }) => {
     const [submitting, setSubmitting] = useState(false);
     
-    const { register, handleSubmit, watch, control, formState: { errors } } = useForm<FormValues>({
+    const { register, handleSubmit, watch, formState: { errors } } = useForm<FormValues>({
         defaultValues: {
             rule_type: "quantitative",
             trigger_n: 10,
