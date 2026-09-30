@@ -48,6 +48,12 @@ export function DashboardLayout() {
                                 My Markers
                             </Link>
                             <Link
+                                to="/creator/events"
+                                className="text-base font-normal text-neutral-600 hover:text-neutral-900 transition-colors"
+                            >
+                                My Events
+                            </Link>
+                            <Link
                                 to="/creator/narratives"
                                 className="text-base font-normal text-neutral-600 hover:text-neutral-900 transition-colors"
                             >
@@ -125,6 +131,13 @@ export function DashboardLayout() {
                                 onClick={() => setIsMobileMenuOpen(false)}
                             >
                                 My Markers
+                            </Link>
+                            <Link
+                                to="/creator/events"
+                                className="block text-base font-normal text-neutral-600 hover:text-neutral-900"
+                                onClick={() => setIsMobileMenuOpen(false)}
+                            >
+                                My Events
                             </Link>
                             <Link
                                 to="/creator/narratives"

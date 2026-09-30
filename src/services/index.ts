@@ -5,6 +5,7 @@ export { creatorService } from "./creator.service";
 export { userService } from "./user.service";
 export { narrativeService } from "./narrative.service";
 export { markerService } from "./marker.service";
+export { eventService } from "./event.service";
 export { taskService } from "./task.service";
 export { rewardService } from "./reward.service";
 export { regionService } from "./region.service";
