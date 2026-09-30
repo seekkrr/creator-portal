@@ -264,6 +264,7 @@ export interface EventSession {
     title: string;
     description?: string | null;
     stage?: string | null;
+    category?: string | null; // creator-typed: Cultural / Literary / Technical / Pronite …
     marker_id?: string | null;
     start_time?: string | null;
     end_time?: string | null;

@@ -18,11 +18,16 @@ interface EventFormModalProps {
     onSaved: (event: EventDetail) => void;
 }
 
+type TabKey = "details" | "media" | "map" | "travel" | "schedule";
+
 /** ISO datetime → "YYYY-MM-DDTHH:MM" for a datetime-local input. */
 function isoToLocalInput(v: string | null | undefined): string {
     if (!v) return "";
     return v.length >= 16 ? v.slice(0, 16) : v;
 }
+
+const numStr = (n: unknown): string =>
+    typeof n === "number" && Number.isFinite(n) ? String(n) : "";
 
 const DEFAULT_VALUES: Partial<EventFormData> = {
     title: "",
@@ -32,6 +37,7 @@ const DEFAULT_VALUES: Partial<EventFormData> = {
     cover_image_url: "",
     start_date: "",
     end_date: "",
+    timezone: "Asia/Kolkata",
     region_id: "",
     is_featured: false,
 };
@@ -45,6 +51,7 @@ function eventToFormData(e: EventDetail): Partial<EventFormData> {
         cover_image_url: e.media?.cover_image_url ?? "",
         start_date: isoToLocalInput(e.start_date),
         end_date: isoToLocalInput(e.end_date),
+        timezone: e.timezone ?? "Asia/Kolkata",
         region_id: e.region_id ?? "",
         capacity: e.capacity ?? undefined,
         is_featured: e.is_featured ?? false,
@@ -52,13 +59,15 @@ function eventToFormData(e: EventDetail): Partial<EventFormData> {
 }
 
 export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventFormModalProps) {
+    const [tab, setTab] = useState<TabKey>("details");
     const [categoryInput, setCategoryInput] = useState("");
-    // Venues & schedule are nested/dynamic — managed as local state (not RHF)
-    // and merged into the payload on submit.
+    // Nested/dynamic data — managed as local state (not RHF) and merged on submit.
     const [venues, setVenues] = useState<EventVenue[]>([]);
     const [schedule, setSchedule] = useState<EventScheduleDay[]>([]);
     const [mapFilters, setMapFilters] = useState<EventMapFilter[]>([]);
     const [travel, setTravel] = useState<TravelInfo>({});
+    const [gallery, setGallery] = useState<string[]>([]);
+    const [videos, setVideos] = useState<string[]>([]);
 
     const {
         register,
@@ -81,29 +90,34 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
 
     useEffect(() => {
         if (!open) return;
+        setTab("details");
         if (mode === "edit" && initial) {
             reset({ ...DEFAULT_VALUES, ...eventToFormData(initial) });
             setVenues(initial.venues ?? []);
             setSchedule(initial.schedule ?? []);
             setMapFilters(initial.map_filters ?? []);
             setTravel((initial.travel_info as TravelInfo) ?? {});
+            setGallery(initial.media?.image_urls ?? []);
+            setVideos(initial.media?.video_urls ?? []);
         } else {
             reset(DEFAULT_VALUES);
             setVenues([]);
             setSchedule([]);
             setMapFilters([]);
             setTravel({});
+            setGallery([]);
+            setVideos([]);
         }
         setCategoryInput("");
     }, [open, mode, initial, reset]);
 
-    // ── Map filter editor helpers ──
+    // ── Map filter helpers ──
     const addFilter = () => setMapFilters((f) => [...f, { key: "", label: "", icon: "", color: "#FECD36" }]);
     const updateFilter = (i: number, patch: Partial<EventMapFilter>) =>
         setMapFilters((f) => f.map((x, idx) => (idx === i ? { ...x, ...patch } : x)));
     const removeFilter = (i: number) => setMapFilters((f) => f.filter((_, idx) => idx !== i));
 
-    // ── Travel (How to Travel) helpers ──
+    // ── Travel helpers ──
     const cabs = travel.cabs ?? [];
     const setTravelField = (k: keyof TravelInfo, v: string) => setTravel((t) => ({ ...t, [k]: v }));
     const addCab = () => setTravel((t) => ({ ...t, cabs: [...(t.cabs ?? []), { name: "" }] }));
@@ -112,27 +126,31 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
     const removeCab = (i: number) =>
         setTravel((t) => ({ ...t, cabs: (t.cabs ?? []).filter((_, idx) => idx !== i) }));
 
-    const cleanMapFilters = (): EventMapFilter[] =>
-        mapFilters
-            .filter((f) => (f.label && f.label.trim()) || (f.key && f.key.trim()))
-            .map((f) => ({ ...f, key: (f.key || f.label || "").trim().toLowerCase().replace(/\s+/g, "-") }));
-    const cleanTravel = (): Record<string, unknown> => {
-        const t: TravelInfo = {};
-        if (travel.by_air?.trim()) t.by_air = travel.by_air.trim();
-        if (travel.by_rail?.trim()) t.by_rail = travel.by_rail.trim();
-        if (travel.by_road?.trim()) t.by_road = travel.by_road.trim();
-        const c = (travel.cabs ?? []).filter((x) => x.name && x.name.trim());
-        if (c.length) t.cabs = c;
-        return t as Record<string, unknown>;
-    };
+    // ── Media (gallery / videos) helpers ──
+    const addGallery = () => setGallery((g) => [...g, ""]);
+    const updateGallery = (i: number, v: string) => setGallery((g) => g.map((x, idx) => (idx === i ? v : x)));
+    const removeGallery = (i: number) => setGallery((g) => g.filter((_, idx) => idx !== i));
+    const addVideo = () => setVideos((g) => [...g, ""]);
+    const updateVideo = (i: number, v: string) => setVideos((g) => g.map((x, idx) => (idx === i ? v : x)));
+    const removeVideo = (i: number) => setVideos((g) => g.filter((_, idx) => idx !== i));
 
-    // ── Venue editor helpers ──
+    // ── Venue helpers ──
     const addVenue = () => setVenues((v) => [...v, { marker_id: "", name: "", category: "" }]);
     const updateVenue = (i: number, patch: Partial<EventVenue>) =>
         setVenues((v) => v.map((x, idx) => (idx === i ? { ...x, ...patch } : x)));
     const removeVenue = (i: number) => setVenues((v) => v.filter((_, idx) => idx !== i));
+    const setVenueCoord = (i: number, axis: "lng" | "lat", raw: string) =>
+        setVenues((vs) => vs.map((x, idx) => {
+            if (idx !== i) return x;
+            const curLng = x.coordinates?.[0];
+            const curLat = x.coordinates?.[1];
+            const lng = axis === "lng" ? raw : numStr(curLng);
+            const lat = axis === "lat" ? raw : numStr(curLat);
+            if (lng === "" && lat === "") return { ...x, coordinates: null };
+            return { ...x, coordinates: [lng === "" ? NaN : Number(lng), lat === "" ? NaN : Number(lat)] };
+        }));
 
-    // ── Schedule editor helpers ──
+    // ── Schedule helpers ──
     const addDay = () => setSchedule((s) => [...s, { label: `Day ${s.length + 1}`, sessions: [] }]);
     const updateDay = (i: number, patch: Partial<EventScheduleDay>) =>
         setSchedule((s) => s.map((d, idx) => (idx === i ? { ...d, ...patch } : d)));
@@ -148,13 +166,61 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
             idx === dayIdx ? { ...d, sessions: d.sessions.filter((_, j) => j !== sIdx) } : d
         ));
 
-    /** Drop empty rows so we never persist blank venues/sessions. */
+    // ── Payload cleaners ──
+    const cleanMapFilters = (): EventMapFilter[] =>
+        mapFilters
+            .filter((f) => (f.label && f.label.trim()) || (f.key && f.key.trim()))
+            .map((f) => ({ ...f, key: (f.key || f.label || "").trim().toLowerCase().replace(/\s+/g, "-") }));
+
+    const cleanTravel = (): Record<string, unknown> => {
+        const t: TravelInfo = {};
+        if (travel.by_air?.trim()) t.by_air = travel.by_air.trim();
+        if (travel.by_rail?.trim()) t.by_rail = travel.by_rail.trim();
+        if (travel.by_road?.trim()) t.by_road = travel.by_road.trim();
+        const c = (travel.cabs ?? []).filter((x) => x.name && x.name.trim());
+        if (c.length) t.cabs = c;
+        return t as Record<string, unknown>;
+    };
+
     const cleanVenues = (): EventVenue[] =>
-        venues.filter((v) => (v.name && v.name.trim()) || (v.marker_id && v.marker_id.trim()));
+        venues
+            .filter((v) => (v.name && v.name.trim()) || (v.marker_id && v.marker_id.trim()))
+            .map((v) => {
+                const coords = v.coordinates && v.coordinates.length === 2 && v.coordinates.every((n) => Number.isFinite(n))
+                    ? v.coordinates
+                    : undefined;
+                const out: EventVenue = { ...v, coordinates: coords ?? null };
+                return out;
+            });
+
     const cleanSchedule = (): EventScheduleDay[] =>
         schedule
             .map((d) => ({ ...d, sessions: d.sessions.filter((ss) => ss.title && ss.title.trim()) }))
             .filter((d) => d.sessions.length > 0 || (d.label && d.label.trim()));
+
+    const buildMedia = (cover: string | undefined): Partial<{ cover_image_url: string; image_urls: string[]; video_urls: string[] }> => {
+        const m: { cover_image_url?: string; image_urls?: string[]; video_urls?: string[] } = {};
+        if (cover && cover.trim()) m.cover_image_url = cover.trim();
+        const imgs = gallery.map((s) => s.trim()).filter(Boolean);
+        if (imgs.length) m.image_urls = imgs;
+        const vids = videos.map((s) => s.trim()).filter(Boolean);
+        if (vids.length) m.video_urls = vids;
+        return m;
+    };
+
+    /** Derive a bounding box from venue coordinates so the app can frame + lock the map. */
+    const buildBoundingBox = (vs: EventVenue[]): Record<string, unknown> | undefined => {
+        const pts = vs.map((v) => v.coordinates).filter((c): c is number[] => !!c && c.length === 2);
+        if (!pts.length) return undefined;
+        const lngs = pts.map((p) => p[0]).filter((n): n is number => Number.isFinite(n));
+        const lats = pts.map((p) => p[1]).filter((n): n is number => Number.isFinite(n));
+        if (!lngs.length || !lats.length) return undefined;
+        const pad = 0.01;
+        return {
+            min: [Math.min(...lngs) - pad, Math.min(...lats) - pad],
+            max: [Math.max(...lngs) + pad, Math.max(...lats) + pad],
+        };
+    };
 
     const categories = watch("categories");
 
@@ -165,7 +231,6 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
         if (next.length) setValue("categories", [...(categories ?? []), ...next]);
         setCategoryInput("");
     };
-
     const removeCategory = (c: string) =>
         setValue("categories", (categories ?? []).filter((x) => x !== c));
 
@@ -182,15 +247,19 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
         const schedulePayload = cleanSchedule();
         const filtersPayload = cleanMapFilters();
         const travelPayload = cleanTravel();
+        const mediaPayload = buildMedia(data.cover_image_url);
+        const bbox = buildBoundingBox(venuesPayload);
+        const extras = {
+            ...(venuesPayload.length ? { venues: venuesPayload } : {}),
+            ...(schedulePayload.length ? { schedule: schedulePayload } : {}),
+            ...(filtersPayload.length ? { map_filters: filtersPayload } : {}),
+            ...(Object.keys(travelPayload).length ? { travel_info: travelPayload } : {}),
+            ...(Object.keys(mediaPayload).length ? { media: mediaPayload } : {}),
+            ...(bbox ? { bounding_box: bbox } : {}),
+        };
         try {
             if (mode === "create") {
-                const promise = createMutation.mutateAsync({
-                    ...toCreatePayload(data),
-                    ...(venuesPayload.length ? { venues: venuesPayload } : {}),
-                    ...(schedulePayload.length ? { schedule: schedulePayload } : {}),
-                    ...(filtersPayload.length ? { map_filters: filtersPayload } : {}),
-                    ...(Object.keys(travelPayload).length ? { travel_info: travelPayload } : {}),
-                });
+                const promise = createMutation.mutateAsync({ ...toCreatePayload(data), ...extras });
                 toast.promise(promise, { loading: "Creating event…", success: "Event created!", error: "Failed to create event" });
                 onSaved(await promise);
                 onClose();
@@ -200,10 +269,13 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
                     id: initial.id,
                     payload: {
                         ...toUpdatePayload(data),
+                        // Always send these on edit so clearing them persists.
                         venues: venuesPayload,
                         schedule: schedulePayload,
                         map_filters: filtersPayload,
                         travel_info: travelPayload,
+                        media: mediaPayload,
+                        ...(bbox ? { bounding_box: bbox } : {}),
                     },
                 });
                 toast.promise(promise, { loading: "Saving event…", success: "Event updated!", error: "Failed to update event" });
@@ -215,281 +287,383 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
         }
     };
 
+    const onInvalid = () => {
+        // Only the Details/Media tabs hold validated fields.
+        if (errors.cover_image_url && !errors.title && !errors.end_date) setTab("media");
+        else setTab("details");
+    };
+
     if (!open) return null;
 
     const isBusy = createMutation.isPending || updateMutation.isPending;
+    const namedVenues = venues.filter((v) => v.name && v.name.trim());
+
+    const TabButton = ({ id, label, count }: { id: TabKey; label: string; count?: number }) => (
+        <button
+            type="button"
+            onClick={() => setTab(id)}
+            className={`px-4 py-2.5 text-sm font-semibold border-b-2 whitespace-nowrap transition-colors ${
+                tab === id
+                    ? "border-primary-600 text-primary-700"
+                    : "border-transparent text-neutral-500 hover:text-neutral-800"
+            }`}
+        >
+            {label}
+            {count != null && count > 0 && (
+                <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-primary-100 text-primary-700 text-[11px] font-bold align-middle">
+                    {count}
+                </span>
+            )}
+        </button>
+    );
+
+    const sessionCount = schedule.reduce((n, d) => n + d.sessions.length, 0);
+    const label = (t: string) => <label className="block text-sm font-medium text-neutral-700 mb-1">{t}</label>;
+    const sectionNote = (t: string) => <p className="text-xs text-neutral-400 mb-3">{t}</p>;
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-sm animate-fade-in">
-            <Card className="w-full max-w-2xl shadow-2xl border-neutral-200 overflow-hidden animate-scale-up max-h-[90vh] flex flex-col">
+            <Card className="w-full max-w-3xl shadow-2xl border-neutral-200 overflow-hidden animate-scale-up max-h-[92vh] flex flex-col">
+                {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 bg-white shrink-0">
-                    <h2 className="text-xl font-bold text-neutral-900">
-                        {mode === "create" ? "Create New Event" : "Edit Event"}
-                    </h2>
+                    <div>
+                        <h2 className="text-xl font-bold text-neutral-900">
+                            {mode === "create" ? "Create New Event" : "Edit Event"}
+                        </h2>
+                        <p className="text-xs text-neutral-400 mt-0.5">
+                            {mode === "create" ? "Fill in the tabs below — only the title is required." : "Update any tab and save."}
+                        </p>
+                    </div>
                     <button onClick={onClose} className="p-2 rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100" aria-label="Close modal">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex-1 flex flex-col min-h-0">
-                    <div className="p-6 space-y-5 bg-neutral-50 overflow-y-auto flex-1">
-                        <div>
-                            <label className="block text-sm font-medium text-neutral-700 mb-1">
-                                Title <span className="text-red-500">*</span>
-                            </label>
-                            <Input {...register("title")} placeholder="e.g. Hornbill Festival" className={errors.title ? "border-red-400" : ""} />
-                            {errors.title && (
-                                <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
-                                    <AlertTriangle className="w-3 h-3" /> {errors.title.message}
-                                </p>
-                            )}
-                        </div>
+                {/* Tabs */}
+                <div className="flex items-center gap-1 px-4 border-b border-neutral-200 bg-white shrink-0 overflow-x-auto">
+                    <TabButton id="details" label="Details" />
+                    <TabButton id="media" label="Media" count={gallery.length + videos.length} />
+                    <TabButton id="map" label="Map & Venues" count={venues.length} />
+                    <TabButton id="travel" label="Travel" />
+                    <TabButton id="schedule" label="Schedule" count={sessionCount} />
+                </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-neutral-700 mb-1">Subtitle</label>
-                            <Input {...register("subtitle")} placeholder="e.g. Music, Culture, Heritage" />
-                        </div>
+                <form onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate className="flex-1 flex flex-col min-h-0">
+                    <div className="p-6 bg-neutral-50 overflow-y-auto flex-1">
 
-                        <div>
-                            <label className="block text-sm font-medium text-neutral-700 mb-1">Description</label>
-                            <Textarea {...register("description")} rows={4} placeholder="What is this festival about?" />
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-neutral-700 mb-1">Start</label>
-                                <Input type="datetime-local" {...register("start_date")} />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-neutral-700 mb-1">End</label>
-                                <Input type="datetime-local" {...register("end_date")} className={errors.end_date ? "border-red-400" : ""} />
-                                {errors.end_date && <p className="mt-1 text-xs text-red-600">{errors.end_date.message}</p>}
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-neutral-700 mb-1">Categories</label>
-                            <div className="flex gap-2">
-                                <Input
-                                    value={categoryInput}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCategoryInput(e.target.value)}
-                                    onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
-                                        if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addCategory(); }
-                                    }}
-                                    placeholder="Type and press Enter"
-                                    className="flex-1"
-                                />
-                                <Button type="button" variant="outline" size="sm" onClick={addCategory}>Add</Button>
-                            </div>
-                            {categories && categories.length > 0 && (
-                                <div className="flex flex-wrap gap-2 mt-2">
-                                    {categories.map((c) => (
-                                        <span key={c} className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-primary-50 text-primary-700 border border-primary-200 rounded-full text-xs font-medium">
-                                            {c}
-                                            <button type="button" onClick={() => removeCategory(c)} className="text-primary-400 hover:text-primary-700" aria-label={`Remove ${c}`}>
-                                                <X className="w-3 h-3" />
-                                            </button>
-                                        </span>
-                                    ))}
+                        {/* ── DETAILS ── */}
+                        {tab === "details" && (
+                            <div className="space-y-5">
+                                <div>
+                                    {label("Title *")}
+                                    <Input {...register("title")} placeholder="e.g. Cliffesto 2026" className={errors.title ? "border-red-400" : ""} />
+                                    {errors.title && (
+                                        <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+                                            <AlertTriangle className="w-3 h-3" /> {errors.title.message}
+                                        </p>
+                                    )}
                                 </div>
-                            )}
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-neutral-700 mb-1">Cover Image URL</label>
-                            <Input {...register("cover_image_url")} placeholder="https://…" className={errors.cover_image_url ? "border-red-400" : ""} />
-                            {errors.cover_image_url && <p className="mt-1 text-xs text-red-600">{errors.cover_image_url.message}</p>}
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-neutral-700 mb-1">Region ID</label>
-                                <Input {...register("region_id")} placeholder="Optional region id" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-neutral-700 mb-1">Capacity</label>
-                                <Input type="number" min={0} placeholder="Unlimited" {...register("capacity", { valueAsNumber: true })} />
-                            </div>
-                        </div>
-
-                        {/* ── Map Filters (per-event pins) ── */}
-                        <div className="rounded-xl border border-neutral-200 bg-white p-4">
-                            <div className="flex items-center justify-between mb-3">
-                                <h3 className="text-sm font-semibold text-neutral-500 uppercase tracking-wider">Map Filters &amp; Pins</h3>
-                                <Button type="button" variant="outline" size="sm" onClick={addFilter} leftIcon={<Plus className="w-3.5 h-3.5" />}>Add</Button>
-                            </div>
-                            <p className="text-xs text-neutral-400 mb-2">Define the filter chips shown on the event's Explore-Around map. Each venue can be assigned a filter below.</p>
-                            {mapFilters.length === 0 ? (
-                                <p className="text-xs text-neutral-400">No filters yet (e.g. Stages, Food, Restrooms).</p>
-                            ) : (
-                                <div className="space-y-2">
-                                    {mapFilters.map((f, i) => (
-                                        <div key={i} className="flex gap-2 items-center">
-                                            <Input value={f.label} placeholder="Label (e.g. Stages)"
-                                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateFilter(i, { label: e.target.value })}
-                                                className="flex-1" />
-                                            <Input value={f.icon ?? ""} placeholder="icon (e.g. music)"
-                                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateFilter(i, { icon: e.target.value })}
-                                                className="w-32" />
-                                            <input type="color" value={f.color || "#FECD36"}
-                                                onChange={(e) => updateFilter(i, { color: e.target.value })}
-                                                className="w-10 h-9 rounded border border-neutral-300 bg-white" title="Pin color" />
-                                            <button type="button" onClick={() => removeFilter(i)} className="p-2 text-neutral-400 hover:text-red-600" aria-label="Remove filter">
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    ))}
+                                <div>
+                                    {label("Subtitle")}
+                                    <Input {...register("subtitle")} placeholder="e.g. Annual Techno-Cultural Fest" />
                                 </div>
-                            )}
-                        </div>
-
-                        {/* ── How to Travel ── */}
-                        <div className="rounded-xl border border-neutral-200 bg-white p-4 space-y-3">
-                            <h3 className="text-sm font-semibold text-neutral-500 uppercase tracking-wider">How to Travel</h3>
-                            <div>
-                                <label className="block text-xs font-medium text-neutral-600 mb-1">By Air</label>
-                                <Textarea rows={2} value={travel.by_air ?? ""} placeholder="Nearest airport, distance, fares…"
-                                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setTravelField("by_air", e.target.value)} />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-medium text-neutral-600 mb-1">By Rail</label>
-                                <Textarea rows={2} value={travel.by_rail ?? ""} placeholder="Nearest station, connections…"
-                                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setTravelField("by_rail", e.target.value)} />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-medium text-neutral-600 mb-1">By Road</label>
-                                <Textarea rows={2} value={travel.by_road ?? ""} placeholder="Highways, buses, parking…"
-                                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setTravelField("by_road", e.target.value)} />
-                            </div>
-                            <div>
-                                <div className="flex items-center justify-between mb-1">
-                                    <label className="block text-xs font-medium text-neutral-600">Cabs / Contacts</label>
-                                    <Button type="button" variant="outline" size="sm" onClick={addCab} leftIcon={<Plus className="w-3.5 h-3.5" />}>Add</Button>
+                                <div>
+                                    {label("Description")}
+                                    <Textarea {...register("description")} rows={5} placeholder="What is this festival about?" />
                                 </div>
-                                {cabs.map((c, i) => (
-                                    <div key={i} className="flex gap-2 items-center mb-1">
-                                        <Input value={c.name} placeholder="Name / vehicle"
-                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateCab(i, { name: e.target.value })}
-                                            className="flex-1" />
-                                        <Input value={c.contact ?? ""} placeholder="Phone"
-                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateCab(i, { contact: e.target.value })}
-                                            className="w-32" />
-                                        <Input value={c.fare ?? ""} placeholder="Fare"
-                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateCab(i, { fare: e.target.value })}
-                                            className="w-24" />
-                                        <button type="button" onClick={() => removeCab(i)} className="p-2 text-neutral-400 hover:text-red-600" aria-label="Remove cab">
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        {label("Start")}
+                                        <Input type="datetime-local" {...register("start_date")} />
                                     </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* ── Venues ── */}
-                        <div className="rounded-xl border border-neutral-200 bg-white p-4">
-                            <div className="flex items-center justify-between mb-3">
-                                <h3 className="text-sm font-semibold text-neutral-500 uppercase tracking-wider">Venues / Stages</h3>
-                                <Button type="button" variant="outline" size="sm" onClick={addVenue} leftIcon={<Plus className="w-3.5 h-3.5" />}>Add</Button>
-                            </div>
-                            {venues.length === 0 ? (
-                                <p className="text-xs text-neutral-400">No venues yet. Add stages, food courts, gates…</p>
-                            ) : (
-                                <div className="space-y-2">
-                                    {venues.map((v, i) => (
-                                        <div key={i} className="flex gap-2 items-start">
-                                            <Input value={v.name ?? ""} placeholder="Name (e.g. Main Stage)"
-                                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateVenue(i, { name: e.target.value })}
-                                                className="flex-1" />
-                                            <Input value={v.category ?? ""} placeholder="Category"
-                                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateVenue(i, { category: e.target.value })}
-                                                className="w-32" />
-                                            <Input value={v.marker_id ?? ""} placeholder="Marker ID (optional)"
-                                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateVenue(i, { marker_id: e.target.value })}
-                                                className="w-36" />
-                                            <select
-                                                value={v.filter_key ?? ""}
-                                                onChange={(e) => updateVenue(i, { filter_key: e.target.value || null })}
-                                                className="w-32 h-9 rounded-lg border border-neutral-300 bg-white text-sm px-2"
-                                                title="Map filter"
-                                            >
-                                                <option value="">— filter —</option>
-                                                {mapFilters
-                                                    .filter((f) => (f.key || f.label))
-                                                    .map((f, fi) => {
-                                                        const k = (f.key || f.label || "").trim().toLowerCase().replace(/\s+/g, "-");
-                                                        return <option key={fi} value={k}>{f.label || k}</option>;
-                                                    })}
-                                            </select>
-                                            <button type="button" onClick={() => removeVenue(i)} className="p-2 text-neutral-400 hover:text-red-600" aria-label="Remove venue">
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    ))}
+                                    <div>
+                                        {label("End")}
+                                        <Input type="datetime-local" {...register("end_date")} className={errors.end_date ? "border-red-400" : ""} />
+                                        {errors.end_date && <p className="mt-1 text-xs text-red-600">{errors.end_date.message}</p>}
+                                    </div>
                                 </div>
-                            )}
-                        </div>
-
-                        {/* ── Schedule ── */}
-                        <div className="rounded-xl border border-neutral-200 bg-white p-4">
-                            <div className="flex items-center justify-between mb-3">
-                                <h3 className="text-sm font-semibold text-neutral-500 uppercase tracking-wider">Schedule</h3>
-                                <Button type="button" variant="outline" size="sm" onClick={addDay} leftIcon={<Plus className="w-3.5 h-3.5" />}>Add Day</Button>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        {label("Timezone")}
+                                        <Input {...register("timezone")} placeholder="Asia/Kolkata" />
+                                    </div>
+                                    <div>
+                                        {label("Capacity")}
+                                        <Input type="number" min={0} placeholder="Unlimited" {...register("capacity", { valueAsNumber: true })} />
+                                    </div>
+                                </div>
+                                <div>
+                                    {label("Categories")}
+                                    <div className="flex gap-2">
+                                        <Input
+                                            value={categoryInput}
+                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCategoryInput(e.target.value)}
+                                            onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                                                if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addCategory(); }
+                                            }}
+                                            placeholder="e.g. Technical, Cultural — press Enter"
+                                            className="flex-1"
+                                        />
+                                        <Button type="button" variant="outline" size="sm" onClick={addCategory}>Add</Button>
+                                    </div>
+                                    {categories && categories.length > 0 && (
+                                        <div className="flex flex-wrap gap-2 mt-2">
+                                            {categories.map((c) => (
+                                                <span key={c} className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-primary-50 text-primary-700 border border-primary-200 rounded-full text-xs font-medium">
+                                                    {c}
+                                                    <button type="button" onClick={() => removeCategory(c)} className="text-primary-400 hover:text-primary-700" aria-label={`Remove ${c}`}>
+                                                        <X className="w-3 h-3" />
+                                                    </button>
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                <div>
+                                    {label("Region ID")}
+                                    <Input {...register("region_id")} placeholder="Optional region id" />
+                                </div>
+                                <label className="flex items-center gap-2 text-sm text-neutral-700 pt-1">
+                                    <input type="checkbox" {...register("is_featured")} className="rounded border-neutral-300 text-primary-600 focus:ring-primary-500" />
+                                    Featured event
+                                </label>
                             </div>
-                            {schedule.length === 0 ? (
-                                <p className="text-xs text-neutral-400">No schedule yet. Add days, then sessions within each day.</p>
-                            ) : (
-                                <div className="space-y-4">
-                                    {schedule.map((d, di) => (
-                                        <div key={di} className="rounded-lg border border-neutral-200 p-3">
-                                            <div className="flex gap-2 items-center mb-2">
-                                                <Input value={d.label ?? ""} placeholder="Day label (e.g. Day 1)"
-                                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateDay(di, { label: e.target.value })}
-                                                    className="flex-1" />
-                                                <button type="button" onClick={() => removeDay(di)} className="p-2 text-neutral-400 hover:text-red-600" aria-label="Remove day">
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                            <div className="space-y-2 pl-2">
-                                                {d.sessions.map((ss, si) => (
-                                                    <div key={si} className="flex gap-2 items-start">
-                                                        <Input value={ss.title} placeholder="Session / act title"
-                                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateSession(di, si, { title: e.target.value })}
-                                                            className="flex-1" />
-                                                        <Input value={ss.stage ?? ""} placeholder="Stage"
-                                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateSession(di, si, { stage: e.target.value })}
-                                                            className="w-28" />
-                                                        <Input type="datetime-local" value={ss.start_time ? ss.start_time.slice(0, 16) : ""}
-                                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateSession(di, si, { start_time: e.target.value })}
-                                                            className="w-44" />
-                                                        <label className="flex items-center gap-1 text-xs text-neutral-600 whitespace-nowrap">
-                                                            <input type="checkbox" checked={ss.status_override === "delayed"}
-                                                                onChange={(e) => updateSession(di, si, { status_override: e.target.checked ? "delayed" : undefined, delayed_to: e.target.checked ? ss.delayed_to : undefined })} />
-                                                            Delayed
-                                                        </label>
-                                                        {ss.status_override === "delayed" && (
-                                                            <Input type="datetime-local" value={ss.delayed_to ? ss.delayed_to.slice(0, 16) : ""}
-                                                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateSession(di, si, { delayed_to: e.target.value })}
-                                                                className="w-44" title="New time" />
-                                                        )}
-                                                        <button type="button" onClick={() => removeSession(di, si)} className="p-2 text-neutral-400 hover:text-red-600" aria-label="Remove session">
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
+                        )}
+
+                        {/* ── MEDIA ── */}
+                        {tab === "media" && (
+                            <div className="space-y-5">
+                                <div>
+                                    {label("Cover Image URL")}
+                                    <Input {...register("cover_image_url")} placeholder="https://…" className={errors.cover_image_url ? "border-red-400" : ""} />
+                                    {errors.cover_image_url && <p className="mt-1 text-xs text-red-600">{errors.cover_image_url.message}</p>}
+                                </div>
+                                <div className="rounded-xl border border-neutral-200 bg-white p-4">
+                                    <div className="flex items-center justify-between mb-1">
+                                        <h3 className="text-sm font-semibold text-neutral-600">Gallery images</h3>
+                                        <Button type="button" variant="outline" size="sm" onClick={addGallery} leftIcon={<Plus className="w-3.5 h-3.5" />}>Add</Button>
+                                    </div>
+                                    {sectionNote("Extra photos shown in the event's image gallery.")}
+                                    {gallery.length === 0 ? (
+                                        <p className="text-xs text-neutral-400">No gallery images yet.</p>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            {gallery.map((url, i) => (
+                                                <div key={i} className="flex gap-2 items-center">
+                                                    <Input value={url} placeholder="https://…" onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateGallery(i, e.target.value)} className="flex-1" />
+                                                    <button type="button" onClick={() => removeGallery(i)} className="p-2 text-neutral-400 hover:text-red-600" aria-label="Remove image"><Trash2 className="w-4 h-4" /></button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="rounded-xl border border-neutral-200 bg-white p-4">
+                                    <div className="flex items-center justify-between mb-1">
+                                        <h3 className="text-sm font-semibold text-neutral-600">Videos</h3>
+                                        <Button type="button" variant="outline" size="sm" onClick={addVideo} leftIcon={<Plus className="w-3.5 h-3.5" />}>Add</Button>
+                                    </div>
+                                    {sectionNote("Optional video URLs (e.g. aftermovie, teaser).")}
+                                    {videos.length === 0 ? (
+                                        <p className="text-xs text-neutral-400">No videos yet.</p>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            {videos.map((url, i) => (
+                                                <div key={i} className="flex gap-2 items-center">
+                                                    <Input value={url} placeholder="https://…" onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateVideo(i, e.target.value)} className="flex-1" />
+                                                    <button type="button" onClick={() => removeVideo(i)} className="p-2 text-neutral-400 hover:text-red-600" aria-label="Remove video"><Trash2 className="w-4 h-4" /></button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ── MAP & VENUES ── */}
+                        {tab === "map" && (
+                            <div className="space-y-5">
+                                <div className="rounded-xl border border-neutral-200 bg-white p-4">
+                                    <div className="flex items-center justify-between mb-1">
+                                        <h3 className="text-sm font-semibold text-neutral-600">Map filters &amp; pins</h3>
+                                        <Button type="button" variant="outline" size="sm" onClick={addFilter} leftIcon={<Plus className="w-3.5 h-3.5" />}>Add filter</Button>
+                                    </div>
+                                    {sectionNote("Filter chips on the Explore-Around map. Each venue below can be assigned one, and its colour becomes the pin colour.")}
+                                    {mapFilters.length === 0 ? (
+                                        <p className="text-xs text-neutral-400">No filters yet (e.g. Stages, Food, Parking).</p>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            {mapFilters.map((f, i) => (
+                                                <div key={i} className="flex gap-2 items-center">
+                                                    <Input value={f.label} placeholder="Label (e.g. Stages)" onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateFilter(i, { label: e.target.value })} className="flex-1" />
+                                                    <Input value={f.icon ?? ""} placeholder="icon" onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateFilter(i, { icon: e.target.value })} className="w-28" />
+                                                    <input type="color" value={f.color || "#FECD36"} onChange={(e) => updateFilter(i, { color: e.target.value })} className="w-10 h-9 rounded border border-neutral-300 bg-white shrink-0" title="Pin color" />
+                                                    <button type="button" onClick={() => removeFilter(i)} className="p-2 text-neutral-400 hover:text-red-600" aria-label="Remove filter"><Trash2 className="w-4 h-4" /></button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="rounded-xl border border-neutral-200 bg-white p-4">
+                                    <div className="flex items-center justify-between mb-1">
+                                        <h3 className="text-sm font-semibold text-neutral-600">Venues / stages</h3>
+                                        <Button type="button" variant="outline" size="sm" onClick={addVenue} leftIcon={<Plus className="w-3.5 h-3.5" />}>Add venue</Button>
+                                    </div>
+                                    {sectionNote("Add latitude & longitude so each venue shows as a pin on the map. The bounding box is computed from these automatically.")}
+                                    {venues.length === 0 ? (
+                                        <p className="text-xs text-neutral-400">No venues yet. Add stages, food courts, gates…</p>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {venues.map((v, i) => (
+                                                <div key={i} className="rounded-lg border border-neutral-200 bg-neutral-50 p-3 space-y-2">
+                                                    <div className="flex gap-2 items-center">
+                                                        <Input value={v.name ?? ""} placeholder="Name (e.g. Main Stage)" onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateVenue(i, { name: e.target.value })} className="flex-1" />
+                                                        <button type="button" onClick={() => removeVenue(i)} className="p-2 text-neutral-400 hover:text-red-600 shrink-0" aria-label="Remove venue"><Trash2 className="w-4 h-4" /></button>
                                                     </div>
-                                                ))}
-                                                <Button type="button" variant="ghost" size="sm" onClick={() => addSession(di)} leftIcon={<Plus className="w-3.5 h-3.5" />}>Add session</Button>
-                                            </div>
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        <Input value={v.category ?? ""} placeholder="Category (e.g. stage)" onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateVenue(i, { category: e.target.value })} />
+                                                        <select
+                                                            value={v.filter_key ?? ""}
+                                                            onChange={(e) => updateVenue(i, { filter_key: e.target.value || null })}
+                                                            className="h-9 rounded-lg border border-neutral-300 bg-white text-sm px-2"
+                                                            title="Map filter"
+                                                        >
+                                                            <option value="">— map filter —</option>
+                                                            {mapFilters.filter((f) => (f.key || f.label)).map((f, fi) => {
+                                                                const k = (f.key || f.label || "").trim().toLowerCase().replace(/\s+/g, "-");
+                                                                return <option key={fi} value={k}>{f.label || k}</option>;
+                                                            })}
+                                                        </select>
+                                                    </div>
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        <Input type="number" step="any" value={numStr(v.coordinates?.[1])} placeholder="Latitude" onChange={(e: React.ChangeEvent<HTMLInputElement>) => setVenueCoord(i, "lat", e.target.value)} />
+                                                        <Input type="number" step="any" value={numStr(v.coordinates?.[0])} placeholder="Longitude" onChange={(e: React.ChangeEvent<HTMLInputElement>) => setVenueCoord(i, "lng", e.target.value)} />
+                                                    </div>
+                                                    <Input value={v.marker_id ?? ""} placeholder="Marker ID (optional — links to an existing map marker)" onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateVenue(i, { marker_id: e.target.value })} />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ── TRAVEL ── */}
+                        {tab === "travel" && (
+                            <div className="rounded-xl border border-neutral-200 bg-white p-4 space-y-3">
+                                <h3 className="text-sm font-semibold text-neutral-600">How to Travel</h3>
+                                <div>
+                                    <label className="block text-xs font-medium text-neutral-600 mb-1">By Air</label>
+                                    <Textarea rows={2} value={travel.by_air ?? ""} placeholder="Nearest airport, distance, fares…" onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setTravelField("by_air", e.target.value)} />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-neutral-600 mb-1">By Rail</label>
+                                    <Textarea rows={2} value={travel.by_rail ?? ""} placeholder="Nearest station, connections…" onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setTravelField("by_rail", e.target.value)} />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-neutral-600 mb-1">By Road</label>
+                                    <Textarea rows={2} value={travel.by_road ?? ""} placeholder="Highways, buses, parking…" onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setTravelField("by_road", e.target.value)} />
+                                </div>
+                                <div>
+                                    <div className="flex items-center justify-between mb-1">
+                                        <label className="block text-xs font-medium text-neutral-600">Cabs / Contacts</label>
+                                        <Button type="button" variant="outline" size="sm" onClick={addCab} leftIcon={<Plus className="w-3.5 h-3.5" />}>Add</Button>
+                                    </div>
+                                    {cabs.length === 0 ? (
+                                        <p className="text-xs text-neutral-400">No cab contacts yet.</p>
+                                    ) : cabs.map((c, i) => (
+                                        <div key={i} className="flex gap-2 items-center mb-2">
+                                            <Input value={c.name} placeholder="Name / service" onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateCab(i, { name: e.target.value })} className="flex-1" />
+                                            <Input value={c.contact ?? ""} placeholder="Phone" onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateCab(i, { contact: e.target.value })} className="w-32" />
+                                            <Input value={c.fare ?? ""} placeholder="Fare" onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateCab(i, { fare: e.target.value })} className="w-24" />
+                                            <button type="button" onClick={() => removeCab(i)} className="p-2 text-neutral-400 hover:text-red-600" aria-label="Remove cab"><Trash2 className="w-4 h-4" /></button>
                                         </div>
                                     ))}
                                 </div>
-                            )}
-                        </div>
+                            </div>
+                        )}
 
-                        <label className="flex items-center gap-2 text-sm text-neutral-700">
-                            <input type="checkbox" {...register("is_featured")} className="rounded border-neutral-300 text-primary-600 focus:ring-primary-500" />
-                            Featured event
-                        </label>
+                        {/* ── SCHEDULE ── */}
+                        {tab === "schedule" && (
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <p className="text-xs text-neutral-400">Add days, then sessions within each day. Link a session to a venue and set its category & times.</p>
+                                    <Button type="button" variant="outline" size="sm" onClick={addDay} leftIcon={<Plus className="w-3.5 h-3.5" />}>Add Day</Button>
+                                </div>
+                                {schedule.length === 0 ? (
+                                    <p className="text-xs text-neutral-400">No schedule yet.</p>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {schedule.map((d, di) => (
+                                            <div key={di} className="rounded-xl border border-neutral-200 bg-white p-4">
+                                                <div className="flex gap-2 items-center mb-3">
+                                                    <Input value={d.label ?? ""} placeholder="Day label (e.g. Day 1)" onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateDay(di, { label: e.target.value })} className="flex-1 font-semibold" />
+                                                    <Input type="date" value={d.date ? d.date.slice(0, 10) : ""} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateDay(di, { date: e.target.value })} className="w-40" title="Day date" />
+                                                    <button type="button" onClick={() => removeDay(di)} className="p-2 text-neutral-400 hover:text-red-600" aria-label="Remove day"><Trash2 className="w-4 h-4" /></button>
+                                                </div>
+                                                <div className="space-y-3">
+                                                    {d.sessions.map((ss, si) => (
+                                                        <div key={si} className="rounded-lg border border-neutral-200 bg-neutral-50 p-3 space-y-2">
+                                                            <div className="flex gap-2 items-center">
+                                                                <Input value={ss.title} placeholder="Session / act title" onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateSession(di, si, { title: e.target.value })} className="flex-1 font-medium" />
+                                                                <button type="button" onClick={() => removeSession(di, si)} className="p-2 text-neutral-400 hover:text-red-600 shrink-0" aria-label="Remove session"><Trash2 className="w-4 h-4" /></button>
+                                                            </div>
+                                                            <div className="grid grid-cols-2 gap-2">
+                                                                <Input value={ss.performer ?? ""} placeholder="Performer / host" onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateSession(di, si, { performer: e.target.value })} />
+                                                                <Input value={ss.category ?? ""} placeholder="Category (Cultural…)" onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateSession(di, si, { category: e.target.value })} />
+                                                            </div>
+                                                            <div className="grid grid-cols-2 gap-2">
+                                                                {namedVenues.length > 0 ? (
+                                                                    <select
+                                                                        value={ss.stage ?? ""}
+                                                                        onChange={(e) => {
+                                                                            const name = e.target.value;
+                                                                            const v = venues.find((x) => (x.name ?? "") === name);
+                                                                            updateSession(di, si, { stage: name || null, marker_id: v?.marker_id || null });
+                                                                        }}
+                                                                        className="h-9 rounded-lg border border-neutral-300 bg-white text-sm px-2"
+                                                                        title="Venue / stage"
+                                                                    >
+                                                                        <option value="">— venue / stage —</option>
+                                                                        {namedVenues.map((v, vi) => <option key={vi} value={v.name ?? ""}>{v.name}</option>)}
+                                                                    </select>
+                                                                ) : (
+                                                                    <Input value={ss.stage ?? ""} placeholder="Stage" onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateSession(di, si, { stage: e.target.value })} />
+                                                                )}
+                                                                <label className="flex items-center gap-2 text-xs text-neutral-600 px-1">
+                                                                    <input type="checkbox" checked={ss.status_override === "delayed"} onChange={(e) => updateSession(di, si, { status_override: e.target.checked ? "delayed" : undefined, delayed_to: e.target.checked ? ss.delayed_to : undefined })} />
+                                                                    Mark delayed
+                                                                </label>
+                                                            </div>
+                                                            <div className="grid grid-cols-2 gap-2">
+                                                                <div>
+                                                                    <span className="block text-[11px] text-neutral-400 mb-0.5">Start</span>
+                                                                    <Input type="datetime-local" value={ss.start_time ? ss.start_time.slice(0, 16) : ""} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateSession(di, si, { start_time: e.target.value })} />
+                                                                </div>
+                                                                <div>
+                                                                    <span className="block text-[11px] text-neutral-400 mb-0.5">End</span>
+                                                                    <Input type="datetime-local" value={ss.end_time ? ss.end_time.slice(0, 16) : ""} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateSession(di, si, { end_time: e.target.value })} />
+                                                                </div>
+                                                            </div>
+                                                            {ss.status_override === "delayed" && (
+                                                                <div>
+                                                                    <span className="block text-[11px] text-neutral-400 mb-0.5">Delayed to</span>
+                                                                    <Input type="datetime-local" value={ss.delayed_to ? ss.delayed_to.slice(0, 16) : ""} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateSession(di, si, { delayed_to: e.target.value })} />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                    <Button type="button" variant="ghost" size="sm" onClick={() => addSession(di)} leftIcon={<Plus className="w-3.5 h-3.5" />}>Add session</Button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
+                    {/* Footer */}
                     <div className="flex gap-3 px-6 py-4 border-t border-neutral-200 bg-neutral-50 shrink-0">
                         <Button type="button" variant="ghost" fullWidth onClick={onClose} disabled={isBusy}>Cancel</Button>
                         <Button type="submit" variant="primary" fullWidth isLoading={isBusy} disabled={isBusy}>
