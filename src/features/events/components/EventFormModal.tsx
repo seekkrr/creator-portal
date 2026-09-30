@@ -3,12 +3,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { X, AlertTriangle } from "lucide-react";
+import { X, AlertTriangle, Plus, Trash2 } from "lucide-react";
 import { Card, Button, Input, Textarea } from "@components/ui";
 import { eventService } from "@services/event.service";
 import { eventFormSchema, toCreatePayload, toUpdatePayload } from "../schemas/event.schema";
 import type { EventFormData } from "../schemas/event.schema";
-import type { EventDetail } from "@/types";
+import type { EventDetail, EventVenue, EventScheduleDay, EventSession } from "@/types";
 
 interface EventFormModalProps {
     open: boolean;
@@ -53,6 +53,10 @@ function eventToFormData(e: EventDetail): Partial<EventFormData> {
 
 export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventFormModalProps) {
     const [categoryInput, setCategoryInput] = useState("");
+    // Venues & schedule are nested/dynamic — managed as local state (not RHF)
+    // and merged into the payload on submit.
+    const [venues, setVenues] = useState<EventVenue[]>([]);
+    const [schedule, setSchedule] = useState<EventScheduleDay[]>([]);
 
     const {
         register,
@@ -77,11 +81,45 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
         if (!open) return;
         if (mode === "edit" && initial) {
             reset({ ...DEFAULT_VALUES, ...eventToFormData(initial) });
+            setVenues(initial.venues ?? []);
+            setSchedule(initial.schedule ?? []);
         } else {
             reset(DEFAULT_VALUES);
+            setVenues([]);
+            setSchedule([]);
         }
         setCategoryInput("");
     }, [open, mode, initial, reset]);
+
+    // ── Venue editor helpers ──
+    const addVenue = () => setVenues((v) => [...v, { marker_id: "", name: "", category: "" }]);
+    const updateVenue = (i: number, patch: Partial<EventVenue>) =>
+        setVenues((v) => v.map((x, idx) => (idx === i ? { ...x, ...patch } : x)));
+    const removeVenue = (i: number) => setVenues((v) => v.filter((_, idx) => idx !== i));
+
+    // ── Schedule editor helpers ──
+    const addDay = () => setSchedule((s) => [...s, { label: `Day ${s.length + 1}`, sessions: [] }]);
+    const updateDay = (i: number, patch: Partial<EventScheduleDay>) =>
+        setSchedule((s) => s.map((d, idx) => (idx === i ? { ...d, ...patch } : d)));
+    const removeDay = (i: number) => setSchedule((s) => s.filter((_, idx) => idx !== i));
+    const addSession = (dayIdx: number) =>
+        setSchedule((s) => s.map((d, idx) => (idx === dayIdx ? { ...d, sessions: [...d.sessions, { title: "" }] } : d)));
+    const updateSession = (dayIdx: number, sIdx: number, patch: Partial<EventSession>) =>
+        setSchedule((s) => s.map((d, idx) =>
+            idx === dayIdx ? { ...d, sessions: d.sessions.map((ss, j) => (j === sIdx ? { ...ss, ...patch } : ss)) } : d
+        ));
+    const removeSession = (dayIdx: number, sIdx: number) =>
+        setSchedule((s) => s.map((d, idx) =>
+            idx === dayIdx ? { ...d, sessions: d.sessions.filter((_, j) => j !== sIdx) } : d
+        ));
+
+    /** Drop empty rows so we never persist blank venues/sessions. */
+    const cleanVenues = (): EventVenue[] =>
+        venues.filter((v) => (v.name && v.name.trim()) || (v.marker_id && v.marker_id.trim()));
+    const cleanSchedule = (): EventScheduleDay[] =>
+        schedule
+            .map((d) => ({ ...d, sessions: d.sessions.filter((ss) => ss.title && ss.title.trim()) }))
+            .filter((d) => d.sessions.length > 0 || (d.label && d.label.trim()));
 
     const categories = watch("categories");
 
@@ -105,15 +143,28 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
     });
 
     const onSubmit = async (data: EventFormData) => {
+        const venuesPayload = cleanVenues();
+        const schedulePayload = cleanSchedule();
         try {
             if (mode === "create") {
-                const promise = createMutation.mutateAsync(toCreatePayload(data));
+                const promise = createMutation.mutateAsync({
+                    ...toCreatePayload(data),
+                    ...(venuesPayload.length ? { venues: venuesPayload } : {}),
+                    ...(schedulePayload.length ? { schedule: schedulePayload } : {}),
+                });
                 toast.promise(promise, { loading: "Creating event…", success: "Event created!", error: "Failed to create event" });
                 onSaved(await promise);
                 onClose();
             } else {
                 if (!initial?.id) return;
-                const promise = updateMutation.mutateAsync({ id: initial.id, payload: toUpdatePayload(data) });
+                const promise = updateMutation.mutateAsync({
+                    id: initial.id,
+                    payload: {
+                        ...toUpdatePayload(data),
+                        venues: venuesPayload,
+                        schedule: schedulePayload,
+                    },
+                });
                 toast.promise(promise, { loading: "Saving event…", success: "Event updated!", error: "Failed to update event" });
                 onSaved(await promise);
                 onClose();
@@ -218,6 +269,81 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
                                 <label className="block text-sm font-medium text-neutral-700 mb-1">Capacity</label>
                                 <Input type="number" min={0} placeholder="Unlimited" {...register("capacity", { valueAsNumber: true })} />
                             </div>
+                        </div>
+
+                        {/* ── Venues ── */}
+                        <div className="rounded-xl border border-neutral-200 bg-white p-4">
+                            <div className="flex items-center justify-between mb-3">
+                                <h3 className="text-sm font-semibold text-neutral-500 uppercase tracking-wider">Venues / Stages</h3>
+                                <Button type="button" variant="outline" size="sm" onClick={addVenue} leftIcon={<Plus className="w-3.5 h-3.5" />}>Add</Button>
+                            </div>
+                            {venues.length === 0 ? (
+                                <p className="text-xs text-neutral-400">No venues yet. Add stages, food courts, gates…</p>
+                            ) : (
+                                <div className="space-y-2">
+                                    {venues.map((v, i) => (
+                                        <div key={i} className="flex gap-2 items-start">
+                                            <Input value={v.name ?? ""} placeholder="Name (e.g. Main Stage)"
+                                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateVenue(i, { name: e.target.value })}
+                                                className="flex-1" />
+                                            <Input value={v.category ?? ""} placeholder="Category"
+                                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateVenue(i, { category: e.target.value })}
+                                                className="w-32" />
+                                            <Input value={v.marker_id ?? ""} placeholder="Marker ID (optional)"
+                                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateVenue(i, { marker_id: e.target.value })}
+                                                className="w-40" />
+                                            <button type="button" onClick={() => removeVenue(i)} className="p-2 text-neutral-400 hover:text-red-600" aria-label="Remove venue">
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* ── Schedule ── */}
+                        <div className="rounded-xl border border-neutral-200 bg-white p-4">
+                            <div className="flex items-center justify-between mb-3">
+                                <h3 className="text-sm font-semibold text-neutral-500 uppercase tracking-wider">Schedule</h3>
+                                <Button type="button" variant="outline" size="sm" onClick={addDay} leftIcon={<Plus className="w-3.5 h-3.5" />}>Add Day</Button>
+                            </div>
+                            {schedule.length === 0 ? (
+                                <p className="text-xs text-neutral-400">No schedule yet. Add days, then sessions within each day.</p>
+                            ) : (
+                                <div className="space-y-4">
+                                    {schedule.map((d, di) => (
+                                        <div key={di} className="rounded-lg border border-neutral-200 p-3">
+                                            <div className="flex gap-2 items-center mb-2">
+                                                <Input value={d.label ?? ""} placeholder="Day label (e.g. Day 1)"
+                                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateDay(di, { label: e.target.value })}
+                                                    className="flex-1" />
+                                                <button type="button" onClick={() => removeDay(di)} className="p-2 text-neutral-400 hover:text-red-600" aria-label="Remove day">
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                            <div className="space-y-2 pl-2">
+                                                {d.sessions.map((ss, si) => (
+                                                    <div key={si} className="flex gap-2 items-start">
+                                                        <Input value={ss.title} placeholder="Session / act title"
+                                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateSession(di, si, { title: e.target.value })}
+                                                            className="flex-1" />
+                                                        <Input value={ss.stage ?? ""} placeholder="Stage"
+                                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateSession(di, si, { stage: e.target.value })}
+                                                            className="w-28" />
+                                                        <Input type="datetime-local" value={ss.start_time ? ss.start_time.slice(0, 16) : ""}
+                                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateSession(di, si, { start_time: e.target.value })}
+                                                            className="w-48" />
+                                                        <button type="button" onClick={() => removeSession(di, si)} className="p-2 text-neutral-400 hover:text-red-600" aria-label="Remove session">
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                                <Button type="button" variant="ghost" size="sm" onClick={() => addSession(di)} leftIcon={<Plus className="w-3.5 h-3.5" />}>Add session</Button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
                         <label className="flex items-center gap-2 text-sm text-neutral-700">

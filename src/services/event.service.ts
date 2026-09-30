@@ -70,6 +70,15 @@ export const eventService = {
         await api.delete(API_ENDPOINTS.EVENTS.BY_ID(id));
     },
 
+    /** POST /api/v2/events/{id}/announce → push to everyone who RSVP'd. */
+    async announce(id: string, title: string, body: string): Promise<{ recipients: number; sent: number }> {
+        const res = await api.post<{ recipients: number; sent: number }>(
+            API_ENDPOINTS.EVENTS.ANNOUNCE(id),
+            { title, body }
+        );
+        return { recipients: res.data.recipients ?? 0, sent: res.data.sent ?? 0 };
+    },
+
     /** GET /api/v2/events/{id}/attendees → RSVP list. */
     async listAttendees(
         id: string,

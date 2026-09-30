@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import type { EventListItem, EventStatus, EventDetail } from "@/types";
 import { EventFormModal } from "../components/EventFormModal";
 import { EventAttendeesModal } from "../components/EventAttendeesModal";
+import { EventAnnounceModal } from "../components/EventAnnounceModal";
 
 type StatusFilter = EventStatus | "all";
 
@@ -66,6 +67,7 @@ export function EventsPage() {
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editing, setEditing] = useState<EventDetail | undefined>(undefined);
     const [attendeesFor, setAttendeesFor] = useState<EventListItem | null>(null);
+    const [announceFor, setAnnounceFor] = useState<EventListItem | null>(null);
     const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
     // Delete modal
@@ -163,6 +165,10 @@ export function EventsPage() {
                 <EventAttendeesModal eventId={attendeesFor.id} eventTitle={attendeesFor.title} onClose={() => setAttendeesFor(null)} />
             )}
 
+            {announceFor && (
+                <EventAnnounceModal eventId={announceFor.id} eventTitle={announceFor.title} onClose={() => setAnnounceFor(null)} />
+            )}
+
             <StatusFilterPills filters={STATUS_FILTERS} active={statusFilter} onChange={setStatusFilter} />
 
             <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm">
@@ -219,6 +225,8 @@ export function EventsPage() {
                                                                 className="w-full text-left px-4 py-2 text-sm text-primary-600 hover:bg-primary-50 font-medium">Edit Event</button>
                                                             <button onClick={() => { setAttendeesFor(ev); setOpenDropdownId(null); }}
                                                                 className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 font-medium">View Attendees</button>
+                                                            <button onClick={() => { setAnnounceFor(ev); setOpenDropdownId(null); }}
+                                                                className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 font-medium">Announce</button>
                                                             {transitionsFor(ev.status).map((t) => (
                                                                 <button key={t.to} onClick={() => { void changeStatus(ev.id, t.to); setOpenDropdownId(null); }}
                                                                     className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 font-medium">{t.label}</button>
