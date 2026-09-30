@@ -247,6 +247,16 @@ export interface EventVenue {
     category?: string | null;
     thumbnail_url?: string | null;
     coordinates?: number[] | null; // [lng, lat]
+    filter_key?: string | null;
+    pin_icon?: string | null;
+    pin_color?: string | null;
+}
+
+export interface EventMapFilter {
+    key: string;
+    label: string;
+    icon?: string | null;
+    color?: string | null;
 }
 
 export interface EventSession {
@@ -259,6 +269,8 @@ export interface EventSession {
     end_time?: string | null;
     performer?: string | null;
     image_url?: string | null;
+    status_override?: string | null; // "delayed"
+    delayed_to?: string | null;
 }
 
 export interface EventScheduleDay {
@@ -304,6 +316,8 @@ export interface EventDetail {
     region_name?: string | null;
     venues: EventVenue[];
     schedule: EventScheduleDay[];
+    map_filters: EventMapFilter[];
+    travel_info: Record<string, unknown>;
     quest_ids: string[];
     status: EventStatus;
     average_rating?: number | null;
@@ -335,12 +349,22 @@ export interface CreateEventPayload {
     region_id?: string;
     venues?: EventVenue[];
     schedule?: EventScheduleDay[];
+    map_filters?: EventMapFilter[];
+    travel_info?: Record<string, unknown>;
     quest_ids?: string[];
     capacity?: number;
     is_featured?: boolean;
 }
 
 export type UpdateEventPayload = Partial<CreateEventPayload>;
+
+/** Structured "How to Travel" content edited in the portal / rendered by the app. */
+export interface TravelInfo {
+    by_air?: string;
+    by_rail?: string;
+    by_road?: string;
+    cabs?: { name: string; contact?: string; fare?: string }[];
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Quest Types (V2)

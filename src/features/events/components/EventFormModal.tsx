@@ -8,7 +8,7 @@ import { Card, Button, Input, Textarea } from "@components/ui";
 import { eventService } from "@services/event.service";
 import { eventFormSchema, toCreatePayload, toUpdatePayload } from "../schemas/event.schema";
 import type { EventFormData } from "../schemas/event.schema";
-import type { EventDetail, EventVenue, EventScheduleDay, EventSession } from "@/types";
+import type { EventDetail, EventVenue, EventScheduleDay, EventSession, EventMapFilter, TravelInfo } from "@/types";
 
 interface EventFormModalProps {
     open: boolean;
@@ -57,6 +57,8 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
     // and merged into the payload on submit.
     const [venues, setVenues] = useState<EventVenue[]>([]);
     const [schedule, setSchedule] = useState<EventScheduleDay[]>([]);
+    const [mapFilters, setMapFilters] = useState<EventMapFilter[]>([]);
+    const [travel, setTravel] = useState<TravelInfo>({});
 
     const {
         register,
@@ -83,13 +85,46 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
             reset({ ...DEFAULT_VALUES, ...eventToFormData(initial) });
             setVenues(initial.venues ?? []);
             setSchedule(initial.schedule ?? []);
+            setMapFilters(initial.map_filters ?? []);
+            setTravel((initial.travel_info as TravelInfo) ?? {});
         } else {
             reset(DEFAULT_VALUES);
             setVenues([]);
             setSchedule([]);
+            setMapFilters([]);
+            setTravel({});
         }
         setCategoryInput("");
     }, [open, mode, initial, reset]);
+
+    // ── Map filter editor helpers ──
+    const addFilter = () => setMapFilters((f) => [...f, { key: "", label: "", icon: "", color: "#FECD36" }]);
+    const updateFilter = (i: number, patch: Partial<EventMapFilter>) =>
+        setMapFilters((f) => f.map((x, idx) => (idx === i ? { ...x, ...patch } : x)));
+    const removeFilter = (i: number) => setMapFilters((f) => f.filter((_, idx) => idx !== i));
+
+    // ── Travel (How to Travel) helpers ──
+    const cabs = travel.cabs ?? [];
+    const setTravelField = (k: keyof TravelInfo, v: string) => setTravel((t) => ({ ...t, [k]: v }));
+    const addCab = () => setTravel((t) => ({ ...t, cabs: [...(t.cabs ?? []), { name: "" }] }));
+    const updateCab = (i: number, patch: Partial<{ name: string; contact: string; fare: string }>) =>
+        setTravel((t) => ({ ...t, cabs: (t.cabs ?? []).map((c, idx) => (idx === i ? { ...c, ...patch } : c)) }));
+    const removeCab = (i: number) =>
+        setTravel((t) => ({ ...t, cabs: (t.cabs ?? []).filter((_, idx) => idx !== i) }));
+
+    const cleanMapFilters = (): EventMapFilter[] =>
+        mapFilters
+            .filter((f) => (f.label && f.label.trim()) || (f.key && f.key.trim()))
+            .map((f) => ({ ...f, key: (f.key || f.label || "").trim().toLowerCase().replace(/\s+/g, "-") }));
+    const cleanTravel = (): Record<string, unknown> => {
+        const t: TravelInfo = {};
+        if (travel.by_air?.trim()) t.by_air = travel.by_air.trim();
+        if (travel.by_rail?.trim()) t.by_rail = travel.by_rail.trim();
+        if (travel.by_road?.trim()) t.by_road = travel.by_road.trim();
+        const c = (travel.cabs ?? []).filter((x) => x.name && x.name.trim());
+        if (c.length) t.cabs = c;
+        return t as Record<string, unknown>;
+    };
 
     // ── Venue editor helpers ──
     const addVenue = () => setVenues((v) => [...v, { marker_id: "", name: "", category: "" }]);
@@ -145,12 +180,16 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
     const onSubmit = async (data: EventFormData) => {
         const venuesPayload = cleanVenues();
         const schedulePayload = cleanSchedule();
+        const filtersPayload = cleanMapFilters();
+        const travelPayload = cleanTravel();
         try {
             if (mode === "create") {
                 const promise = createMutation.mutateAsync({
                     ...toCreatePayload(data),
                     ...(venuesPayload.length ? { venues: venuesPayload } : {}),
                     ...(schedulePayload.length ? { schedule: schedulePayload } : {}),
+                    ...(filtersPayload.length ? { map_filters: filtersPayload } : {}),
+                    ...(Object.keys(travelPayload).length ? { travel_info: travelPayload } : {}),
                 });
                 toast.promise(promise, { loading: "Creating event…", success: "Event created!", error: "Failed to create event" });
                 onSaved(await promise);
@@ -163,6 +202,8 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
                         ...toUpdatePayload(data),
                         venues: venuesPayload,
                         schedule: schedulePayload,
+                        map_filters: filtersPayload,
+                        travel_info: travelPayload,
                     },
                 });
                 toast.promise(promise, { loading: "Saving event…", success: "Event updated!", error: "Failed to update event" });
@@ -271,6 +312,79 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
                             </div>
                         </div>
 
+                        {/* ── Map Filters (per-event pins) ── */}
+                        <div className="rounded-xl border border-neutral-200 bg-white p-4">
+                            <div className="flex items-center justify-between mb-3">
+                                <h3 className="text-sm font-semibold text-neutral-500 uppercase tracking-wider">Map Filters &amp; Pins</h3>
+                                <Button type="button" variant="outline" size="sm" onClick={addFilter} leftIcon={<Plus className="w-3.5 h-3.5" />}>Add</Button>
+                            </div>
+                            <p className="text-xs text-neutral-400 mb-2">Define the filter chips shown on the event's Explore-Around map. Each venue can be assigned a filter below.</p>
+                            {mapFilters.length === 0 ? (
+                                <p className="text-xs text-neutral-400">No filters yet (e.g. Stages, Food, Restrooms).</p>
+                            ) : (
+                                <div className="space-y-2">
+                                    {mapFilters.map((f, i) => (
+                                        <div key={i} className="flex gap-2 items-center">
+                                            <Input value={f.label} placeholder="Label (e.g. Stages)"
+                                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateFilter(i, { label: e.target.value })}
+                                                className="flex-1" />
+                                            <Input value={f.icon ?? ""} placeholder="icon (e.g. music)"
+                                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateFilter(i, { icon: e.target.value })}
+                                                className="w-32" />
+                                            <input type="color" value={f.color || "#FECD36"}
+                                                onChange={(e) => updateFilter(i, { color: e.target.value })}
+                                                className="w-10 h-9 rounded border border-neutral-300 bg-white" title="Pin color" />
+                                            <button type="button" onClick={() => removeFilter(i)} className="p-2 text-neutral-400 hover:text-red-600" aria-label="Remove filter">
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* ── How to Travel ── */}
+                        <div className="rounded-xl border border-neutral-200 bg-white p-4 space-y-3">
+                            <h3 className="text-sm font-semibold text-neutral-500 uppercase tracking-wider">How to Travel</h3>
+                            <div>
+                                <label className="block text-xs font-medium text-neutral-600 mb-1">By Air</label>
+                                <Textarea rows={2} value={travel.by_air ?? ""} placeholder="Nearest airport, distance, fares…"
+                                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setTravelField("by_air", e.target.value)} />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-neutral-600 mb-1">By Rail</label>
+                                <Textarea rows={2} value={travel.by_rail ?? ""} placeholder="Nearest station, connections…"
+                                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setTravelField("by_rail", e.target.value)} />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-neutral-600 mb-1">By Road</label>
+                                <Textarea rows={2} value={travel.by_road ?? ""} placeholder="Highways, buses, parking…"
+                                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setTravelField("by_road", e.target.value)} />
+                            </div>
+                            <div>
+                                <div className="flex items-center justify-between mb-1">
+                                    <label className="block text-xs font-medium text-neutral-600">Cabs / Contacts</label>
+                                    <Button type="button" variant="outline" size="sm" onClick={addCab} leftIcon={<Plus className="w-3.5 h-3.5" />}>Add</Button>
+                                </div>
+                                {cabs.map((c, i) => (
+                                    <div key={i} className="flex gap-2 items-center mb-1">
+                                        <Input value={c.name} placeholder="Name / vehicle"
+                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateCab(i, { name: e.target.value })}
+                                            className="flex-1" />
+                                        <Input value={c.contact ?? ""} placeholder="Phone"
+                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateCab(i, { contact: e.target.value })}
+                                            className="w-32" />
+                                        <Input value={c.fare ?? ""} placeholder="Fare"
+                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateCab(i, { fare: e.target.value })}
+                                            className="w-24" />
+                                        <button type="button" onClick={() => removeCab(i)} className="p-2 text-neutral-400 hover:text-red-600" aria-label="Remove cab">
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
                         {/* ── Venues ── */}
                         <div className="rounded-xl border border-neutral-200 bg-white p-4">
                             <div className="flex items-center justify-between mb-3">
@@ -291,7 +405,21 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
                                                 className="w-32" />
                                             <Input value={v.marker_id ?? ""} placeholder="Marker ID (optional)"
                                                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateVenue(i, { marker_id: e.target.value })}
-                                                className="w-40" />
+                                                className="w-36" />
+                                            <select
+                                                value={v.filter_key ?? ""}
+                                                onChange={(e) => updateVenue(i, { filter_key: e.target.value || null })}
+                                                className="w-32 h-9 rounded-lg border border-neutral-300 bg-white text-sm px-2"
+                                                title="Map filter"
+                                            >
+                                                <option value="">— filter —</option>
+                                                {mapFilters
+                                                    .filter((f) => (f.key || f.label))
+                                                    .map((f, fi) => {
+                                                        const k = (f.key || f.label || "").trim().toLowerCase().replace(/\s+/g, "-");
+                                                        return <option key={fi} value={k}>{f.label || k}</option>;
+                                                    })}
+                                            </select>
                                             <button type="button" onClick={() => removeVenue(i)} className="p-2 text-neutral-400 hover:text-red-600" aria-label="Remove venue">
                                                 <Trash2 className="w-4 h-4" />
                                             </button>
@@ -332,7 +460,17 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
                                                             className="w-28" />
                                                         <Input type="datetime-local" value={ss.start_time ? ss.start_time.slice(0, 16) : ""}
                                                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateSession(di, si, { start_time: e.target.value })}
-                                                            className="w-48" />
+                                                            className="w-44" />
+                                                        <label className="flex items-center gap-1 text-xs text-neutral-600 whitespace-nowrap">
+                                                            <input type="checkbox" checked={ss.status_override === "delayed"}
+                                                                onChange={(e) => updateSession(di, si, { status_override: e.target.checked ? "delayed" : undefined, delayed_to: e.target.checked ? ss.delayed_to : undefined })} />
+                                                            Delayed
+                                                        </label>
+                                                        {ss.status_override === "delayed" && (
+                                                            <Input type="datetime-local" value={ss.delayed_to ? ss.delayed_to.slice(0, 16) : ""}
+                                                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateSession(di, si, { delayed_to: e.target.value })}
+                                                                className="w-44" title="New time" />
+                                                        )}
                                                         <button type="button" onClick={() => removeSession(di, si)} className="p-2 text-neutral-400 hover:text-red-600" aria-label="Remove session">
                                                             <Trash2 className="w-4 h-4" />
                                                         </button>
