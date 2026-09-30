@@ -15,6 +15,16 @@ export const API_ENDPOINTS = {
         RETRACT: (id: string) => `/api/v2/quests/${id}/retract`,
         REVIEW: (id: string) => `/api/v2/quests/${id}/review`,
     },
+    // V2 events / festivals. Static paths (/mine) resolve before /{id} on the backend.
+    EVENTS: {
+        BASE: "/api/v2/events",
+        CREATE: "/api/v2/events",
+        MINE: "/api/v2/events/mine",
+        BY_ID: (id: string) => `/api/v2/events/${id}`,
+        STATUS: (id: string) => `/api/v2/events/${id}/status`,
+        ATTENDEES: (id: string) => `/api/v2/events/${id}/attendees`,
+        ANNOUNCE: (id: string) => `/api/v2/events/${id}/announce`,
+    },
     CREATORS: {
         // V2: current authenticated creator's own profile + analytics
         ME: "/api/v2/creators/me",
