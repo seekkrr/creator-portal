@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { X, AlertTriangle, Plus, Trash2 } from "lucide-react";
+import { X, AlertTriangle, Plus, Trash2, Upload, Loader2 } from "lucide-react";
 import { Card, Button, Input, Textarea } from "@components/ui";
 import { eventService } from "@services/event.service";
+import { cloudinaryService } from "@services/cloudinary.service";
+import { markerService } from "@services/marker.service";
 import { eventFormSchema, toCreatePayload, toUpdatePayload } from "../schemas/event.schema";
 import type { EventFormData } from "../schemas/event.schema";
-import type { EventDetail, EventVenue, EventScheduleDay, EventSession, EventMapFilter, TravelInfo } from "@/types";
+import type { EventDetail, EventVenue, EventScheduleDay, EventSession, EventMapFilter, TravelInfo, EventStatus } from "@/types";
 
 interface EventFormModalProps {
     open: boolean;
@@ -67,7 +69,8 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
     const [mapFilters, setMapFilters] = useState<EventMapFilter[]>([]);
     const [travel, setTravel] = useState<TravelInfo>({});
     const [gallery, setGallery] = useState<string[]>([]);
-    const [videos, setVideos] = useState<string[]>([]);
+    const [coverUploading, setCoverUploading] = useState(false);
+    const [galleryUploading, setGalleryUploading] = useState(false);
 
     const {
         register,
@@ -80,6 +83,16 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
         resolver: zodResolver(eventFormSchema),
         defaultValues: DEFAULT_VALUES,
     });
+
+    // The creator's own markers — venues are linked by picking from these rather
+    // than typing a raw marker id.
+    const { data: myMarkersData } = useQuery({
+        queryKey: ["creator-markers-for-events"],
+        queryFn: () => markerService.listMarkers({ mine: true, page: 1, page_size: 200 }),
+        enabled: open,
+        staleTime: 60_000,
+    });
+    const myMarkers = myMarkersData?.items ?? [];
 
     useEffect(() => {
         if (!open) return;
@@ -98,7 +111,6 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
             setMapFilters(initial.map_filters ?? []);
             setTravel((initial.travel_info as TravelInfo) ?? {});
             setGallery(initial.media?.image_urls ?? []);
-            setVideos(initial.media?.video_urls ?? []);
         } else {
             reset(DEFAULT_VALUES);
             setVenues([]);
@@ -106,7 +118,6 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
             setMapFilters([]);
             setTravel({});
             setGallery([]);
-            setVideos([]);
         }
         setCategoryInput("");
     }, [open, mode, initial, reset]);
@@ -116,6 +127,13 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
     const updateFilter = (i: number, patch: Partial<EventMapFilter>) =>
         setMapFilters((f) => f.map((x, idx) => (idx === i ? { ...x, ...patch } : x)));
     const removeFilter = (i: number) => setMapFilters((f) => f.filter((_, idx) => idx !== i));
+    const uploadFilterIcon = (i: number, file: File) => {
+        const p = cloudinaryService
+            .uploadImage(file, { folder: "creator-portal/event-pins" })
+            .then((res) => { updateFilter(i, { icon: res.secure_url }); return res; });
+        toast.promise(p, { loading: "Uploading icon…", success: "Icon uploaded", error: "Icon upload failed" });
+    };
+    const isIconUrl = (s?: string | null) => !!s && /^https?:\/\//.test(s);
 
     // ── Travel helpers ──
     const cabs = travel.cabs ?? [];
@@ -126,13 +144,32 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
     const removeCab = (i: number) =>
         setTravel((t) => ({ ...t, cabs: (t.cabs ?? []).filter((_, idx) => idx !== i) }));
 
-    // ── Media (gallery / videos) helpers ──
-    const addGallery = () => setGallery((g) => [...g, ""]);
-    const updateGallery = (i: number, v: string) => setGallery((g) => g.map((x, idx) => (idx === i ? v : x)));
+    // ── Media helpers (upload to S3 → CDN via the media presign broker) ──
     const removeGallery = (i: number) => setGallery((g) => g.filter((_, idx) => idx !== i));
-    const addVideo = () => setVideos((g) => [...g, ""]);
-    const updateVideo = (i: number, v: string) => setVideos((g) => g.map((x, idx) => (idx === i ? v : x)));
-    const removeVideo = (i: number) => setVideos((g) => g.filter((_, idx) => idx !== i));
+    const uploadCover = async (file: File) => {
+        setCoverUploading(true);
+        try {
+            const res = await cloudinaryService.uploadImage(file, { folder: "events" });
+            setValue("cover_image_url", res.secure_url, { shouldValidate: true });
+        } catch {
+            toast.error("Cover upload failed");
+        } finally {
+            setCoverUploading(false);
+        }
+    };
+    const uploadGalleryFiles = async (files: FileList) => {
+        setGalleryUploading(true);
+        try {
+            const results = await Promise.all(
+                Array.from(files).map((f) => cloudinaryService.uploadImage(f, { folder: "events/gallery" }))
+            );
+            setGallery((g) => [...g, ...results.map((r) => r.secure_url)]);
+        } catch {
+            toast.error("Image upload failed");
+        } finally {
+            setGalleryUploading(false);
+        }
+    };
 
     // ── Venue helpers ──
     const addVenue = () => setVenues((v) => [...v, { marker_id: "", name: "", category: "" }]);
@@ -198,13 +235,11 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
             .map((d) => ({ ...d, sessions: d.sessions.filter((ss) => ss.title && ss.title.trim()) }))
             .filter((d) => d.sessions.length > 0 || (d.label && d.label.trim()));
 
-    const buildMedia = (cover: string | undefined): Partial<{ cover_image_url: string; image_urls: string[]; video_urls: string[] }> => {
-        const m: { cover_image_url?: string; image_urls?: string[]; video_urls?: string[] } = {};
+    const buildMedia = (cover: string | undefined): Partial<{ cover_image_url: string; image_urls: string[] }> => {
+        const m: { cover_image_url?: string; image_urls?: string[] } = {};
         if (cover && cover.trim()) m.cover_image_url = cover.trim();
         const imgs = gallery.map((s) => s.trim()).filter(Boolean);
         if (imgs.length) m.image_urls = imgs;
-        const vids = videos.map((s) => s.trim()).filter(Boolean);
-        if (vids.length) m.video_urls = vids;
         return m;
     };
 
@@ -223,6 +258,7 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
     };
 
     const categories = watch("categories");
+    const coverUrl = watch("cover_image_url");
 
     const addCategory = () => {
         const raw = categoryInput.trim();
@@ -242,7 +278,9 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
             eventService.updateEvent(id, payload),
     });
 
-    const onSubmit = async (data: EventFormData) => {
+    // Save the form, then set the event's status: "draft" (keep working) or
+    // "pending" (submit for admin review). Admins approve pending → published.
+    const submit = (intent: "draft" | "review") => async (data: EventFormData) => {
         const venuesPayload = cleanVenues();
         const schedulePayload = cleanSchedule();
         const filtersPayload = cleanMapFilters();
@@ -257,15 +295,14 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
             ...(Object.keys(mediaPayload).length ? { media: mediaPayload } : {}),
             ...(bbox ? { bounding_box: bbox } : {}),
         };
+        const targetStatus: EventStatus = intent === "review" ? "pending" : "draft";
         try {
+            let saved: EventDetail;
             if (mode === "create") {
-                const promise = createMutation.mutateAsync({ ...toCreatePayload(data), ...extras });
-                toast.promise(promise, { loading: "Creating event…", success: "Event created!", error: "Failed to create event" });
-                onSaved(await promise);
-                onClose();
+                saved = await createMutation.mutateAsync({ ...toCreatePayload(data), ...extras });
             } else {
                 if (!initial?.id) return;
-                const promise = updateMutation.mutateAsync({
+                saved = await updateMutation.mutateAsync({
                     id: initial.id,
                     payload: {
                         ...toUpdatePayload(data),
@@ -278,12 +315,18 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
                         ...(bbox ? { bounding_box: bbox } : {}),
                     },
                 });
-                toast.promise(promise, { loading: "Saving event…", success: "Event updated!", error: "Failed to update event" });
-                onSaved(await promise);
-                onClose();
             }
+            // Apply the chosen status unless the event is already live/published
+            // (don't silently demote a published event when the owner edits it).
+            const keep = saved.status === "published" || saved.status === "live" || saved.status === "ended";
+            if (!keep && saved.status !== targetStatus) {
+                try { saved = await eventService.setStatus(saved.id, targetStatus); } catch { /* keep saved */ }
+            }
+            toast.success(intent === "review" ? "Submitted for review" : "Saved as draft");
+            onSaved(saved);
+            onClose();
         } catch {
-            // toast already surfaced the error; keep the modal open.
+            toast.error(mode === "create" ? "Failed to create event" : "Failed to save event");
         }
     };
 
@@ -342,13 +385,13 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
                 {/* Tabs */}
                 <div className="flex items-center gap-1 px-4 border-b border-neutral-200 bg-white shrink-0 overflow-x-auto">
                     <TabButton id="details" label="Details" />
-                    <TabButton id="media" label="Media" count={gallery.length + videos.length} />
+                    <TabButton id="media" label="Media" count={gallery.length} />
                     <TabButton id="map" label="Map & Venues" count={venues.length} />
                     <TabButton id="travel" label="Travel" />
                     <TabButton id="schedule" label="Schedule" count={sessionCount} />
                 </div>
 
-                <form onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate className="flex-1 flex flex-col min-h-0">
+                <form onSubmit={handleSubmit(submit("review"), onInvalid)} noValidate className="flex-1 flex flex-col min-h-0">
                     <div className="p-6 bg-neutral-50 overflow-y-auto flex-1">
 
                         {/* ── DETAILS ── */}
@@ -419,10 +462,6 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
                                         </div>
                                     )}
                                 </div>
-                                <div>
-                                    {label("Region ID")}
-                                    <Input {...register("region_id")} placeholder="Optional region id" />
-                                </div>
                                 <label className="flex items-center gap-2 text-sm text-neutral-700 pt-1">
                                     <input type="checkbox" {...register("is_featured")} className="rounded border-neutral-300 text-primary-600 focus:ring-primary-500" />
                                     Featured event
@@ -434,47 +473,44 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
                         {tab === "media" && (
                             <div className="space-y-5">
                                 <div>
-                                    {label("Cover Image URL")}
-                                    <Input {...register("cover_image_url")} placeholder="https://…" className={errors.cover_image_url ? "border-red-400" : ""} />
+                                    {label("Cover Image")}
+                                    {sectionNote("Shown as the event's hero. Uploaded to S3 and served from the CDN.")}
+                                    {coverUrl ? (
+                                        <div className="relative w-full max-w-sm rounded-xl overflow-hidden border border-neutral-200">
+                                            <img src={coverUrl} alt="" className="w-full aspect-video object-cover" />
+                                            <button type="button" onClick={() => setValue("cover_image_url", "", { shouldValidate: true })}
+                                                className="absolute top-2 right-2 p-1.5 bg-white/90 rounded-full text-neutral-600 hover:text-red-600 shadow" aria-label="Remove cover">
+                                                <X className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <label className="flex flex-col items-center justify-center w-full max-w-sm aspect-video rounded-xl border-2 border-dashed border-neutral-300 bg-white hover:bg-neutral-50 cursor-pointer text-neutral-500">
+                                            {coverUploading ? <Loader2 className="w-7 h-7 animate-spin text-neutral-700" /> : <><Upload className="w-7 h-7 mb-1.5 text-neutral-400" /><span className="text-xs font-medium">Click or drop to upload</span></>}
+                                            <input type="file" accept="image/*" className="hidden" disabled={coverUploading}
+                                                onChange={(e) => { const f = e.target.files?.[0]; if (f) void uploadCover(f); e.target.value = ""; }} />
+                                        </label>
+                                    )}
                                     {errors.cover_image_url && <p className="mt-1 text-xs text-red-600">{errors.cover_image_url.message}</p>}
                                 </div>
                                 <div className="rounded-xl border border-neutral-200 bg-white p-4">
-                                    <div className="flex items-center justify-between mb-1">
-                                        <h3 className="text-sm font-semibold text-neutral-600">Gallery images</h3>
-                                        <Button type="button" variant="outline" size="sm" onClick={addGallery} leftIcon={<Plus className="w-3.5 h-3.5" />}>Add</Button>
-                                    </div>
+                                    <h3 className="text-sm font-semibold text-neutral-600 mb-1">Gallery images</h3>
                                     {sectionNote("Extra photos shown in the event's image gallery.")}
-                                    {gallery.length === 0 ? (
-                                        <p className="text-xs text-neutral-400">No gallery images yet.</p>
-                                    ) : (
-                                        <div className="space-y-2">
-                                            {gallery.map((url, i) => (
-                                                <div key={i} className="flex gap-2 items-center">
-                                                    <Input value={url} placeholder="https://…" onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateGallery(i, e.target.value)} className="flex-1" />
-                                                    <button type="button" onClick={() => removeGallery(i)} className="p-2 text-neutral-400 hover:text-red-600" aria-label="Remove image"><Trash2 className="w-4 h-4" /></button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="rounded-xl border border-neutral-200 bg-white p-4">
-                                    <div className="flex items-center justify-between mb-1">
-                                        <h3 className="text-sm font-semibold text-neutral-600">Videos</h3>
-                                        <Button type="button" variant="outline" size="sm" onClick={addVideo} leftIcon={<Plus className="w-3.5 h-3.5" />}>Add</Button>
+                                    <div className="flex flex-wrap gap-2">
+                                        {gallery.map((url, i) => (
+                                            <div key={i} className="relative w-20 h-20 rounded-lg overflow-hidden border border-neutral-200">
+                                                <img src={url} alt="" className="w-full h-full object-cover" />
+                                                <button type="button" onClick={() => removeGallery(i)}
+                                                    className="absolute top-0.5 right-0.5 p-1 bg-white/90 rounded-full text-neutral-600 hover:text-red-600 shadow" aria-label="Remove image">
+                                                    <X className="w-3 h-3" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                        <label className="w-20 h-20 rounded-lg border-2 border-dashed border-neutral-300 bg-neutral-50 hover:bg-white cursor-pointer flex flex-col items-center justify-center text-neutral-400">
+                                            {galleryUploading ? <Loader2 className="w-5 h-5 animate-spin text-neutral-600" /> : <><Plus className="w-5 h-5" /><span className="text-[10px] font-semibold">Add</span></>}
+                                            <input type="file" accept="image/*" multiple className="hidden" disabled={galleryUploading}
+                                                onChange={(e) => { if (e.target.files && e.target.files.length) void uploadGalleryFiles(e.target.files); e.target.value = ""; }} />
+                                        </label>
                                     </div>
-                                    {sectionNote("Optional video URLs (e.g. aftermovie, teaser).")}
-                                    {videos.length === 0 ? (
-                                        <p className="text-xs text-neutral-400">No videos yet.</p>
-                                    ) : (
-                                        <div className="space-y-2">
-                                            {videos.map((url, i) => (
-                                                <div key={i} className="flex gap-2 items-center">
-                                                    <Input value={url} placeholder="https://…" onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateVideo(i, e.target.value)} className="flex-1" />
-                                                    <button type="button" onClick={() => removeVideo(i)} className="p-2 text-neutral-400 hover:text-red-600" aria-label="Remove video"><Trash2 className="w-4 h-4" /></button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                         )}
@@ -487,7 +523,7 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
                                         <h3 className="text-sm font-semibold text-neutral-600">Map filters &amp; pins</h3>
                                         <Button type="button" variant="outline" size="sm" onClick={addFilter} leftIcon={<Plus className="w-3.5 h-3.5" />}>Add filter</Button>
                                     </div>
-                                    {sectionNote("Filter chips on the Explore-Around map. Each venue below can be assigned one, and its colour becomes the pin colour.")}
+                                    {sectionNote("Filter chips on the Explore-Around map. Upload an icon and pick a background colour — venues assigned to a filter render as that pin (icon on the coloured background, like the Explore page).")}
                                     {mapFilters.length === 0 ? (
                                         <p className="text-xs text-neutral-400">No filters yet (e.g. Stages, Food, Parking).</p>
                                     ) : (
@@ -495,8 +531,18 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
                                             {mapFilters.map((f, i) => (
                                                 <div key={i} className="flex gap-2 items-center">
                                                     <Input value={f.label} placeholder="Label (e.g. Stages)" onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateFilter(i, { label: e.target.value })} className="flex-1" />
-                                                    <Input value={f.icon ?? ""} placeholder="icon" onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateFilter(i, { icon: e.target.value })} className="w-28" />
-                                                    <input type="color" value={f.color || "#FECD36"} onChange={(e) => updateFilter(i, { color: e.target.value })} className="w-10 h-9 rounded border border-neutral-300 bg-white shrink-0" title="Pin color" />
+                                                    <label
+                                                        className="relative w-10 h-9 rounded border border-dashed border-neutral-300 bg-white flex items-center justify-center cursor-pointer overflow-hidden shrink-0"
+                                                        style={f.color ? { backgroundColor: f.color } : undefined}
+                                                        title="Upload pin icon"
+                                                    >
+                                                        {isIconUrl(f.icon)
+                                                            ? <img src={f.icon ?? ""} alt="" className="w-full h-full object-contain p-0.5" />
+                                                            : <Upload className="w-4 h-4 text-neutral-400" />}
+                                                        <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer"
+                                                            onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadFilterIcon(i, file); e.target.value = ""; }} />
+                                                    </label>
+                                                    <input type="color" value={f.color || "#FECD36"} onChange={(e) => updateFilter(i, { color: e.target.value })} className="w-10 h-9 rounded border border-neutral-300 bg-white shrink-0" title="Pin background color" />
                                                     <button type="button" onClick={() => removeFilter(i)} className="p-2 text-neutral-400 hover:text-red-600" aria-label="Remove filter"><Trash2 className="w-4 h-4" /></button>
                                                 </div>
                                             ))}
@@ -535,11 +581,32 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
                                                             })}
                                                         </select>
                                                     </div>
+                                                    <div>
+                                                        <span className="block text-[11px] text-neutral-400 mb-0.5">Link one of your markers (fills the location automatically)</span>
+                                                        <select
+                                                            value={v.marker_id ?? ""}
+                                                            onChange={(e) => {
+                                                                const m = myMarkers.find((x) => x.id === e.target.value);
+                                                                if (!m) { updateVenue(i, { marker_id: "" }); return; }
+                                                                const coords = m.location?.coordinates;
+                                                                updateVenue(i, {
+                                                                    marker_id: m.id,
+                                                                    name: (v.name && v.name.trim()) ? v.name : m.title,
+                                                                    category: (v.category && v.category.trim()) ? v.category : (m.categories?.[0] ?? ""),
+                                                                    coordinates: coords && coords.length === 2 ? [coords[0], coords[1]] : v.coordinates,
+                                                                });
+                                                            }}
+                                                            className="w-full h-9 rounded-lg border border-neutral-300 bg-white text-sm px-2"
+                                                            title="Link a marker"
+                                                        >
+                                                            <option value="">— link a marker —</option>
+                                                            {myMarkers.map((m) => <option key={m.id} value={m.id}>{m.title}</option>)}
+                                                        </select>
+                                                    </div>
                                                     <div className="grid grid-cols-2 gap-2">
                                                         <Input type="number" step="any" value={numStr(v.coordinates?.[1])} placeholder="Latitude" onChange={(e: React.ChangeEvent<HTMLInputElement>) => setVenueCoord(i, "lat", e.target.value)} />
                                                         <Input type="number" step="any" value={numStr(v.coordinates?.[0])} placeholder="Longitude" onChange={(e: React.ChangeEvent<HTMLInputElement>) => setVenueCoord(i, "lng", e.target.value)} />
                                                     </div>
-                                                    <Input value={v.marker_id ?? ""} placeholder="Marker ID (optional — links to an existing map marker)" onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateVenue(i, { marker_id: e.target.value })} />
                                                 </div>
                                             ))}
                                         </div>
@@ -631,7 +698,11 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
                                                                     <Input value={ss.stage ?? ""} placeholder="Stage" onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateSession(di, si, { stage: e.target.value })} />
                                                                 )}
                                                                 <label className="flex items-center gap-2 text-xs text-neutral-600 px-1">
-                                                                    <input type="checkbox" checked={ss.status_override === "delayed"} onChange={(e) => updateSession(di, si, { status_override: e.target.checked ? "delayed" : undefined, delayed_to: e.target.checked ? ss.delayed_to : undefined })} />
+                                                                    <input type="checkbox" checked={ss.status_override === "delayed"} onChange={(e) => updateSession(di, si, {
+                                                                        status_override: e.target.checked ? "delayed" : undefined,
+                                                                        delayed_to: e.target.checked ? (ss.delayed_to ?? ss.start_time ?? undefined) : undefined,
+                                                                        delayed_end: e.target.checked ? (ss.delayed_end ?? ss.end_time ?? undefined) : undefined,
+                                                                    })} />
                                                                     Mark delayed
                                                                 </label>
                                                             </div>
@@ -646,9 +717,18 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
                                                                 </div>
                                                             </div>
                                                             {ss.status_override === "delayed" && (
-                                                                <div>
-                                                                    <span className="block text-[11px] text-neutral-400 mb-0.5">Delayed to</span>
-                                                                    <Input type="datetime-local" value={ss.delayed_to ? ss.delayed_to.slice(0, 16) : ""} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateSession(di, si, { delayed_to: e.target.value })} />
+                                                                <div className="rounded-lg border border-amber-200 bg-amber-50 p-2.5 space-y-2">
+                                                                    <p className="text-[11px] font-medium text-amber-700">Reschedule this delayed session — set both a new start and end so it doesn't overlap the next session.</p>
+                                                                    <div className="grid grid-cols-2 gap-2">
+                                                                        <div>
+                                                                            <span className="block text-[11px] text-amber-700 mb-0.5">New start</span>
+                                                                            <Input type="datetime-local" value={ss.delayed_to ? ss.delayed_to.slice(0, 16) : ""} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateSession(di, si, { delayed_to: e.target.value })} />
+                                                                        </div>
+                                                                        <div>
+                                                                            <span className="block text-[11px] text-amber-700 mb-0.5">New end</span>
+                                                                            <Input type="datetime-local" value={ss.delayed_end ? ss.delayed_end.slice(0, 16) : ""} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateSession(di, si, { delayed_end: e.target.value })} />
+                                                                        </div>
+                                                                    </div>
                                                                 </div>
                                                             )}
                                                         </div>
@@ -664,10 +744,14 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
                     </div>
 
                     {/* Footer */}
-                    <div className="flex gap-3 px-6 py-4 border-t border-neutral-200 bg-neutral-50 shrink-0">
-                        <Button type="button" variant="ghost" fullWidth onClick={onClose} disabled={isBusy}>Cancel</Button>
-                        <Button type="submit" variant="primary" fullWidth isLoading={isBusy} disabled={isBusy}>
-                            {mode === "create" ? "Create Event" : "Save Changes"}
+                    <div className="flex items-center gap-3 px-6 py-4 border-t border-neutral-200 bg-neutral-50 shrink-0">
+                        <Button type="button" variant="ghost" onClick={onClose} disabled={isBusy}>Cancel</Button>
+                        <div className="flex-1" />
+                        <Button type="button" variant="outline" onClick={handleSubmit(submit("draft"), onInvalid)} disabled={isBusy}>
+                            Save as Draft
+                        </Button>
+                        <Button type="submit" variant="primary" isLoading={isBusy} disabled={isBusy}>
+                            Submit for Review
                         </Button>
                     </div>
                 </form>

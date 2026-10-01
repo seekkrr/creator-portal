@@ -15,6 +15,7 @@ type StatusFilter = EventStatus | "all";
 const STATUS_FILTERS: { label: string; value: StatusFilter }[] = [
     { label: "All", value: "all" },
     { label: "Draft", value: "draft" },
+    { label: "In Review", value: "pending" },
     { label: "Published", value: "published" },
     { label: "Live", value: "live" },
     { label: "Ended", value: "ended" },
@@ -23,17 +24,31 @@ const STATUS_FILTERS: { label: string; value: StatusFilter }[] = [
 
 const STATUS_STYLES: Record<EventStatus, string> = {
     draft: "bg-neutral-100 text-neutral-600 border-neutral-200",
+    pending: "bg-blue-50 text-blue-700 border-blue-200",
     published: "bg-green-50 text-green-700 border-green-200",
     live: "bg-red-50 text-red-700 border-red-200",
     ended: "bg-neutral-100 text-neutral-500 border-neutral-200",
     cancelled: "bg-amber-50 text-amber-700 border-amber-200",
 };
 
-/** Sensible next status transitions for an event, given its current status. */
+/** Human label for a status (so "pending" reads as "In Review"). */
+const STATUS_LABELS: Record<EventStatus, string> = {
+    draft: "draft",
+    pending: "in review",
+    published: "published",
+    live: "live",
+    ended: "ended",
+    cancelled: "cancelled",
+};
+
+/** Sensible next status transitions a creator can make. Publishing is the
+ * admin's job, so a draft is submitted for review rather than self-published. */
 function transitionsFor(status: EventStatus): { label: string; to: EventStatus }[] {
     switch (status) {
         case "draft":
-            return [{ label: "Publish", to: "published" }];
+            return [{ label: "Submit for Review", to: "pending" }];
+        case "pending":
+            return [{ label: "Withdraw to Draft", to: "draft" }];
         case "published":
             return [
                 { label: "Mark Live", to: "live" },
@@ -203,7 +218,7 @@ export function EventsPage() {
                                         <td className="py-4 px-6 text-sm text-neutral-500">{fmtDate(ev.start_date)} – {fmtDate(ev.end_date)}</td>
                                         <td className="py-4 px-6 text-center">
                                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${STATUS_STYLES[ev.status]}`}>
-                                                {ev.status}
+                                                {STATUS_LABELS[ev.status]}
                                             </span>
                                         </td>
                                         <td className="py-4 px-6 text-right relative">
