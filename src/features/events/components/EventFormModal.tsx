@@ -88,7 +88,7 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
     // than typing a raw marker id.
     const { data: myMarkersData } = useQuery({
         queryKey: ["creator-markers-for-events"],
-        queryFn: () => markerService.listMarkers({ mine: true, page: 1, page_size: 200 }),
+        queryFn: () => markerService.listMarkers({ mine: true, page: 1, page_size: 100 }),
         enabled: open,
         staleTime: 60_000,
     });
