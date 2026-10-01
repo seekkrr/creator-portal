@@ -25,7 +25,7 @@ const MAX_INPUT_BYTES = 25 * 1024 * 1024;
 
 /** Backend media categories (mirror of v2 settings.MEDIA_FOLDERS). */
 const VALID_CATEGORIES = new Set([
-    "icons", "logo", "marker", "narrative", "onboarding", "profile", "quest", "region", "website",
+    "event", "icons", "logo", "marker", "narrative", "onboarding", "profile", "quest", "region", "website",
 ]);
 /** Human-facing folder names → canonical backend category. */
 const CATEGORY_ALIASES: Record<string, string> = {
