@@ -42,7 +42,6 @@ export function toCreatePayload(d: EventFormData): CreateEventPayload {
             start_date: d.start_date,
             end_date: d.end_date,
             timezone: d.timezone,
-            region_id: d.region_id,
             capacity: d.capacity,
         }),
         title: d.title,
@@ -64,7 +63,7 @@ export function toUpdatePayload(d: EventFormData): UpdateEventPayload {
         title: d.title,
         categories: d.categories,
         is_featured: d.is_featured,
-        // region_id is always sent (empty clears it), matching the marker pattern.
-        region_id: d.region_id ?? "",
+        // region_id is intentionally NOT sent from the creator portal — the
+        // region is managed by admins, so creator edits must not overwrite it.
     } as UpdateEventPayload;
 }

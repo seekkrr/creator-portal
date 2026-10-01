@@ -233,7 +233,7 @@ export interface Paginated<T> extends Pagination {
 // normalizes it to `id` at the boundary (see normalizeId).
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type EventStatus = "draft" | "published" | "live" | "ended" | "cancelled";
+export type EventStatus = "draft" | "pending" | "published" | "live" | "ended" | "cancelled";
 
 export interface EventMedia {
     image_urls: string[];
@@ -272,6 +272,7 @@ export interface EventSession {
     image_url?: string | null;
     status_override?: string | null; // "delayed"
     delayed_to?: string | null;
+    delayed_end?: string | null; // new end time when delayed
 }
 
 export interface EventScheduleDay {
