@@ -31,6 +31,15 @@ function isoToLocalInput(v: string | null | undefined): string {
 const numStr = (n: unknown): string =>
     typeof n === "number" && Number.isFinite(n) ? String(n) : "";
 
+/** Best human message from an upload error — prefers the backend's detail. */
+function uploadErrMsg(e: unknown, fallback: string): string {
+    const data = (e as { response?: { data?: { detail?: unknown; message?: unknown } } })?.response?.data;
+    if (data?.detail) return String(data.detail);
+    if (data?.message) return String(data.message);
+    if (e instanceof Error && e.message) return e.message;
+    return fallback;
+}
+
 const DEFAULT_VALUES: Partial<EventFormData> = {
     title: "",
     subtitle: "",
@@ -135,7 +144,11 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
         const p = cloudinaryService
             .uploadImage(file, { category: "icons" })
             .then((res) => { updateFilter(i, { icon: res.secure_url }); return res; });
-        toast.promise(p, { loading: "Uploading icon…", success: "Icon uploaded", error: "Icon upload failed" });
+        toast.promise(p, {
+            loading: "Uploading icon…",
+            success: "Icon uploaded",
+            error: (e) => uploadErrMsg(e, "Icon upload failed"),
+        });
     };
     const isIconUrl = (s?: string | null) => !!s && /^https?:\/\//.test(s);
 
@@ -155,8 +168,8 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
         try {
             const res = await cloudinaryService.uploadImage(file, { category: "event" });
             setValue("cover_image_url", res.secure_url, { shouldValidate: true });
-        } catch {
-            toast.error("Cover upload failed");
+        } catch (e) {
+            toast.error(uploadErrMsg(e, "Cover upload failed"));
         } finally {
             setCoverUploading(false);
         }
@@ -168,8 +181,8 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
                 Array.from(files).map((f) => cloudinaryService.uploadImage(f, { category: "event" }))
             );
             setGallery((g) => [...g, ...results.map((r) => r.secure_url)]);
-        } catch {
-            toast.error("Image upload failed");
+        } catch (e) {
+            toast.error(uploadErrMsg(e, "Image upload failed"));
         } finally {
             setGalleryUploading(false);
         }
