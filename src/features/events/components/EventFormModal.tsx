@@ -128,8 +128,12 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
         setMapFilters((f) => f.map((x, idx) => (idx === i ? { ...x, ...patch } : x)));
     const removeFilter = (i: number) => setMapFilters((f) => f.filter((_, idx) => idx !== i));
     const uploadFilterIcon = (i: number, file: File) => {
+        if (file.size > 1024 * 1024) {
+            toast.error("Icon must be under 1 MB");
+            return;
+        }
         const p = cloudinaryService
-            .uploadImage(file, { folder: "creator-portal/event-pins" })
+            .uploadImage(file, { category: "icons" })
             .then((res) => { updateFilter(i, { icon: res.secure_url }); return res; });
         toast.promise(p, { loading: "Uploading icon…", success: "Icon uploaded", error: "Icon upload failed" });
     };
@@ -149,7 +153,7 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
     const uploadCover = async (file: File) => {
         setCoverUploading(true);
         try {
-            const res = await cloudinaryService.uploadImage(file, { folder: "events" });
+            const res = await cloudinaryService.uploadImage(file, { category: "event" });
             setValue("cover_image_url", res.secure_url, { shouldValidate: true });
         } catch {
             toast.error("Cover upload failed");
@@ -161,7 +165,7 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
         setGalleryUploading(true);
         try {
             const results = await Promise.all(
-                Array.from(files).map((f) => cloudinaryService.uploadImage(f, { folder: "events/gallery" }))
+                Array.from(files).map((f) => cloudinaryService.uploadImage(f, { category: "event" }))
             );
             setGallery((g) => [...g, ...results.map((r) => r.secure_url)]);
         } catch {
@@ -435,33 +439,6 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
                                         <Input type="number" min={0} placeholder="Unlimited" {...register("capacity", { valueAsNumber: true })} />
                                     </div>
                                 </div>
-                                <div>
-                                    {label("Categories")}
-                                    <div className="flex gap-2">
-                                        <Input
-                                            value={categoryInput}
-                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCategoryInput(e.target.value)}
-                                            onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
-                                                if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addCategory(); }
-                                            }}
-                                            placeholder="e.g. Technical, Cultural — press Enter"
-                                            className="flex-1"
-                                        />
-                                        <Button type="button" variant="outline" size="sm" onClick={addCategory}>Add</Button>
-                                    </div>
-                                    {categories && categories.length > 0 && (
-                                        <div className="flex flex-wrap gap-2 mt-2">
-                                            {categories.map((c) => (
-                                                <span key={c} className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-primary-50 text-primary-700 border border-primary-200 rounded-full text-xs font-medium">
-                                                    {c}
-                                                    <button type="button" onClick={() => removeCategory(c)} className="text-primary-400 hover:text-primary-700" aria-label={`Remove ${c}`}>
-                                                        <X className="w-3 h-3" />
-                                                    </button>
-                                                </span>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
                                 <label className="flex items-center gap-2 text-sm text-neutral-700 pt-1">
                                     <input type="checkbox" {...register("is_featured")} className="rounded border-neutral-300 text-primary-600 focus:ring-primary-500" />
                                     Featured event
@@ -474,7 +451,7 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
                             <div className="space-y-5">
                                 <div>
                                     {label("Cover Image")}
-                                    {sectionNote("Shown as the event's hero. Uploaded to S3 and served from the CDN.")}
+                                    {sectionNote("Shown as the event's hero. PNG, JPG or WebP · up to 25 MB · no SVG. Large photos are optimized automatically.")}
                                     {coverUrl ? (
                                         <div className="relative w-full max-w-sm rounded-xl overflow-hidden border border-neutral-200">
                                             <img src={coverUrl} alt="" className="w-full aspect-video object-cover" />
@@ -494,7 +471,7 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
                                 </div>
                                 <div className="rounded-xl border border-neutral-200 bg-white p-4">
                                     <h3 className="text-sm font-semibold text-neutral-600 mb-1">Gallery images</h3>
-                                    {sectionNote("Extra photos shown in the event's image gallery.")}
+                                    {sectionNote("Extra photos shown in the event's image gallery. PNG, JPG or WebP · up to 25 MB each · no SVG.")}
                                     <div className="flex flex-wrap gap-2">
                                         {gallery.map((url, i) => (
                                             <div key={i} className="relative w-20 h-20 rounded-lg overflow-hidden border border-neutral-200">
@@ -523,7 +500,7 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
                                         <h3 className="text-sm font-semibold text-neutral-600">Map filters &amp; pins</h3>
                                         <Button type="button" variant="outline" size="sm" onClick={addFilter} leftIcon={<Plus className="w-3.5 h-3.5" />}>Add filter</Button>
                                     </div>
-                                    {sectionNote("Filter chips on the Explore-Around map. Upload an icon and pick a background colour — venues assigned to a filter render as that pin (icon on the coloured background, like the Explore page).")}
+                                    {sectionNote("Filter chips on the Explore-Around map. Upload an icon and pick a background colour — venues assigned to a filter render as that pin (icon on the coloured background, like the Explore page). Icon: PNG/JPG/WebP (no SVG), up to 1 MB; a small square with a transparent background looks best.")}
                                     {mapFilters.length === 0 ? (
                                         <p className="text-xs text-neutral-400">No filters yet (e.g. Stages, Food, Parking).</p>
                                     ) : (
@@ -566,15 +543,19 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
                                                         <Input value={v.name ?? ""} placeholder="Name (e.g. Main Stage)" onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateVenue(i, { name: e.target.value })} className="flex-1" />
                                                         <button type="button" onClick={() => removeVenue(i)} className="p-2 text-neutral-400 hover:text-red-600 shrink-0" aria-label="Remove venue"><Trash2 className="w-4 h-4" /></button>
                                                     </div>
-                                                    <div className="grid grid-cols-2 gap-2">
-                                                        <Input value={v.category ?? ""} placeholder="Category (e.g. stage)" onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateVenue(i, { category: e.target.value })} />
+                                                    <div>
+                                                        <span className="block text-[11px] text-neutral-400 mb-0.5">Category (map filter) — groups the pin and its Explore-Around chip</span>
                                                         <select
                                                             value={v.filter_key ?? ""}
-                                                            onChange={(e) => updateVenue(i, { filter_key: e.target.value || null })}
-                                                            className="h-9 rounded-lg border border-neutral-300 bg-white text-sm px-2"
-                                                            title="Map filter"
+                                                            onChange={(e) => {
+                                                                const k = e.target.value || null;
+                                                                const f = mapFilters.find((x) => (x.key || x.label || "").trim().toLowerCase().replace(/\s+/g, "-") === k);
+                                                                updateVenue(i, { filter_key: k, category: f ? (f.label || f.key || "") : v.category });
+                                                            }}
+                                                            className="w-full h-9 rounded-lg border border-neutral-300 bg-white text-sm px-2"
+                                                            title="Category / map filter"
                                                         >
-                                                            <option value="">— map filter —</option>
+                                                            <option value="">{mapFilters.length ? "— category / map filter —" : "Add a map filter above first"}</option>
                                                             {mapFilters.filter((f) => (f.key || f.label)).map((f, fi) => {
                                                                 const k = (f.key || f.label || "").trim().toLowerCase().replace(/\s+/g, "-");
                                                                 return <option key={fi} value={k}>{f.label || k}</option>;
@@ -653,8 +634,37 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
                         {/* ── SCHEDULE ── */}
                         {tab === "schedule" && (
                             <div className="space-y-4">
+                                {/* Session categories — define them here, then pick per session below. */}
+                                <div className="rounded-xl border border-neutral-200 bg-white p-4">
+                                    <h3 className="text-sm font-semibold text-neutral-600 mb-1">Categories</h3>
+                                    {sectionNote("The kinds of sessions in this event (e.g. Cultural, Technical, Literary, Pronite). Each session below picks one, and they appear as tags on the event.")}
+                                    <div className="flex gap-2">
+                                        <Input
+                                            value={categoryInput}
+                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCategoryInput(e.target.value)}
+                                            onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                                                if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addCategory(); }
+                                            }}
+                                            placeholder="e.g. Cultural, Technical — press Enter"
+                                            className="flex-1"
+                                        />
+                                        <Button type="button" variant="outline" size="sm" onClick={addCategory}>Add</Button>
+                                    </div>
+                                    {categories && categories.length > 0 && (
+                                        <div className="flex flex-wrap gap-2 mt-2">
+                                            {categories.map((c) => (
+                                                <span key={c} className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-primary-50 text-primary-700 border border-primary-200 rounded-full text-xs font-medium">
+                                                    {c}
+                                                    <button type="button" onClick={() => removeCategory(c)} className="text-primary-400 hover:text-primary-700" aria-label={`Remove ${c}`}>
+                                                        <X className="w-3 h-3" />
+                                                    </button>
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
                                 <div className="flex items-center justify-between">
-                                    <p className="text-xs text-neutral-400">Add days, then sessions within each day. Link a session to a venue and set its category & times.</p>
+                                    <p className="text-xs text-neutral-400">Add days, then sessions within each day. Link a session to a venue, pick its category &amp; set times.</p>
                                     <Button type="button" variant="outline" size="sm" onClick={addDay} leftIcon={<Plus className="w-3.5 h-3.5" />}>Add Day</Button>
                                 </div>
                                 {schedule.length === 0 ? (
@@ -677,7 +687,15 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
                                                             </div>
                                                             <div className="grid grid-cols-2 gap-2">
                                                                 <Input value={ss.performer ?? ""} placeholder="Performer / host" onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateSession(di, si, { performer: e.target.value })} />
-                                                                <Input value={ss.category ?? ""} placeholder="Category (Cultural…)" onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateSession(di, si, { category: e.target.value })} />
+                                                                <select
+                                                                    value={ss.category ?? ""}
+                                                                    onChange={(e) => updateSession(di, si, { category: e.target.value || null })}
+                                                                    className="h-9 rounded-lg border border-neutral-300 bg-white text-sm px-2"
+                                                                    title="Category"
+                                                                >
+                                                                    <option value="">{(categories && categories.length) ? "— category —" : "Add categories above"}</option>
+                                                                    {(categories ?? []).map((c) => <option key={c} value={c}>{c}</option>)}
+                                                                </select>
                                                             </div>
                                                             <div className="grid grid-cols-2 gap-2">
                                                                 {namedVenues.length > 0 ? (
