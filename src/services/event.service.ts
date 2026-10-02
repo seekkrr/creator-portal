@@ -76,18 +76,19 @@ export const eventService = {
         id: string,
         title: string,
         body: string,
-        opts?: { image?: string; long_body?: string }
-    ): Promise<{ recipients: number; sent: number }> {
-        const res = await api.post<{ recipients: number; sent: number }>(
+        opts?: { image?: string; long_body?: string; send_at?: string }
+    ): Promise<{ recipients: number; sent: number; scheduled?: boolean }> {
+        const res = await api.post<{ recipients: number; sent: number; scheduled?: boolean }>(
             API_ENDPOINTS.EVENTS.ANNOUNCE(id),
             {
                 title,
                 body,
                 ...(opts?.image ? { image: opts.image } : {}),
                 ...(opts?.long_body ? { long_body: opts.long_body } : {}),
+                ...(opts?.send_at ? { send_at: opts.send_at } : {}),
             }
         );
-        return { recipients: res.data.recipients ?? 0, sent: res.data.sent ?? 0 };
+        return { recipients: res.data.recipients ?? 0, sent: res.data.sent ?? 0, scheduled: res.data.scheduled };
     },
 
     /** GET /api/v2/events/{id}/attendees → RSVP list. */

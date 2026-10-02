@@ -19,6 +19,8 @@ export function EventAnnounceModal({ eventId, eventTitle, onClose }: EventAnnoun
     const [longBody, setLongBody] = useState("");
     const [image, setImage] = useState("");
     const [imgUploading, setImgUploading] = useState(false);
+    const [scheduleLater, setScheduleLater] = useState(false);
+    const [scheduleAt, setScheduleAt] = useState(""); // datetime-local (wall time)
 
     const uploadImage = async (file: File) => {
         setImgUploading(true);
@@ -36,18 +38,25 @@ export function EventAnnounceModal({ eventId, eventTitle, onClose }: EventAnnoun
         mutationFn: () => eventService.announce(eventId, title.trim(), body.trim(), {
             image: image || undefined,
             long_body: longBody.trim() || undefined,
+            // Convert local wall-time to a UTC ISO instant for the server.
+            send_at: scheduleLater && scheduleAt ? new Date(scheduleAt).toISOString() : undefined,
         }),
     });
 
     const send = async () => {
         if (!title.trim() || !body.trim()) return;
+        if (scheduleLater && !scheduleAt) { toast.error("Pick a date & time to schedule"); return; }
         try {
             const res = await mutation.mutateAsync();
-            toast.success(
-                res.sent > 0
-                    ? `Sent to ${res.sent} device(s) across ${res.recipients} attendee(s).`
-                    : `Queued for ${res.recipients} attendee(s). (Push delivery activates once SNS is configured.)`
-            );
+            if (res.scheduled) {
+                toast.success(`Scheduled for ${res.recipients} attendee(s).`);
+            } else {
+                toast.success(
+                    res.sent > 0
+                        ? `Sent to ${res.sent} device(s) across ${res.recipients} attendee(s).`
+                        : `Queued for ${res.recipients} attendee(s). (Push delivery activates once SNS is configured.)`
+                );
+            }
             onClose();
         } catch (e) {
             toast.error(e instanceof Error ? e.message : "Failed to send announcement");
@@ -106,12 +115,25 @@ export function EventAnnounceModal({ eventId, eventTitle, onClose }: EventAnnoun
                             </label>
                         )}
                     </div>
+                    <div>
+                        <label className="flex items-center gap-2 text-sm text-neutral-700">
+                            <input type="checkbox" checked={scheduleLater}
+                                onChange={(e) => setScheduleLater(e.target.checked)}
+                                className="rounded border-neutral-300 text-primary-600 focus:ring-primary-500" />
+                            Schedule for later
+                        </label>
+                        {scheduleLater && (
+                            <input type="datetime-local" value={scheduleAt}
+                                onChange={(e) => setScheduleAt(e.target.value)}
+                                className="mt-2 w-full h-9 rounded-lg border border-neutral-300 bg-white text-sm px-2" />
+                        )}
+                    </div>
                     <div className="flex gap-3 pt-1">
                         <Button variant="ghost" fullWidth onClick={onClose} disabled={mutation.isPending}>Cancel</Button>
                         <Button variant="primary" fullWidth onClick={send}
                             isLoading={mutation.isPending}
                             disabled={mutation.isPending || !title.trim() || !body.trim()}>
-                            Send Announcement
+                            {scheduleLater ? "Schedule" : "Send Announcement"}
                         </Button>
                     </div>
                 </div>
