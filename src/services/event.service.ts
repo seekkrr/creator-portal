@@ -70,11 +70,22 @@ export const eventService = {
         await api.delete(API_ENDPOINTS.EVENTS.BY_ID(id));
     },
 
-    /** POST /api/v2/events/{id}/announce → push to everyone who RSVP'd. */
-    async announce(id: string, title: string, body: string): Promise<{ recipients: number; sent: number }> {
+    /** POST /api/v2/events/{id}/announce → push to everyone who RSVP'd.
+     * image / long_body are optional rich fields (banner + expandable text). */
+    async announce(
+        id: string,
+        title: string,
+        body: string,
+        opts?: { image?: string; long_body?: string }
+    ): Promise<{ recipients: number; sent: number }> {
         const res = await api.post<{ recipients: number; sent: number }>(
             API_ENDPOINTS.EVENTS.ANNOUNCE(id),
-            { title, body }
+            {
+                title,
+                body,
+                ...(opts?.image ? { image: opts.image } : {}),
+                ...(opts?.long_body ? { long_body: opts.long_body } : {}),
+            }
         );
         return { recipients: res.data.recipients ?? 0, sent: res.data.sent ?? 0 };
     },

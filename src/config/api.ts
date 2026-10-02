@@ -28,6 +28,8 @@ export const API_ENDPOINTS = {
     CREATORS: {
         // V2: current authenticated creator's own profile + analytics
         ME: "/api/v2/creators/me",
+        ME_NOTIFICATION_ACCESS: "/api/v2/creators/me/notification-access",
+        ME_NOTIFICATION_ACCESS_REQUEST: "/api/v2/creators/me/notification-access/request",
         ME_ONBOARDING: "/api/v2/creators/me/onboarding-status",
         ME_ANALYTICS_SUMMARY: "/api/v2/creators/me/analytics/summary",
         ME_ANALYTICS_QUESTS: "/api/v2/creators/me/analytics/quests",

@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { X, Megaphone } from "lucide-react";
+import { X, Megaphone, Upload, Loader2 } from "lucide-react";
 import { Card, Button, Input, Textarea } from "@components/ui";
 import { eventService } from "@services/event.service";
+import { cloudinaryService } from "@services/cloudinary.service";
 
 interface EventAnnounceModalProps {
     eventId: string;
@@ -15,9 +16,27 @@ interface EventAnnounceModalProps {
 export function EventAnnounceModal({ eventId, eventTitle, onClose }: EventAnnounceModalProps) {
     const [title, setTitle] = useState("");
     const [body, setBody] = useState("");
+    const [longBody, setLongBody] = useState("");
+    const [image, setImage] = useState("");
+    const [imgUploading, setImgUploading] = useState(false);
+
+    const uploadImage = async (file: File) => {
+        setImgUploading(true);
+        try {
+            const res = await cloudinaryService.uploadImage(file, { category: "event" });
+            setImage(res.secure_url);
+        } catch {
+            toast.error("Image upload failed");
+        } finally {
+            setImgUploading(false);
+        }
+    };
 
     const mutation = useMutation({
-        mutationFn: () => eventService.announce(eventId, title.trim(), body.trim()),
+        mutationFn: () => eventService.announce(eventId, title.trim(), body.trim(), {
+            image: image || undefined,
+            long_body: longBody.trim() || undefined,
+        }),
     });
 
     const send = async () => {
@@ -59,9 +78,33 @@ export function EventAnnounceModal({ eventId, eventTitle, onClose }: EventAnnoun
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-neutral-700 mb-1">Message</label>
-                        <Textarea value={body} rows={4} maxLength={500}
+                        <Textarea value={body} rows={3} maxLength={500}
                             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setBody(e.target.value)}
-                            placeholder="What do attendees need to know?" />
+                            placeholder="Short line shown in the notification" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-neutral-700 mb-1">Longer description <span className="text-neutral-400 font-normal">(optional)</span></label>
+                        <Textarea value={longBody} rows={3} maxLength={2000}
+                            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setLongBody(e.target.value)}
+                            placeholder="Shown when the notification is expanded" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-neutral-700 mb-1">Image <span className="text-neutral-400 font-normal">(optional — defaults to the event cover)</span></label>
+                        {image ? (
+                            <div className="relative w-full rounded-lg overflow-hidden border border-neutral-200">
+                                <img src={image} alt="" className="w-full aspect-video object-cover" />
+                                <button type="button" onClick={() => setImage("")}
+                                    className="absolute top-2 right-2 p-1.5 bg-white/90 rounded-full text-neutral-600 hover:text-red-600 shadow" aria-label="Remove image">
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+                        ) : (
+                            <label className="flex flex-col items-center justify-center w-full aspect-video rounded-lg border-2 border-dashed border-neutral-300 bg-neutral-50 hover:bg-white cursor-pointer text-neutral-500">
+                                {imgUploading ? <Loader2 className="w-6 h-6 animate-spin text-neutral-700" /> : <><Upload className="w-6 h-6 mb-1 text-neutral-400" /><span className="text-xs font-medium">Click to upload (PNG/JPG/WebP)</span></>}
+                                <input type="file" accept="image/*" className="hidden" disabled={imgUploading}
+                                    onChange={(e) => { const f = e.target.files?.[0]; if (f) void uploadImage(f); e.target.value = ""; }} />
+                            </label>
+                        )}
                     </div>
                     <div className="flex gap-3 pt-1">
                         <Button variant="ghost" fullWidth onClick={onClose} disabled={mutation.isPending}>Cancel</Button>

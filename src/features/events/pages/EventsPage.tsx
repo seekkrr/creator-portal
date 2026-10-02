@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { MoreVertical, AlertTriangle, Plus, CalendarDays, Users } from "lucide-react";
 import { Card, Button, Input, EmptyState, ErrorState, SkeletonTableRows, StatusFilterPills } from "@components/ui";
 import { eventService } from "@services/event.service";
+import { creatorService } from "@services/creator.service";
 import { useAuthStore } from "@store/auth.store";
 import { toast } from "sonner";
 import type { EventListItem, EventStatus, EventDetail } from "@/types";
@@ -102,6 +103,21 @@ export function EventsPage() {
     });
 
     const events = data?.items ?? [];
+
+    // Notification-access gate: creators must be approved by an admin to send.
+    const { data: notifAccess } = useQuery({
+        queryKey: ["notif-access"],
+        queryFn: () => creatorService.getNotificationAccess(),
+        enabled: !!user,
+    });
+    const requestAccess = useMutation({
+        mutationFn: () => creatorService.requestNotificationAccess(),
+        onSuccess: () => {
+            toast.success("Request sent — an admin will review it.");
+            queryClient.invalidateQueries({ queryKey: ["notif-access"] });
+        },
+        onError: (e) => toast.error(e instanceof Error ? e.message : "Could not request access"),
+    });
 
     const openCreate = () => { setEditing(undefined); setIsFormOpen(true); };
 
@@ -240,8 +256,16 @@ export function EventsPage() {
                                                                 className="w-full text-left px-4 py-2 text-sm text-primary-600 hover:bg-primary-50 font-medium">Edit Event</button>
                                                             <button onClick={() => { setAttendeesFor(ev); setOpenDropdownId(null); }}
                                                                 className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 font-medium">View Attendees</button>
-                                                            <button onClick={() => { setAnnounceFor(ev); setOpenDropdownId(null); }}
-                                                                className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 font-medium">Announce</button>
+                                                            {notifAccess === "approved" ? (
+                                                                <button onClick={() => { setAnnounceFor(ev); setOpenDropdownId(null); }}
+                                                                    className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 font-medium">Send Notification</button>
+                                                            ) : notifAccess === "pending" ? (
+                                                                <div className="px-4 py-2 text-sm text-amber-600 font-medium">Notifications: awaiting admin approval</div>
+                                                            ) : (
+                                                                <button onClick={() => { requestAccess.mutate(); setOpenDropdownId(null); }}
+                                                                    disabled={requestAccess.isPending}
+                                                                    className="w-full text-left px-4 py-2 text-sm text-primary-600 hover:bg-primary-50 font-medium">Request Notification Access</button>
+                                                            )}
                                                             {transitionsFor(ev.status).map((t) => (
                                                                 <button key={t.to} onClick={() => { void changeStatus(ev.id, t.to); setOpenDropdownId(null); }}
                                                                     className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 font-medium">{t.label}</button>
