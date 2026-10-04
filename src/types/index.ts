@@ -301,6 +301,15 @@ export interface EventListItem {
     average_rating?: number | null;
     is_featured: boolean;
     status: EventStatus;
+    created_by?: string | null;
+    created_by_name?: string | null;
+    collaborator_ids?: string[];
+    collaborators?: EventCollaborator[];
+}
+
+export interface EventCollaborator {
+    id: string;
+    name?: string | null;
 }
 
 /** Detail-endpoint shape (Event.to_public_dict + rsvp + region_name). */
@@ -329,6 +338,10 @@ export interface EventDetail {
     created_at?: string | null;
     updated_at?: string | null;
     rsvp?: EventRsvpSummary;
+    created_by?: string | null;
+    created_by_name?: string | null;
+    collaborator_ids?: string[];
+    collaborators?: EventCollaborator[];
 }
 
 export interface EventAttendee {
@@ -666,6 +679,7 @@ export interface Marker {
     status: MarkerStatus;
     source: MarkerSource | null;
     created_by: string | null;
+    creator_name?: string | null;
     usage_count: number;
     center_distance: MarkerCenterDistance | null;
     /** present only on the teaser shape returned by the booking-gated detail. */

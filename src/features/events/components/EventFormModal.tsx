@@ -93,11 +93,16 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
         defaultValues: DEFAULT_VALUES,
     });
 
-    // The creator's own markers — venues are linked by picking from these rather
-    // than typing a raw marker id.
+    // Markers available to link as venues. For an existing event this is the whole
+    // team's pool (owner + admin-assigned collaborators); for a brand-new event
+    // (no collaborators yet) it's just the creator's own markers.
+    const editingEventId = mode === "edit" ? initial?.id : undefined;
     const { data: myMarkersData } = useQuery({
-        queryKey: ["creator-markers-for-events"],
-        queryFn: () => markerService.listMarkers({ mine: true, page: 1, page_size: 100 }),
+        queryKey: ["creator-markers-for-events", editingEventId ?? "mine"],
+        queryFn: () =>
+            editingEventId
+                ? markerService.listMarkers({ event_id: editingEventId, page: 1, page_size: 100 })
+                : markerService.listMarkers({ mine: true, page: 1, page_size: 100 }),
         enabled: open,
         staleTime: 60_000,
     });
@@ -508,6 +513,14 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
                         {/* ── MAP & VENUES ── */}
                         {tab === "map" && (
                             <div className="space-y-5">
+                                {mode === "edit" && initial && (initial.collaborators?.length ?? 0) > 0 && (
+                                    <div className="rounded-xl border border-violet-200 bg-violet-50 p-3 text-xs text-violet-800">
+                                        <span className="font-semibold">Team:</span>{" "}
+                                        {initial.created_by_name ?? "Owner"} (owner)
+                                        {initial.collaborators?.map((c) => `, ${c.name ?? "creator"}`).join("")}
+                                        <span className="block text-violet-600 mt-0.5">You can link any team member's markers as venues below.</span>
+                                    </div>
+                                )}
                                 <div className="rounded-xl border border-neutral-200 bg-white p-4">
                                     <div className="flex items-center justify-between mb-1">
                                         <h3 className="text-sm font-semibold text-neutral-600">Map filters &amp; pins</h3>
@@ -576,7 +589,7 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
                                                         </select>
                                                     </div>
                                                     <div>
-                                                        <span className="block text-[11px] text-neutral-400 mb-0.5">Link one of your markers (fills the location automatically)</span>
+                                                        <span className="block text-[11px] text-neutral-400 mb-0.5">Link a venue marker — your team's markers (fills the location automatically)</span>
                                                         <select
                                                             value={v.marker_id ?? ""}
                                                             onChange={(e) => {
@@ -594,7 +607,11 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
                                                             title="Link a marker"
                                                         >
                                                             <option value="">— link a marker —</option>
-                                                            {myMarkers.map((m) => <option key={m.id} value={m.id}>{m.title}</option>)}
+                                                            {myMarkers.map((m) => (
+                                                                <option key={m.id} value={m.id}>
+                                                                    {m.title}{m.creator_name ? ` — ${m.creator_name}` : ""}
+                                                                </option>
+                                                            ))}
                                                         </select>
                                                     </div>
                                                     <div className="grid grid-cols-2 gap-2">

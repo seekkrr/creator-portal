@@ -230,6 +230,9 @@ export function EventsPage() {
                                         <td className="py-4 px-6 font-medium text-neutral-900 truncate" title={ev.title}>
                                             {ev.title}
                                             {ev.is_featured && <span className="ml-2 text-[11px] font-semibold text-amber-600">★ Featured</span>}
+                                            {ev.created_by && user?._id && ev.created_by !== user._id && (
+                                                <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-violet-50 text-violet-700 border border-violet-200" title={`Owner: ${ev.created_by_name ?? "another creator"}`}>Collaborator</span>
+                                            )}
                                         </td>
                                         <td className="py-4 px-6 text-sm text-neutral-500">{fmtDate(ev.start_date)} – {fmtDate(ev.end_date)}</td>
                                         <td className="py-4 px-6 text-center">
