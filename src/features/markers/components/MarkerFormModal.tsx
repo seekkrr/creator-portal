@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -126,6 +126,11 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
     const [pendingPayload, setPendingPayload] = useState<CreateMarkerPayload | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const ttdImageInputRef = useRef<HTMLInputElement>(null);
+    // Auto-save draft so an interrupted marker edit (crash / close / expired
+    // session) isn't lost. Keyed per marker (or "new" for a create).
+    const [draftSavedAt, setDraftSavedAt] = useState<number | null>(null);
+    // Suppress auto-save while the form is being populated programmatically.
+    const initializingRef = useRef(false);
 
     // --- Smart default map center for Create mode (F14) ---
     // Priority: (1) most recent creator marker, (2) browser geolocation, (3) Bangalore fallback.
@@ -192,6 +197,15 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
         defaultValues: DEFAULT_VALUES,
     });
 
+    const draftKey = useMemo(
+        () => `seekkrr_marker_draft_${mode === "edit" && initial?.id ? initial.id : "new"}`,
+        [mode, initial?.id]
+    );
+    const clearDraft = () => {
+        try { localStorage.removeItem(draftKey); } catch { /* storage unavailable */ }
+        setDraftSavedAt(null);
+    };
+
     // Lock background scroll while the modal is open (matches other portal
     // modals) so only the modal scrolls, not the page behind it.
     useEffect(() => {
@@ -204,6 +218,7 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
     // Prefill when editing or reset when creating
     useEffect(() => {
         if (!open) return;
+        initializingRef.current = true;
         if (mode === "edit" && initial) {
             reset({ ...DEFAULT_VALUES, ...markerToFormData(initial) });
             setHidden(initial.hidden ?? false);
@@ -212,7 +227,51 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
             setHidden(false);
         }
         setTagInput("");
-    }, [open, mode, initial, reset]);
+        // Surface a previously-saved draft so the user can restore it.
+        let savedAt: number | null = null;
+        try {
+            const raw = localStorage.getItem(draftKey);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (parsed && typeof parsed.savedAt === "number") savedAt = parsed.savedAt;
+            }
+        } catch { /* ignore malformed draft */ }
+        setDraftSavedAt(savedAt);
+        const t = setTimeout(() => { initializingRef.current = false; }, 0);
+        return () => clearTimeout(t);
+    }, [open, mode, initial, reset, draftKey]);
+
+    // Auto-save the full form (RHF fields + hidden flag) to localStorage, debounced.
+    const watchedAll = watch();
+    useEffect(() => {
+        if (!open || initializingRef.current) return;
+        const t = setTimeout(() => {
+            try {
+                localStorage.setItem(draftKey, JSON.stringify({
+                    savedAt: Date.now(),
+                    form: watchedAll,
+                    hidden,
+                }));
+            } catch { /* quota / private mode — best-effort */ }
+        }, 600);
+        return () => clearTimeout(t);
+    }, [open, draftKey, watchedAll, hidden]);
+
+    const restoreDraft = () => {
+        try {
+            const raw = localStorage.getItem(draftKey);
+            if (!raw) return;
+            const d = JSON.parse(raw);
+            initializingRef.current = true;
+            reset({ ...DEFAULT_VALUES, ...(d.form ?? {}) });
+            if (typeof d.hidden === "boolean") setHidden(d.hidden);
+            setDraftSavedAt(null);
+            setTimeout(() => { initializingRef.current = false; }, 0);
+            toast.success("Draft restored");
+        } catch {
+            toast.error("Couldn't restore the draft");
+        }
+    };
 
     const longitude = watch("longitude");
     const latitude = watch("latitude");
@@ -291,6 +350,7 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
             setNearbyConflict(null);
             setPendingPayload(null);
             toast.success("Marker created!");
+            clearDraft();
             onSaved(marker);
             onClose();
         } catch (err) {
@@ -335,6 +395,7 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
                     error: "Failed to update marker",
                 });
                 const marker = await promise;
+                clearDraft();
                 onSaved(marker);
                 onClose();
             } catch {
@@ -427,6 +488,16 @@ export function MarkerFormModal({ open, mode, initial, onClose, onSaved }: Marke
                         <X className="w-5 h-5" />
                     </button>
                 </div>
+
+                {draftSavedAt && (
+                    <div className="flex items-center justify-between gap-3 px-6 py-2 bg-amber-50 border-b border-amber-200 text-sm text-amber-800 shrink-0">
+                        <span>Unsaved draft from {new Date(draftSavedAt).toLocaleString()} found.</span>
+                        <div className="flex items-center gap-2 shrink-0">
+                            <button type="button" onClick={restoreDraft} className="px-3 py-1 rounded-md bg-amber-600 text-white text-xs font-medium hover:bg-amber-700">Restore</button>
+                            <button type="button" onClick={clearDraft} className="px-3 py-1 rounded-md text-amber-700 text-xs font-medium hover:bg-amber-100">Discard</button>
+                        </div>
+                    </div>
+                )}
 
                 <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex-1 flex flex-col min-h-0">
                     <div className="p-6 space-y-5 bg-neutral-50 overflow-y-auto flex-1">

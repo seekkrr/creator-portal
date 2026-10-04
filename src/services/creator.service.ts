@@ -82,4 +82,16 @@ export const creatorService = {
         );
         return res.data.data;
     },
+
+    /** Notification-access status: "none" | "pending" | "approved" | "rejected". */
+    async getNotificationAccess(): Promise<string> {
+        const res = await api.get<{ status: string }>(API_ENDPOINTS.CREATORS.ME_NOTIFICATION_ACCESS);
+        return res.data.status ?? "none";
+    },
+
+    /** Ask an admin to grant notification access. Returns the new status. */
+    async requestNotificationAccess(): Promise<string> {
+        const res = await api.post<{ status: string }>(API_ENDPOINTS.CREATORS.ME_NOTIFICATION_ACCESS_REQUEST);
+        return res.data.status ?? "pending";
+    },
 };

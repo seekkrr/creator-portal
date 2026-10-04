@@ -8,6 +8,8 @@ export interface ListMarkersParams {
     status?: string;
     /** Only the caller's own markers (all statuses). */
     mine?: boolean;
+    /** Markers of an event's team (owner + collaborators). Caller must manage the event. */
+    event_id?: string;
     category?: string;
     /** Comma-separated tag list. */
     tags?: string;

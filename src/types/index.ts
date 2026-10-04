@@ -228,6 +228,164 @@ export interface Paginated<T> extends Pagination {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Event / Festival Types (V2)
+// Backed by /api/v2/events. The backend serializes `_id`; the event service
+// normalizes it to `id` at the boundary (see normalizeId).
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type EventStatus = "draft" | "pending" | "published" | "live" | "ended" | "cancelled";
+
+export interface EventMedia {
+    image_urls: string[];
+    video_urls: string[];
+    cover_image_url: string;
+}
+
+export interface EventVenue {
+    marker_id: string;
+    name?: string | null;
+    category?: string | null;
+    thumbnail_url?: string | null;
+    coordinates?: number[] | null; // [lng, lat]
+    filter_key?: string | null;
+    pin_icon?: string | null;
+    pin_color?: string | null;
+}
+
+export interface EventMapFilter {
+    key: string;
+    label: string;
+    icon?: string | null;
+    color?: string | null;
+}
+
+export interface EventSession {
+    _id?: string;
+    title: string;
+    description?: string | null;
+    stage?: string | null;
+    category?: string | null; // creator-typed: Cultural / Literary / Technical / Pronite …
+    marker_id?: string | null;
+    start_time?: string | null;
+    end_time?: string | null;
+    performer?: string | null;
+    image_url?: string | null;
+    status_override?: string | null; // "delayed"
+    delayed_to?: string | null;
+    delayed_end?: string | null; // new end time when delayed
+}
+
+export interface EventScheduleDay {
+    date?: string | null;
+    label?: string | null;
+    sessions: EventSession[];
+}
+
+export interface EventRsvpSummary {
+    going_count: number;
+    interested_count: number;
+    my_status?: string | null;
+}
+
+/** List-endpoint shape (Event.to_list_dict + region_name). */
+export interface EventListItem {
+    id: string;
+    title: string;
+    subtitle?: string | null;
+    image?: string | null;
+    start_date?: string | null;
+    end_date?: string | null;
+    region_id?: string | null;
+    region_name?: string | null;
+    categories: string[];
+    average_rating?: number | null;
+    is_featured: boolean;
+    status: EventStatus;
+    created_by?: string | null;
+    created_by_name?: string | null;
+    collaborator_ids?: string[];
+    collaborators?: EventCollaborator[];
+}
+
+export interface EventCollaborator {
+    id: string;
+    name?: string | null;
+}
+
+/** Detail-endpoint shape (Event.to_public_dict + rsvp + region_name). */
+export interface EventDetail {
+    id: string;
+    title: string;
+    subtitle?: string | null;
+    description: string;
+    website?: string | null;
+    categories: string[];
+    media: EventMedia;
+    start_date?: string | null;
+    end_date?: string | null;
+    timezone?: string | null;
+    region_id?: string | null;
+    region_name?: string | null;
+    venues: EventVenue[];
+    main_venue_marker_id?: string | null;
+    schedule: EventScheduleDay[];
+    map_filters: EventMapFilter[];
+    travel_info: Record<string, unknown>;
+    quest_ids: string[];
+    status: EventStatus;
+    average_rating?: number | null;
+    review_count: number;
+    capacity?: number | null;
+    is_featured: boolean;
+    created_at?: string | null;
+    updated_at?: string | null;
+    rsvp?: EventRsvpSummary;
+    created_by?: string | null;
+    created_by_name?: string | null;
+    collaborator_ids?: string[];
+    collaborators?: EventCollaborator[];
+}
+
+export interface EventAttendee {
+    user_id: string;
+    name: string;
+    avatar_url?: string | null;
+    status: string;
+    rsvp_at?: string | null;
+}
+
+export interface CreateEventPayload {
+    title: string;
+    subtitle?: string;
+    description?: string;
+    website?: string;
+    categories?: string[];
+    media?: Partial<EventMedia>;
+    start_date?: string;
+    end_date?: string;
+    timezone?: string;
+    region_id?: string;
+    venues?: EventVenue[];
+    main_venue_marker_id?: string;
+    schedule?: EventScheduleDay[];
+    map_filters?: EventMapFilter[];
+    travel_info?: Record<string, unknown>;
+    quest_ids?: string[];
+    capacity?: number;
+    is_featured?: boolean;
+}
+
+export type UpdateEventPayload = Partial<CreateEventPayload>;
+
+/** Structured "How to Travel" content edited in the portal / rendered by the app. */
+export interface TravelInfo {
+    by_air?: string;
+    by_rail?: string;
+    by_road?: string;
+    cabs?: { name: string; contact?: string; fare?: string }[];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Quest Types (V2)
 //
 // A quest has THREE distinct serialized shapes depending on the endpoint:
@@ -525,6 +683,7 @@ export interface Marker {
     status: MarkerStatus;
     source: MarkerSource | null;
     created_by: string | null;
+    creator_name?: string | null;
     usage_count: number;
     center_distance: MarkerCenterDistance | null;
     /** present only on the teaser shape returned by the booking-gated detail. */

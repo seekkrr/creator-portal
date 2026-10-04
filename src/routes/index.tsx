@@ -53,6 +53,10 @@ const MarkersPage = lazyRetry(() =>
     import("@features/markers/pages/MarkersPage").then((m) => ({ default: m.MarkersPage }))
 );
 
+const EventsPage = lazyRetry(() =>
+    import("@features/events/pages/EventsPage").then((m) => ({ default: m.EventsPage }))
+);
+
 const MarkerDetailPage = lazyRetry(() =>
     import("@features/markers/pages/MarkerDetailPage").then((m) => ({ default: m.MarkerDetailPage }))
 );
@@ -221,6 +225,14 @@ export const router = createBrowserRouter(
                                 element: (
                                     <SuspenseWrapper>
                                         <MarkersPage />
+                                    </SuspenseWrapper>
+                                ),
+                            },
+                            {
+                                path: "events",
+                                element: (
+                                    <SuspenseWrapper>
+                                        <EventsPage />
                                     </SuspenseWrapper>
                                 ),
                             },
