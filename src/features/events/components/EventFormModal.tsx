@@ -44,6 +44,7 @@ const DEFAULT_VALUES: Partial<EventFormData> = {
     title: "",
     subtitle: "",
     description: "",
+    website: "",
     categories: [],
     cover_image_url: "",
     start_date: "",
@@ -58,6 +59,7 @@ function eventToFormData(e: EventDetail): Partial<EventFormData> {
         title: e.title,
         subtitle: e.subtitle ?? "",
         description: e.description ?? "",
+        website: e.website ?? "",
         categories: e.categories ?? [],
         cover_image_url: e.media?.cover_image_url ?? "",
         start_date: isoToLocalInput(e.start_date),
@@ -512,6 +514,10 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
                                 <div>
                                     {label("Description")}
                                     <Textarea {...register("description")} rows={5} placeholder="What is this festival about?" />
+                                </div>
+                                <div>
+                                    {label("Website")}
+                                    <Input {...register("website")} placeholder="https://cliffesto.example.com" />
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div>

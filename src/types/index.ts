@@ -318,6 +318,7 @@ export interface EventDetail {
     title: string;
     subtitle?: string | null;
     description: string;
+    website?: string | null;
     categories: string[];
     media: EventMedia;
     start_date?: string | null;
@@ -356,6 +357,7 @@ export interface CreateEventPayload {
     title: string;
     subtitle?: string;
     description?: string;
+    website?: string;
     categories?: string[];
     media?: Partial<EventMedia>;
     start_date?: string;
