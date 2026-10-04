@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -80,6 +80,12 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
     const [gallery, setGallery] = useState<string[]>([]);
     const [coverUploading, setCoverUploading] = useState(false);
     const [galleryUploading, setGalleryUploading] = useState(false);
+    // Auto-save draft: survive accidental close / crash / expired session so a
+    // half-filled event isn't lost. Keyed per event (or "new" for a create).
+    const [draftSavedAt, setDraftSavedAt] = useState<number | null>(null);
+    // Suppress auto-save while we programmatically populate the form on open/restore
+    // (otherwise opening an event would immediately overwrite its own "draft").
+    const initializingRef = useRef(false);
 
     const {
         register,
@@ -92,6 +98,15 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
         resolver: zodResolver(eventFormSchema),
         defaultValues: DEFAULT_VALUES,
     });
+
+    const draftKey = useMemo(
+        () => `seekkrr_event_draft_${mode === "edit" && initial?.id ? initial.id : "new"}`,
+        [mode, initial?.id]
+    );
+    const clearDraft = () => {
+        try { localStorage.removeItem(draftKey); } catch { /* storage unavailable */ }
+        setDraftSavedAt(null);
+    };
 
     // Markers available to link as venues. For an existing event this is the whole
     // team's pool (owner + admin-assigned collaborators); for a brand-new event
@@ -118,6 +133,7 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
     useEffect(() => {
         if (!open) return;
         setTab("details");
+        initializingRef.current = true;
         if (mode === "edit" && initial) {
             reset({ ...DEFAULT_VALUES, ...eventToFormData(initial) });
             setVenues(initial.venues ?? []);
@@ -134,7 +150,57 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
             setGallery([]);
         }
         setCategoryInput("");
-    }, [open, mode, initial, reset]);
+        // Surface a previously-saved draft (from a crash / accidental close /
+        // expired session) so the user can restore instead of starting over.
+        let savedAt: number | null = null;
+        try {
+            const raw = localStorage.getItem(draftKey);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (parsed && typeof parsed.savedAt === "number") savedAt = parsed.savedAt;
+            }
+        } catch { /* ignore malformed draft */ }
+        setDraftSavedAt(savedAt);
+        // Let the state writes above flush before auto-save turns on.
+        const t = setTimeout(() => { initializingRef.current = false; }, 0);
+        return () => clearTimeout(t);
+    }, [open, mode, initial, reset, draftKey]);
+
+    // Auto-save the full form (RHF fields + nested state) to localStorage, debounced.
+    const watched = watch();
+    useEffect(() => {
+        if (!open || initializingRef.current) return;
+        const t = setTimeout(() => {
+            try {
+                localStorage.setItem(draftKey, JSON.stringify({
+                    savedAt: Date.now(),
+                    form: watched,
+                    venues, schedule, mapFilters, travel, gallery,
+                }));
+            } catch { /* quota / private mode — best-effort */ }
+        }, 600);
+        return () => clearTimeout(t);
+    }, [open, draftKey, watched, venues, schedule, mapFilters, travel, gallery]);
+
+    const restoreDraft = () => {
+        try {
+            const raw = localStorage.getItem(draftKey);
+            if (!raw) return;
+            const d = JSON.parse(raw);
+            initializingRef.current = true;
+            reset({ ...DEFAULT_VALUES, ...(d.form ?? {}) });
+            setVenues(d.venues ?? []);
+            setSchedule(d.schedule ?? []);
+            setMapFilters(d.mapFilters ?? []);
+            setTravel(d.travel ?? {});
+            setGallery(d.gallery ?? []);
+            setDraftSavedAt(null);
+            setTimeout(() => { initializingRef.current = false; }, 0);
+            toast.success("Draft restored");
+        } catch {
+            toast.error("Couldn't restore the draft");
+        }
+    };
 
     // ── Map filter helpers ──
     const addFilter = () => setMapFilters((f) => [...f, { key: "", label: "", icon: "", color: "#FECD36" }]);
@@ -345,6 +411,7 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
                 try { saved = await eventService.setStatus(saved.id, targetStatus); } catch { /* keep saved */ }
             }
             toast.success(intent === "review" ? "Submitted for review" : "Saved as draft");
+            clearDraft();
             onSaved(saved);
             onClose();
         } catch {
@@ -412,6 +479,16 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
                     <TabButton id="travel" label="Travel" />
                     <TabButton id="schedule" label="Schedule" count={sessionCount} />
                 </div>
+
+                {draftSavedAt && (
+                    <div className="flex items-center justify-between gap-3 px-4 py-2 bg-amber-50 border-b border-amber-200 text-sm text-amber-800 shrink-0">
+                        <span>Unsaved draft from {new Date(draftSavedAt).toLocaleString()} found.</span>
+                        <div className="flex items-center gap-2 shrink-0">
+                            <button type="button" onClick={restoreDraft} className="px-3 py-1 rounded-md bg-amber-600 text-white text-xs font-medium hover:bg-amber-700">Restore</button>
+                            <button type="button" onClick={clearDraft} className="px-3 py-1 rounded-md text-amber-700 text-xs font-medium hover:bg-amber-100">Discard</button>
+                        </div>
+                    </div>
+                )}
 
                 <form onSubmit={handleSubmit(submit("review"), onInvalid)} noValidate className="flex-1 flex flex-col min-h-0">
                     <div className="p-6 bg-neutral-50 overflow-y-auto flex-1">
