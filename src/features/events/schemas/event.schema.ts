@@ -12,6 +12,7 @@ export const eventFormSchema = z
         title: z.string().min(1, "Title is required").max(300),
         subtitle: z.string().max(300).optional().or(z.literal("")),
         description: z.string().max(10000).optional().or(z.literal("")),
+        website: z.string().max(500).optional().or(z.literal("")),
         categories: z.array(z.string()).default([]),
         cover_image_url: z.string().url("Must be a valid URL").max(500).optional().or(z.literal("")),
         // datetime-local strings, e.g. "2026-12-01T09:00"
@@ -39,6 +40,7 @@ export function toCreatePayload(d: EventFormData): CreateEventPayload {
         ...clean({
             subtitle: d.subtitle,
             description: d.description,
+            website: d.website,
             start_date: d.start_date,
             end_date: d.end_date,
             timezone: d.timezone,
@@ -55,6 +57,7 @@ export function toUpdatePayload(d: EventFormData): UpdateEventPayload {
         ...clean({
             subtitle: d.subtitle,
             description: d.description,
+            website: d.website,
             start_date: d.start_date,
             end_date: d.end_date,
             timezone: d.timezone,
