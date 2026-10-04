@@ -65,8 +65,8 @@ export function EventAnnounceModal({ eventId, eventTitle, onClose }: EventAnnoun
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-sm animate-fade-in">
-            <Card className="w-full max-w-md shadow-2xl border-neutral-200 overflow-hidden animate-scale-up">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
+            <Card className="w-full max-w-md shadow-2xl border-neutral-200 overflow-hidden animate-scale-up max-h-[90vh] flex flex-col">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 shrink-0">
                     <div className="flex items-center gap-2">
                         <Megaphone className="w-5 h-5 text-primary-600" />
                         <div>
@@ -78,7 +78,7 @@ export function EventAnnounceModal({ eventId, eventTitle, onClose }: EventAnnoun
                         <X className="w-5 h-5" />
                     </button>
                 </div>
-                <div className="p-6 space-y-4">
+                <div className="p-6 space-y-4 overflow-y-auto flex-1">
                     <div>
                         <label className="block text-sm font-medium text-neutral-700 mb-1">Title</label>
                         <Input value={title} maxLength={120}
@@ -128,14 +128,14 @@ export function EventAnnounceModal({ eventId, eventTitle, onClose }: EventAnnoun
                                 className="mt-2 w-full h-9 rounded-lg border border-neutral-300 bg-white text-sm px-2" />
                         )}
                     </div>
-                    <div className="flex gap-3 pt-1">
-                        <Button variant="ghost" fullWidth onClick={onClose} disabled={mutation.isPending}>Cancel</Button>
-                        <Button variant="primary" fullWidth onClick={send}
-                            isLoading={mutation.isPending}
-                            disabled={mutation.isPending || !title.trim() || !body.trim()}>
-                            {scheduleLater ? "Schedule" : "Send Announcement"}
-                        </Button>
-                    </div>
+                </div>
+                <div className="flex gap-3 px-6 py-4 border-t border-neutral-200 bg-white shrink-0">
+                    <Button variant="ghost" fullWidth onClick={onClose} disabled={mutation.isPending}>Cancel</Button>
+                    <Button variant="primary" fullWidth onClick={send}
+                        isLoading={mutation.isPending}
+                        disabled={mutation.isPending || !title.trim() || !body.trim()}>
+                        {scheduleLater ? "Schedule" : "Send Announcement"}
+                    </Button>
                 </div>
             </Card>
         </div>
