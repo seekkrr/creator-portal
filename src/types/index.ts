@@ -327,6 +327,7 @@ export interface EventDetail {
     region_id?: string | null;
     region_name?: string | null;
     venues: EventVenue[];
+    main_venue_marker_id?: string | null;
     schedule: EventScheduleDay[];
     map_filters: EventMapFilter[];
     travel_info: Record<string, unknown>;
@@ -365,6 +366,7 @@ export interface CreateEventPayload {
     timezone?: string;
     region_id?: string;
     venues?: EventVenue[];
+    main_venue_marker_id?: string;
     schedule?: EventScheduleDay[];
     map_filters?: EventMapFilter[];
     travel_info?: Record<string, unknown>;

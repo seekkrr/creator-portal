@@ -76,6 +76,8 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
     const [categoryInput, setCategoryInput] = useState("");
     // Nested/dynamic data — managed as local state (not RHF) and merged on submit.
     const [venues, setVenues] = useState<EventVenue[]>([]);
+    // Marker id of the venue used for "How to Reach" / Open in Maps in the app.
+    const [mainVenueId, setMainVenueId] = useState<string>("");
     const [schedule, setSchedule] = useState<EventScheduleDay[]>([]);
     const [mapFilters, setMapFilters] = useState<EventMapFilter[]>([]);
     const [travel, setTravel] = useState<TravelInfo>({});
@@ -139,6 +141,7 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
         if (mode === "edit" && initial) {
             reset({ ...DEFAULT_VALUES, ...eventToFormData(initial) });
             setVenues(initial.venues ?? []);
+            setMainVenueId(initial.main_venue_marker_id ?? "");
             setSchedule(initial.schedule ?? []);
             setMapFilters(initial.map_filters ?? []);
             setTravel((initial.travel_info as TravelInfo) ?? {});
@@ -146,6 +149,7 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
         } else {
             reset(DEFAULT_VALUES);
             setVenues([]);
+            setMainVenueId("");
             setSchedule([]);
             setMapFilters([]);
             setTravel({});
@@ -177,12 +181,12 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
                 localStorage.setItem(draftKey, JSON.stringify({
                     savedAt: Date.now(),
                     form: watched,
-                    venues, schedule, mapFilters, travel, gallery,
+                    venues, mainVenueId, schedule, mapFilters, travel, gallery,
                 }));
             } catch { /* quota / private mode — best-effort */ }
         }, 600);
         return () => clearTimeout(t);
-    }, [open, draftKey, watched, venues, schedule, mapFilters, travel, gallery]);
+    }, [open, draftKey, watched, venues, mainVenueId, schedule, mapFilters, travel, gallery]);
 
     const restoreDraft = () => {
         try {
@@ -192,6 +196,7 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
             initializingRef.current = true;
             reset({ ...DEFAULT_VALUES, ...(d.form ?? {}) });
             setVenues(d.venues ?? []);
+            setMainVenueId(d.mainVenueId ?? "");
             setSchedule(d.schedule ?? []);
             setMapFilters(d.mapFilters ?? []);
             setTravel(d.travel ?? {});
@@ -377,8 +382,15 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
         const travelPayload = cleanTravel();
         const mediaPayload = buildMedia(data.cover_image_url);
         const bbox = buildBoundingBox(venuesPayload);
+        // Main venue: the chosen one if it still has a marker, else the first
+        // venue with a marker (what the app falls back to anyway).
+        const withMarker = venuesPayload.filter((v) => v.marker_id);
+        const mainId = withMarker.some((v) => v.marker_id === mainVenueId)
+            ? mainVenueId
+            : (withMarker[0]?.marker_id ?? "");
         const extras = {
             ...(venuesPayload.length ? { venues: venuesPayload } : {}),
+            ...(mainId ? { main_venue_marker_id: mainId } : {}),
             ...(schedulePayload.length ? { schedule: schedulePayload } : {}),
             ...(filtersPayload.length ? { map_filters: filtersPayload } : {}),
             ...(Object.keys(travelPayload).length ? { travel_info: travelPayload } : {}),
@@ -398,6 +410,7 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
                         ...toUpdatePayload(data),
                         // Always send these on edit so clearing them persists.
                         venues: venuesPayload,
+                        main_venue_marker_id: mainId,
                         schedule: schedulePayload,
                         map_filters: filtersPayload,
                         travel_info: travelPayload,
@@ -650,6 +663,19 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
                                                 <div key={i} className="rounded-lg border border-neutral-200 bg-neutral-50 p-3 space-y-2">
                                                     <div className="flex gap-2 items-center">
                                                         <Input value={v.name ?? ""} placeholder="Name (e.g. Main Stage)" onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateVenue(i, { name: e.target.value })} className="flex-1" />
+                                                        <button
+                                                            type="button"
+                                                            disabled={!v.marker_id}
+                                                            onClick={() => setMainVenueId(v.marker_id)}
+                                                            title={v.marker_id ? "Set as main venue (used for How to Reach / Open in Maps)" : "Link a marker first"}
+                                                            className={`shrink-0 inline-flex items-center gap-1 px-2 h-9 rounded-lg border text-xs font-medium transition-colors ${
+                                                                mainVenueId && v.marker_id === mainVenueId
+                                                                    ? "border-primary-500 bg-primary-50 text-primary-700"
+                                                                    : "border-neutral-300 text-neutral-500 hover:bg-neutral-50 disabled:opacity-40"
+                                                            }`}
+                                                        >
+                                                            {mainVenueId && v.marker_id === mainVenueId ? "★ Main" : "☆ Main"}
+                                                        </button>
                                                         <button type="button" onClick={() => removeVenue(i)} className="p-2 text-neutral-400 hover:text-red-600 shrink-0" aria-label="Remove venue"><Trash2 className="w-4 h-4" /></button>
                                                     </div>
                                                     <div>
