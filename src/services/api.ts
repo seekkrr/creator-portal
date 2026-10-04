@@ -4,6 +4,7 @@ import axios, {
     type InternalAxiosRequestConfig,
 } from "axios";
 import { config } from "@config/env";
+import { API_ENDPOINTS } from "@config/api";
 import type { ApiError } from "@/types";
 
 /**
@@ -50,6 +51,54 @@ function clearStoredTokens(): void {
     localStorage.removeItem(REFRESH_TOKEN_KEY);
 }
 
+// Bare client (no interceptors) used only to mint a new access token, so a 401
+// on the refresh call itself can't recurse back into the refresh flow.
+const refreshClient = axios.create({
+    baseURL: config.api.baseUrl,
+    timeout: config.api.timeout,
+    headers: { "Content-Type": "application/json" },
+});
+
+// Single-flight: many requests can 401 at once (e.g. a dashboard firing several
+// calls); they must share ONE refresh, not stampede the endpoint.
+let refreshPromise: Promise<string> | null = null;
+
+function refreshAccessToken(): Promise<string> {
+    if (!refreshPromise) {
+        const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+        refreshPromise = (async () => {
+            if (!refreshToken) throw new Error("No refresh token");
+            const { data } = await refreshClient.post<{ access_token: string; refresh_token: string }>(
+                API_ENDPOINTS.AUTH.REFRESH,
+                { refresh_token: refreshToken }
+            );
+            setStoredTokens(data.access_token, data.refresh_token);
+            return data.access_token;
+        })().finally(() => { refreshPromise = null; });
+    }
+    return refreshPromise;
+}
+
+function redirectToLogin(): void {
+    if (
+        !window.location.pathname.includes("/login") &&
+        !window.location.pathname.includes("/access-denied")
+    ) {
+        window.location.href = "/creator/login";
+    }
+}
+
+/** Auth endpoints where a 401 means "bad credentials", not "token expired" —
+ *  never try to refresh for these (would loop or mask a real login failure). */
+function isAuthEndpoint(url?: string): boolean {
+    if (!url) return false;
+    return (
+        url.includes(API_ENDPOINTS.AUTH.REFRESH) ||
+        url.includes(API_ENDPOINTS.AUTH.OAUTH_LOGIN) ||
+        url.includes(API_ENDPOINTS.AUTH.LOGOUT)
+    );
+}
+
 function createApiClient(): AxiosInstance {
     const client = axios.create({
         baseURL: config.api.baseUrl,
@@ -78,17 +127,37 @@ function createApiClient(): AxiosInstance {
         (response) => response,
         async (error: AxiosError<ApiError>) => {
             const status = error.response?.status;
+            const originalRequest = error.config as
+                | (InternalAxiosRequestConfig & { _retry?: boolean })
+                | undefined;
             console.warn("[API] Response error:", status, error.response?.data);
 
-            // Handle 401 - Unauthorized
-            if (status === 401) {
+            // Handle 401 - try a silent refresh once, then retry the request.
+            // Only fall back to logout if there's no refresh token or the refresh
+            // itself fails — so an expired access token no longer ends the session.
+            if (
+                status === 401 &&
+                originalRequest &&
+                !originalRequest._retry &&
+                !isAuthEndpoint(originalRequest.url) &&
+                localStorage.getItem(REFRESH_TOKEN_KEY)
+            ) {
+                originalRequest._retry = true;
+                try {
+                    await refreshAccessToken();
+                    // The request interceptor re-attaches the fresh token on retry.
+                    return client(originalRequest);
+                } catch {
+                    console.warn("[API] Token refresh failed - clearing session");
+                    clearStoredTokens();
+                    redirectToLogin();
+                }
+            } else if (status === 401) {
+                // No refresh token, an auth-endpoint 401, or an already-retried
+                // request: the session is genuinely over.
                 console.warn("[API] 401 Unauthorized - Clearing tokens");
                 clearStoredTokens();
-                // Redirect to login if not already there
-                if (!window.location.pathname.includes("/login") &&
-                    !window.location.pathname.includes("/access-denied")) {
-                    window.location.href = "/creator/login";
-                }
+                redirectToLogin();
             }
 
             // Extract error message — check all known backend shapes:
