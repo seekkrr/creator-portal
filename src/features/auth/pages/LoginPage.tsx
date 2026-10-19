@@ -1,14 +1,20 @@
 import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, type Location } from "react-router-dom";
 import { toast } from "sonner";
 import { authService } from "@services/auth.service";
 import { useAuthStore } from "@store/auth.store";
-import { evaluateCreatorAccess } from "@/types";
+import { getHomePath } from "@hooks/useWorkspace";
 import { Card } from "@components/ui";
 
 export function LoginPage() {
     const { login, checkAuth } = useAuthStore();
     const navigate = useNavigate();
+    const location = useLocation();
+    // Where ProtectedRoute (or a claim link) sent the user from.
+    const from = (location.state as { from?: Location } | null)?.from;
+    const fromPath = from ? `${from.pathname}${from.search ?? ""}` : null;
+    // Onboarding pages any signed-in user may open, even without portal access yet.
+    const isOnboardingPath = !!fromPath && (fromPath.startsWith("/business/apply") || fromPath.startsWith("/business/claim/"));
 
     const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
         if (!credentialResponse.credential) {
@@ -23,10 +29,14 @@ export function LoginPage() {
             const success = await checkAuth();
             if (success) {
                 toast.success("Welcome back!");
-                navigate("/creator/dashboard", { replace: true });
+                navigate(fromPath && fromPath !== "/" ? fromPath : getHomePath(), { replace: true });
             } else {
                 const state = useAuthStore.getState();
-                if (state.user && !evaluateCreatorAccess(state.user, state.creator).allowed) {
+                if (state.user && isOnboardingPath && fromPath) {
+                    navigate(fromPath, { replace: true });
+                    return;
+                }
+                if (state.user) {
                     navigate("/creator/access-denied", { replace: true });
                     return;
                 }
@@ -60,6 +70,9 @@ export function LoginPage() {
                     </h2>
                     <p className="text-sm lg:text-[1.125em] leading-relaxed text-center text-neutral-500 mb-8 lg:mb-10 font-sans max-w-md mx-auto px-4 lg:px-0">
                         Step In. Build What Others Explore.
+                        <span className="block text-xs lg:text-sm mt-2 text-neutral-400">
+                            Business partners sign in here too.
+                        </span>
                     </p>
 
                     <div className="bg-white border border-neutral-200 rounded-2xl lg:rounded-[2rem] p-6 lg:p-6 shadow-sm lg:shadow-md shadow-neutral-100/50 w-full flex flex-col items-center">

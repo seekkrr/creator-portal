@@ -1,11 +1,12 @@
-import { ShieldAlert } from "lucide-react";
+import { Link } from "react-router-dom";
+import { ShieldAlert, Store } from "lucide-react";
 import { useAuthStore } from "@store/auth.store";
 import { evaluateCreatorAccess, type CreatorAccessDenialReason } from "@/types";
 
 const DENIAL_COPY: Record<CreatorAccessDenialReason, { title: string; body: string }> = {
     not_creator: {
-        title: "Creator Access Required",
-        body: "This account is not a creator. If you'd like to become a creator, please apply through the SeekKrr app.",
+        title: "Creator or Partner Access Required",
+        body: "This account isn't a creator or a business partner yet. Creators apply through the SeekKrr app; businesses can list themselves below.",
     },
     no_profile: {
         title: "Finishing Setup",
@@ -39,6 +40,15 @@ export function AccessDeniedPage() {
                 <p className="text-neutral-500 mb-8">{copy.body}</p>
 
                 <div className="space-y-3">
+                    {reason === "not_creator" && (
+                        <Link
+                            to="/business/apply"
+                            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-accent-500 text-white rounded-xl hover:bg-accent-600 transition-colors font-medium"
+                        >
+                            <Store className="w-4 h-4" />
+                            List your business
+                        </Link>
+                    )}
                     <button
                         onClick={() => logout().then(() => (window.location.href = "/creator/login"))}
                         className="w-full inline-flex items-center justify-center px-4 py-2.5 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors font-medium"

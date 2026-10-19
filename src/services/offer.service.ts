@@ -32,7 +32,7 @@ export const offerService = {
      * Fetch all offers for a given marker.
      */
     getBusinessOffers: async (markerId: string): Promise<BusinessOffer[]> => {
-        const response = await api.get<{ offers: BusinessOffer[] }>(`/offers/business/${markerId}`);
+        const response = await api.get<{ offers: BusinessOffer[] }>(`/api/v2/offers/business/${markerId}`);
         return response.data.offers;
     },
 
@@ -41,7 +41,7 @@ export const offerService = {
      */
     createBusinessOffer: async (markerId: string, payload: Partial<BusinessOffer>): Promise<BusinessOffer> => {
         const response = await api.post<{ status: string; offer: BusinessOffer }>(
-            `/offers/business/${markerId}`,
+            `/api/v2/offers/business/${markerId}`,
             payload
         );
         return response.data.offer;
@@ -51,21 +51,21 @@ export const offerService = {
      * Update an existing business offer (e.g. toggle is_active).
      */
     updateBusinessOffer: async (offerId: string, payload: Partial<BusinessOffer>): Promise<void> => {
-        await api.put(`/offers/business/offer/${offerId}`, payload);
+        await api.put(`/api/v2/offers/business/offer/${offerId}`, payload);
     },
     
     /**
      * Soft delete an offer.
      */
     deleteBusinessOffer: async (offerId: string): Promise<void> => {
-        await api.put(`/offers/business/offer/${offerId}`, { is_deleted: true });
+        await api.put(`/api/v2/offers/business/offer/${offerId}`, { is_deleted: true });
     },
 
     /**
      * Get analytics for the dashboard.
      */
     getBusinessAnalytics: async (markerId: string): Promise<BusinessAnalytics> => {
-        const response = await api.get<BusinessAnalytics>(`/offers/business/${markerId}/analytics`);
+        const response = await api.get<BusinessAnalytics>(`/api/v2/offers/business/${markerId}/analytics`);
         return response.data;
     },
 
@@ -73,7 +73,7 @@ export const offerService = {
      * Redeem a virtual code manually.
      */
     redeemVirtualCode: async (code: string, secretCode: string): Promise<void> => {
-        await api.post(`/offers/redeem`, { 
+        await api.post(`/api/v2/offers/redeem`, { 
             code, 
             business_secret_code: secretCode 
         });

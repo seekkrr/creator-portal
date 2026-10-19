@@ -1,9 +1,10 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { evaluateCreatorAccess, normalizeUser, type CreatorAccessDenialReason, type User, type Creator, type AuthTokens } from "@/types";
+import { evaluatePortalAccess, normalizeUser, type CreatorAccessDenialReason, type User, type Creator, type AuthTokens } from "@/types";
+import type { Business } from "@services/business.types";
 
 const ACCESS_DENIAL_MESSAGE: Record<CreatorAccessDenialReason, string> = {
-    not_creator: "Access Denied: This account is not a creator.",
+    not_creator: "Access Denied: This account is not a creator or a business partner.",
     no_profile: "Access Denied: Your creator account is still being set up. Please sign in again shortly.",
     suspended: "Access Denied: Your creator account is suspended.",
     rejected: "Access Denied: Your creator application was rejected.",
@@ -14,6 +15,8 @@ import { authStorage } from "@services/api";
 interface AuthState {
     user: User | null;
     creator: Creator | null;
+    /** Partner Portal memberships (`GET /businesses/mine`). */
+    businesses: Business[];
     isAuthenticated: boolean;
     isLoading: boolean;
     error: string | null;
@@ -26,6 +29,12 @@ interface AuthActions {
     login: (tokens: AuthTokens) => void;
     logout: () => Promise<void>;
     checkAuth: () => Promise<boolean>;
+    /**
+     * Re-fetch the user, creator profile and business memberships WITHOUT
+     * toggling `isLoading` (which would unmount the router). Use after a claim,
+     * a team change or a business profile edit.
+     */
+    refreshSession: () => Promise<void>;
     clearError: () => void;
 }
 
@@ -37,6 +46,7 @@ export const useAuthStore = create<AuthStore>()(
             // State
             user: null,
             creator: null,
+            businesses: [],
             isAuthenticated: false,
             isLoading: false,
             error: null,
@@ -78,6 +88,7 @@ export const useAuthStore = create<AuthStore>()(
                     set({
                         user: null,
                         creator: null,
+                        businesses: [],
                         isAuthenticated: false,
                         isLoading: false,
                         error: null,
@@ -93,15 +104,17 @@ export const useAuthStore = create<AuthStore>()(
 
                 set({ isLoading: true });
                 try {
-                    const { user, creator } = await authService.getCurrentUser();
+                    const { user, creator, businesses } = await authService.getCurrentUser();
 
-                    // RBAC: only ACTIVE creators (is_creator + creators.status==='active')
-                    // or staff may enter the portal. is_verified is a badge, not a gate.
-                    const access = evaluateCreatorAccess(user, creator);
+                    // RBAC: ACTIVE creators (is_creator + creators.status==='active'),
+                    // staff, or members of a business (Partner Portal) may enter.
+                    // is_verified is a badge, not a gate.
+                    const access = evaluatePortalAccess(user, creator, businesses);
                     if (!access.allowed) {
                         set({
                             user, // keep so the UI knows who was rejected
                             creator: creator ?? null,
+                            businesses,
                             isAuthenticated: true, // they ARE authenticated, just not authorized
                             isLoading: false,
                             error: access.reason ? ACCESS_DENIAL_MESSAGE[access.reason] : "Access Denied",
@@ -112,6 +125,7 @@ export const useAuthStore = create<AuthStore>()(
                     set({
                         user,
                         creator: creator ?? null,
+                        businesses,
                         isAuthenticated: true,
                         isLoading: false,
                         error: null,
@@ -122,11 +136,29 @@ export const useAuthStore = create<AuthStore>()(
                     set({
                         user: null,
                         creator: null,
+                        businesses: [],
                         isAuthenticated: false,
                         isLoading: false,
                         error: error instanceof Error ? error.message : "Authentication failed",
                     });
                     return false;
+                }
+            },
+
+            refreshSession: async () => {
+                if (!authService.hasStoredToken()) return;
+                try {
+                    const { user, creator, businesses } = await authService.getCurrentUser();
+                    const access = evaluatePortalAccess(user, creator, businesses);
+                    set({
+                        user,
+                        creator: creator ?? null,
+                        businesses,
+                        isAuthenticated: true,
+                        error: access.allowed || !access.reason ? null : ACCESS_DENIAL_MESSAGE[access.reason],
+                    });
+                } catch (error) {
+                    console.error("Failed to refresh session:", error);
                 }
             },
         }),
@@ -135,6 +167,7 @@ export const useAuthStore = create<AuthStore>()(
             partialize: (state) => ({
                 user: state.user,
                 creator: state.creator,
+                businesses: state.businesses,
                 isAuthenticated: state.isAuthenticated,
             }),
             // A user persisted by an older build may have `role` as a string;
@@ -142,7 +175,12 @@ export const useAuthStore = create<AuthStore>()(
             // before checkAuth() re-fetches.
             merge: (persisted, current) => {
                 const p = (persisted ?? {}) as Partial<AuthState>;
-                return { ...current, ...p, user: p.user ? normalizeUser(p.user) : current.user };
+                return {
+                    ...current,
+                    ...p,
+                    user: p.user ? normalizeUser(p.user) : current.user,
+                    businesses: Array.isArray(p.businesses) ? p.businesses : [],
+                };
             },
         }
     )
