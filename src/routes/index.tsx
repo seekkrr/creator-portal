@@ -1,6 +1,7 @@
+import type { ComponentType, ReactNode } from "react";
 import { createBrowserRouter, Navigate, Link } from "react-router-dom";
 import { AuthLayout, DashboardLayout, PublicLayout } from "@layouts/index";
-import { ProtectedRoute } from "./ProtectedRoute";
+import { HomeRedirect, ProtectedRoute } from "./ProtectedRoute";
 import { SuspenseWrapper, RootWrapper } from "@components/index";
 import { lazyRetry } from "@utils/lazyRetry";
 
@@ -83,17 +84,30 @@ const PayoutAccountsPage = lazyRetry(() =>
     }))
 );
 
-const BusinessDashboardPage = lazyRetry(() =>
-    import("@features/business/BusinessDashboard").then((m) => ({
-        default: m.BusinessDashboard,
-    }))
-);
+// ── Partner Portal (business workspace) ─────────────────────────────────────
+const lazyBusiness = <K extends string>(load: () => Promise<Record<K, ComponentType>>, name: K) =>
+    lazyRetry(() => load().then((m) => ({ default: m[name] })));
 
-const BusinessApplicationPage = lazyRetry(() =>
-    import("@features/business/BusinessApplicationPage").then((m) => ({
-        default: m.BusinessApplicationPage,
-    }))
+const BusinessLayout = lazyBusiness(() => import("@features/business/BusinessLayout"), "BusinessLayout");
+const BusinessOverviewPage = lazyBusiness(() => import("@features/business/pages/OverviewPage"), "OverviewPage");
+const BusinessCollabsPage = lazyBusiness(() => import("@features/business/pages/CollabsPage"), "CollabsPage");
+const BusinessRequestsPage = lazyBusiness(() => import("@features/business/pages/RequestsPage"), "RequestsPage");
+const BusinessDiscoverPage = lazyBusiness(() => import("@features/business/pages/DiscoverPage"), "DiscoverPage");
+const BusinessContentPage = lazyBusiness(() => import("@features/business/pages/ContentPage"), "ContentPage");
+const BusinessAttributionPage = lazyBusiness(() => import("@features/business/pages/AttributionPage"), "AttributionPage");
+const BusinessOffersPage = lazyBusiness(() => import("@features/business/pages/OffersPage"), "OffersPage");
+const BusinessLocationsPage = lazyBusiness(() => import("@features/business/pages/LocationsPage"), "LocationsPage");
+const BusinessTeamPage = lazyBusiness(() => import("@features/business/pages/TeamPage"), "TeamPage");
+const BusinessBillingPage = lazyBusiness(() => import("@features/business/pages/BillingPage"), "BillingPage");
+const BusinessProfilePage = lazyBusiness(() => import("@features/business/pages/BusinessProfilePage"), "BusinessProfilePage");
+const BusinessBlocksPage = lazyBusiness(() => import("@features/business/pages/BlocksPage"), "BlocksPage");
+const BusinessApplicationPage = lazyBusiness(
+    () => import("@features/business/pages/BusinessApplicationPage"),
+    "BusinessApplicationPage"
 );
+const BusinessClaimPage = lazyBusiness(() => import("@features/business/pages/ClaimPage"), "ClaimPage");
+
+const page = (node: ReactNode) => <SuspenseWrapper>{node}</SuspenseWrapper>;
 
 export const router = createBrowserRouter(
     [
@@ -102,7 +116,7 @@ export const router = createBrowserRouter(
         children: [
             {
                 path: "/",
-                element: <Navigate to="/creator/login" replace />,
+                element: <HomeRedirect />,
             },
             {
                 element: <PublicLayout />,
@@ -131,6 +145,11 @@ export const router = createBrowserRouter(
                             </SuspenseWrapper>
                         ),
                     },
+                    {
+                        // Claim link for a listing created by SeekKrr (previewable signed out).
+                        path: "/business/claim/:token",
+                        element: page(<BusinessClaimPage />),
+                    },
                 ],
             },
             {
@@ -157,9 +176,12 @@ export const router = createBrowserRouter(
                             },
                         ],
                     },
+                    // Legacy business URLs → the Partner Portal.
+                    { path: "business", element: <Navigate to="/business" replace /> },
+                    { path: "business/apply", element: <Navigate to="/business/apply" replace /> },
                     {
                         element: (
-                            <ProtectedRoute>
+                            <ProtectedRoute workspace="creator">
                                 <DashboardLayout />
                             </ProtectedRoute>
                         ),
@@ -284,22 +306,40 @@ export const router = createBrowserRouter(
                                     </SuspenseWrapper>
                                 ),
                             },
-                            {
-                                path: "business",
-                                element: (
-                                    <SuspenseWrapper>
-                                        <BusinessDashboardPage />
-                                    </SuspenseWrapper>
-                                ),
-                            },
-                            {
-                                path: "business/apply",
-                                element: (
-                                    <SuspenseWrapper>
-                                        <BusinessApplicationPage />
-                                    </SuspenseWrapper>
-                                ),
-                            },
+                        ],
+                    },
+                ],
+            },
+            {
+                // Partner Portal. Any signed-in user may apply; the rest needs a business membership.
+                path: "/business",
+                element: (
+                    <ProtectedRoute workspace="any">
+                        <DashboardLayout />
+                    </ProtectedRoute>
+                ),
+                children: [
+                    { path: "apply", element: page(<BusinessApplicationPage />) },
+                    {
+                        element: (
+                            <ProtectedRoute workspace="business">
+                                {page(<BusinessLayout />)}
+                            </ProtectedRoute>
+                        ),
+                        children: [
+                            { index: true, element: page(<BusinessOverviewPage />) },
+                            { path: "collabs", element: page(<BusinessCollabsPage />) },
+                            { path: "requests", element: page(<BusinessRequestsPage />) },
+                            { path: "discover", element: page(<BusinessDiscoverPage />) },
+                            { path: "content", element: page(<BusinessContentPage />) },
+                            { path: "attribution", element: page(<BusinessAttributionPage />) },
+                            { path: "offers", element: page(<BusinessOffersPage />) },
+                            { path: "locations", element: page(<BusinessLocationsPage />) },
+                            { path: "team", element: page(<BusinessTeamPage />) },
+                            { path: "billing", element: page(<BusinessBillingPage />) },
+                            { path: "profile", element: page(<BusinessProfilePage />) },
+                            { path: "blocks", element: page(<BusinessBlocksPage />) },
+                            { path: "*", element: <Navigate to="/business" replace /> },
                         ],
                     },
                 ],

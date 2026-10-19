@@ -79,6 +79,51 @@ export function canAccessCreatorPortal(
     return evaluateCreatorAccess(user, creator).allowed;
 }
 
+/**
+ * Business (Partner Portal) access: the user carries the `business` role AND
+ * is a member of at least one business (`GET /businesses/mine`). The role is
+ * granted by the backend when an owner is attached or a member is added.
+ */
+export function hasBusinessAccess(
+    user: { role?: unknown } | null | undefined,
+    businesses: readonly unknown[] | null | undefined
+): boolean {
+    if (!user) return false;
+    const roles = Array.isArray(user.role) ? user.role : user.role ? [user.role] : [];
+    return roles.includes("business") && (businesses?.length ?? 0) > 0;
+}
+
+export interface PortalAccess {
+    /** May enter the portal at all (creator and/or business workspace). */
+    allowed: boolean;
+    /** Creator (quest tooling) workspace. */
+    creator: boolean;
+    /** Business (Partner Portal) workspace. */
+    business: boolean;
+    /** Why creator access was denied — only meaningful when `allowed` is false. */
+    reason?: CreatorAccessDenialReason;
+}
+
+/**
+ * Role-scoped portal access. One account may hold both roles; business-only
+ * users never see quest tooling and creator-only users never see business tooling.
+ */
+export function evaluatePortalAccess(
+    user: { role?: unknown; is_creator?: boolean } | null | undefined,
+    creator: { status?: string } | null | undefined,
+    businesses: readonly unknown[] | null | undefined
+): PortalAccess {
+    const creatorAccess = evaluateCreatorAccess(user, creator);
+    const business = hasBusinessAccess(user, businesses);
+    const allowed = creatorAccess.allowed || business;
+    return {
+        allowed,
+        creator: creatorAccess.allowed,
+        business,
+        reason: allowed ? undefined : creatorAccess.reason,
+    };
+}
+
 export interface UserProfile {
     _id: string;
     bio?: string;
