@@ -14,7 +14,9 @@ export function LoginPage() {
     const from = (location.state as { from?: Location } | null)?.from;
     const fromPath = from ? `${from.pathname}${from.search ?? ""}` : null;
     // Onboarding pages any signed-in user may open, even without portal access yet.
-    const isOnboardingPath = !!fromPath && (fromPath.startsWith("/business/apply") || fromPath.startsWith("/business/claim/"));
+    const isCreatorApply = !!fromPath && fromPath.startsWith("/creator/apply");
+    const isOnboardingPath =
+        !!fromPath && (isCreatorApply || fromPath.startsWith("/business/apply") || fromPath.startsWith("/business/claim/"));
 
     const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
         if (!credentialResponse.credential) {
@@ -66,17 +68,35 @@ export function LoginPage() {
             <div className="flex flex-col justify-center items-center p-6 sm:p-8 lg:p-16 bg-white w-full">
                 <div className="w-full max-w-sm lg:max-w-lg">
                     <h2 className="text-3xl lg:text-[2.5em] leading-tight font-bold text-center text-black mb-3 lg:mb-4 tracking-tight font-sans">
-                        Creator Portal
+                        {isCreatorApply ? "Become a SeekKrr creator" : isOnboardingPath ? "SeekKrr Partner Portal" : "Creator Portal"}
                     </h2>
                     <p className="text-sm lg:text-[1.125em] leading-relaxed text-center text-neutral-500 mb-8 lg:mb-10 font-sans max-w-md mx-auto px-4 lg:px-0">
-                        Step In. Build What Others Explore.
-                        <span className="block text-xs lg:text-sm mt-2 text-neutral-400">
-                            Business partners sign in here too.
-                        </span>
+                        {isCreatorApply ? (
+                            <>
+                                Continue with Google to apply.
+                                <span className="block text-xs lg:text-sm mt-2 text-neutral-400">
+                                    Next we'll ask for your phone number and where you post.
+                                </span>
+                            </>
+                        ) : isOnboardingPath ? (
+                            <>
+                                Continue with Google to list your business.
+                                <span className="block text-xs lg:text-sm mt-2 text-neutral-400">
+                                    Next we'll ask for your phone number, then a few details about your place.
+                                </span>
+                            </>
+                        ) : (
+                            <>
+                                Step In. Build What Others Explore.
+                                <span className="block text-xs lg:text-sm mt-2 text-neutral-400">
+                                    Business partners sign in here too.
+                                </span>
+                            </>
+                        )}
                     </p>
 
                     <div className="bg-white border border-neutral-200 rounded-2xl lg:rounded-[2rem] p-6 lg:p-6 shadow-sm lg:shadow-md shadow-neutral-100/50 w-full flex flex-col items-center">
-                        <h3 className="text-2xl lg:text-[2em] leading-none font-display font-semibold text-primary-900 text-center mb-6 lg:mb-6 tracking-tight">Login</h3>
+                        <h3 className="text-2xl lg:text-[2em] leading-none font-display font-semibold text-primary-900 text-center mb-6 lg:mb-6 tracking-tight">{isOnboardingPath ? "Get started" : "Login"}</h3>
 
                         <div className="w-full flex justify-center">
                             <GoogleLogin
@@ -85,7 +105,7 @@ export function LoginPage() {
                                 useOneTap
                                 shape="pill"
                                 size="large"
-                                text="signin_with"
+                                text={isOnboardingPath ? "continue_with" : "signin_with"}
                             />
                         </div>
                     </div>

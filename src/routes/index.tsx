@@ -10,6 +10,10 @@ const LoginPage = lazyRetry(() =>
     import("@features/auth/pages/LoginPage").then((m) => ({ default: m.LoginPage }))
 );
 
+const CreatorApplicationPage = lazyRetry(() =>
+    import("@features/auth/pages/CreatorApplicationPage").then((m) => ({ default: m.CreatorApplicationPage }))
+);
+
 const AccessDeniedPage = lazyRetry(() =>
     import("@features/auth/pages/AccessDeniedPage").then((m) => ({ default: m.AccessDeniedPage }))
 );
@@ -171,6 +175,24 @@ export const router = createBrowserRouter(
                                 element: (
                                     <SuspenseWrapper>
                                         <AccessDeniedPage />
+                                    </SuspenseWrapper>
+                                ),
+                            },
+                        ],
+                    },
+                    // "Become a creator": Google sign-in first, then the short application.
+                    {
+                        element: (
+                            <ProtectedRoute workspace="any">
+                                <AuthLayout />
+                            </ProtectedRoute>
+                        ),
+                        children: [
+                            {
+                                path: "apply",
+                                element: (
+                                    <SuspenseWrapper>
+                                        <CreatorApplicationPage />
                                     </SuspenseWrapper>
                                 ),
                             },

@@ -11,15 +11,16 @@ import { useBusiness } from "../context";
 import { bkeys, useBusinessDetail } from "../queries";
 import { errorMessage } from "../utils";
 import { ChipInput } from "../components/ChipInput";
+import { CategoryPicker } from "../components/CategoryPicker";
 import { FieldLabel, PageHeader, SectionCard, Toggle, inputClass } from "../components/bits";
 
-const CATEGORY_SUGGESTIONS = ["Café", "Restaurant", "Hostel", "Homestay", "Hotel", "Experience", "Adventure", "Wellness", "Shop", "Bar"];
 
 interface ProfileForm {
     name: string;
     tagline: string;
     description: string;
     categories: string[];
+    sub_categories: string[];
     socials: string[];
     photos: string[];
     logo_url: string;
@@ -34,6 +35,7 @@ function formFrom(b: Business): ProfileForm {
         tagline: b.tagline ?? "",
         description: b.description ?? "",
         categories: b.categories ?? [],
+        sub_categories: b.sub_categories ?? [],
         socials: (b.socials ?? []).map((s) => s.url),
         photos: b.photos ?? [],
         logo_url: b.logo_url ?? "",
@@ -115,6 +117,7 @@ export function BusinessProfilePage() {
                 tagline: form.tagline.trim(),
                 description: form.description.trim(),
                 categories: form.categories,
+                sub_categories: form.sub_categories,
                 socials: form.socials.map((url) => ({ url })),
                 photos: form.photos,
                 contact_phone: form.contact_phone.trim(),
@@ -203,17 +206,14 @@ export function BusinessProfilePage() {
                                 <p className="text-xs text-neutral-400 text-right">{form.description.length}/3000</p>
                             </div>
                             <div>
-                                <FieldLabel htmlFor="bp-categories" hint="Helps SeekKrr Match find creators who fit.">
+                                <FieldLabel hint="Helps SeekKrr Match find creators who fit.">
                                     Categories
                                 </FieldLabel>
-                                <ChipInput
-                                    id="bp-categories"
-                                    values={form.categories}
-                                    onChange={(v) => set("categories", v)}
-                                    max={10}
-                                    suggestions={CATEGORY_SUGGESTIONS}
+                                <CategoryPicker
+                                    categories={form.categories}
+                                    subCategories={form.sub_categories}
                                     disabled={readOnly}
-                                    placeholder="Café"
+                                    onChange={(categories, sub_categories) => setForm((f) => (f ? { ...f, categories, sub_categories } : f))}
                                 />
                             </div>
                         </div>

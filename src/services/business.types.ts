@@ -39,6 +39,7 @@ export interface Business {
     tagline: string | null;
     description: string | null;
     categories: string[];
+    sub_categories?: string[];
     region_id: string | null;
     socials: BusinessSocial[];
     photos: string[];
@@ -65,6 +66,7 @@ export interface UpdateBusinessPayload {
     tagline?: string;
     description?: string;
     categories?: string[];
+    sub_categories?: string[];
     socials?: BusinessSocial[];
     photos?: string[];
     logo_url?: string;
@@ -602,11 +604,18 @@ export interface SubmitBusinessApplicationPayload {
     maps_url?: string | null;
     region_id?: string | null;
     categories?: string[];
+    sub_categories?: string[];
     social_links?: string[];
     requested_plan?: PlanCode | null;
     gstin?: string | null;
     message?: string | null;
     source: "website" | "app" | "portal";
+}
+
+/** A predefined place category a business can be listed under. */
+export interface BusinessCategory {
+    name: string;
+    sub_categories: string[];
 }
 
 export interface SubmittedBusinessApplication {

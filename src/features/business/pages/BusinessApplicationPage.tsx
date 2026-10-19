@@ -10,9 +10,9 @@ import type { Marker } from "@/types";
 import { GSTIN_PATTERN, errorMessage } from "../utils";
 import { Banner, FieldLabel, SectionCard, SegmentedControl, inputClass, selectClass } from "../components/bits";
 import { ChipInput } from "../components/ChipInput";
+import { CategoryPicker } from "../components/CategoryPicker";
 import { PlaceSearchSelect } from "../components/PlaceSearchSelect";
 
-const CATEGORY_SUGGESTIONS = ["Café", "Restaurant", "Hostel", "Homestay", "Hotel", "Experience", "Adventure", "Wellness", "Shop"];
 
 type LocationMode = "search" | "maps";
 
@@ -31,6 +31,7 @@ export function BusinessApplicationPage() {
     const [place, setPlace] = useState<Marker | null>(null);
     const [mapsUrl, setMapsUrl] = useState("");
     const [categories, setCategories] = useState<string[]>([]);
+    const [subCategories, setSubCategories] = useState<string[]>([]);
     const [socials, setSocials] = useState<string[]>([]);
     const [plan, setPlan] = useState<PlanCode | "">("");
     const [gstin, setGstin] = useState("");
@@ -39,6 +40,7 @@ export function BusinessApplicationPage() {
     const [submitting, setSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [done, setDone] = useState<SubmittedBusinessApplication | null>(null);
+    const [step, setStep] = useState<1 | 2>(1);
 
     const validate = (): Record<string, string> => {
         const e: Record<string, string> = {};
@@ -59,7 +61,10 @@ export function BusinessApplicationPage() {
         setSubmitError(null);
         const errs = validate();
         setErrors(errs);
-        if (Object.keys(errs).length) return;
+        if (Object.keys(errs).length) {
+            if (errs.contactName || errs.email || errs.phone) setStep(1);
+            return;
+        }
         setSubmitting(true);
         try {
             const app = await businessService.submitApplication({
@@ -71,6 +76,7 @@ export function BusinessApplicationPage() {
                 maps_url: locationMode === "maps" ? mapsUrl.trim() : null,
                 region_id: locationMode === "search" ? (place?.region_id ?? null) : null,
                 categories,
+                sub_categories: subCategories,
                 social_links: socials,
                 requested_plan: plan || null,
                 gstin: gstin || null,
@@ -157,17 +163,46 @@ export function BusinessApplicationPage() {
         );
     }
 
+    const stepOneErrors = (): Record<string, string> => {
+        const e: Record<string, string> = {};
+        if (!contactName.trim()) e.contactName = "Your name, please.";
+        if (!/^\S+@\S+\.\S+$/.test(email.trim())) e.email = "Enter a valid email.";
+        if (phone.replace(/\D/g, "").length < 7) e.phone = "Enter a phone number we can reach you on.";
+        return e;
+    };
+
+    const goToBusinessStep = () => {
+        const errs = stepOneErrors();
+        setErrors(errs);
+        if (Object.keys(errs).length) return;
+        setStep(2);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
+    const switchAccount = () => {
+        void logout().then(() =>
+            navigate("/creator/login", { replace: true, state: { from: { pathname: "/business/apply", search: "" } } }),
+        );
+    };
+
     return (
-        <form onSubmit={(e) => void submit(e)} className="max-w-3xl mx-auto space-y-6 animate-fade-in" noValidate>
+        <form onSubmit={(e) => void submit(e)} className="max-w-2xl mx-auto space-y-6 animate-fade-in" noValidate>
             <div>
-                <h1 className="text-3xl font-display font-bold text-primary-900 tracking-tight">List your business on SeekKrr</h1>
+                <p className="text-xs font-semibold uppercase tracking-wider text-primary-600">Step {step} of 2</p>
+                <h1 className="text-3xl font-display font-bold text-primary-900 tracking-tight mt-1">
+                    {step === 1 ? "List your business on SeekKrr" : "Tell us about your place"}
+                </h1>
                 <p className="text-neutral-500 mt-1">
-                    Post collabs for travel creators, run check-in offers, and see the content and visits they bring you.
-                    Free to start.
+                    {step === 1
+                        ? "Free to start. First, how can we reach you?"
+                        : "Just the basics — you can add photos, socials and more after approval."}
                 </p>
+                <div className="mt-4 h-1.5 rounded-full bg-neutral-100 overflow-hidden" aria-hidden>
+                    <div className={`h-full bg-primary-600 transition-all ${step === 1 ? "w-1/2" : "w-full"}`} />
+                </div>
             </div>
 
-            {access.business && businesses.length > 0 && (
+            {step === 1 && access.business && businesses.length > 0 && (
                 <Banner
                     tone="info"
                     icon={<Store className="w-5 h-5" />}
@@ -178,175 +213,191 @@ export function BusinessApplicationPage() {
                         </Link>
                     }
                 >
-                    Use this form only to list another business.
+                    Continue only to list another business.
                 </Banner>
             )}
 
-            <Banner tone="info" title="Got a claim link from our team?">
-                Open it instead — it takes you straight to your ready-made listing.
-            </Banner>
-
-            <SectionCard title="Your business">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="md:col-span-2">
-                        <FieldLabel htmlFor="ba-name">Business name *</FieldLabel>
-                        <input
-                            id="ba-name"
-                            className={inputClass}
-                            maxLength={150}
-                            value={businessName}
-                            onChange={(e) => setBusinessName(e.target.value)}
-                            placeholder="e.g. Garden Café Bir"
-                        />
-                        {errors.businessName && <p className="text-xs text-red-600 mt-1">{errors.businessName}</p>}
+            {step === 1 ? (
+                <SectionCard title="Your contact">
+                    <div className="space-y-4">
+                        {user?.email && (
+                            <div className="flex items-center justify-between gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3">
+                                <div className="min-w-0">
+                                    <p className="text-xs text-neutral-500">Signed in with Google</p>
+                                    <p className="font-semibold text-neutral-900 truncate">{user.email}</p>
+                                </div>
+                                <button type="button" onClick={switchAccount} className="text-sm font-semibold text-primary-700 hover:underline shrink-0">
+                                    Not you?
+                                </button>
+                            </div>
+                        )}
+                        <div>
+                            <FieldLabel htmlFor="ba-phone" hint="We'll call to confirm your listing. Never shown publicly.">
+                                Phone number *
+                            </FieldLabel>
+                            <input
+                                id="ba-phone"
+                                type="tel"
+                                inputMode="tel"
+                                autoComplete="tel"
+                                autoFocus
+                                className={inputClass}
+                                maxLength={20}
+                                value={phone}
+                                onChange={(e) => setPhone(e.target.value)}
+                                placeholder="+91 98xxxxxxxx"
+                            />
+                            {errors.phone && <p className="text-xs text-red-600 mt-1">{errors.phone}</p>}
+                        </div>
+                        <div>
+                            <FieldLabel htmlFor="ba-contact">Your name *</FieldLabel>
+                            <input
+                                id="ba-contact"
+                                className={inputClass}
+                                maxLength={100}
+                                autoComplete="name"
+                                value={contactName}
+                                onChange={(e) => setContactName(e.target.value)}
+                            />
+                            {errors.contactName && <p className="text-xs text-red-600 mt-1">{errors.contactName}</p>}
+                        </div>
+                        {!user?.email && (
+                            <div>
+                                <FieldLabel htmlFor="ba-email">Email *</FieldLabel>
+                                <input
+                                    id="ba-email"
+                                    type="email"
+                                    className={inputClass}
+                                    maxLength={255}
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                />
+                                {errors.email && <p className="text-xs text-red-600 mt-1">{errors.email}</p>}
+                            </div>
+                        )}
                     </div>
-                    <div className="md:col-span-2">
-                        <FieldLabel>Where is it? *</FieldLabel>
-                        <div className="mb-3">
-                            <SegmentedControl<LocationMode>
-                                size="sm"
-                                ariaLabel="How to find your place"
-                                value={locationMode}
-                                onChange={setLocationMode}
-                                options={[
-                                    { value: "search", label: "Find it on SeekKrr" },
-                                    { value: "maps", label: "Paste a Google Maps link" },
-                                ]}
+                </SectionCard>
+            ) : (
+                <SectionCard title="Your business">
+                    <div className="space-y-4">
+                        <div>
+                            <FieldLabel htmlFor="ba-name">Business name *</FieldLabel>
+                            <input
+                                id="ba-name"
+                                className={inputClass}
+                                maxLength={150}
+                                autoFocus
+                                value={businessName}
+                                onChange={(e) => setBusinessName(e.target.value)}
+                                placeholder="e.g. Garden Café Bir"
+                            />
+                            {errors.businessName && <p className="text-xs text-red-600 mt-1">{errors.businessName}</p>}
+                        </div>
+                        <div>
+                            <FieldLabel>Where is it? *</FieldLabel>
+                            <div className="mb-3">
+                                <SegmentedControl<LocationMode>
+                                    size="sm"
+                                    ariaLabel="How to find your place"
+                                    value={locationMode}
+                                    onChange={setLocationMode}
+                                    options={[
+                                        { value: "search", label: "Find it on SeekKrr" },
+                                        { value: "maps", label: "Paste a Google Maps link" },
+                                    ]}
+                                />
+                            </div>
+                            {locationMode === "search" ? (
+                                <PlaceSearchSelect id="ba-place" value={place} onChange={setPlace} />
+                            ) : (
+                                <input
+                                    id="ba-maps"
+                                    className={inputClass}
+                                    maxLength={500}
+                                    value={mapsUrl}
+                                    onChange={(e) => setMapsUrl(e.target.value)}
+                                    placeholder="https://maps.app.goo.gl/…"
+                                />
+                            )}
+                            {errors.location && <p className="text-xs text-red-600 mt-1">{errors.location}</p>}
+                        </div>
+                        <div>
+                            <FieldLabel>What kind of place?</FieldLabel>
+                            <CategoryPicker
+                                categories={categories}
+                                subCategories={subCategories}
+                                onChange={(cats, subs) => {
+                                    setCategories(cats);
+                                    setSubCategories(subs);
+                                }}
                             />
                         </div>
-                        {locationMode === "search" ? (
-                            <PlaceSearchSelect id="ba-place" value={place} onChange={setPlace} />
-                        ) : (
-                            <input
-                                id="ba-maps"
-                                className={inputClass}
-                                maxLength={500}
-                                value={mapsUrl}
-                                onChange={(e) => setMapsUrl(e.target.value)}
-                                placeholder="https://maps.app.goo.gl/…"
-                            />
-                        )}
-                        {errors.location && <p className="text-xs text-red-600 mt-1">{errors.location}</p>}
+                        <details className="group rounded-2xl border border-neutral-200 px-4 py-3" open={!!(errors.socials || errors.gstin)}>
+                            <summary className="cursor-pointer select-none text-sm font-semibold text-neutral-700">
+                                More details <span className="font-normal text-neutral-400">(optional)</span>
+                            </summary>
+                            <div className="mt-4 space-y-4">
+                                <div>
+                                    <FieldLabel htmlFor="ba-socials" hint="Instagram, website… (https:// links)">
+                                        Social links
+                                    </FieldLabel>
+                                    <ChipInput
+                                        id="ba-socials"
+                                        values={socials}
+                                        onChange={setSocials}
+                                        max={10}
+                                        placeholder="https://instagram.com/yourplace"
+                                        normalize={(s) => {
+                                            const t = s.trim();
+                                            if (!t) return "";
+                                            return /^https?:\/\//i.test(t) ? t.replace(/^http:\/\//i, "https://") : `https://${t}`;
+                                        }}
+                                    />
+                                    {errors.socials && <p className="text-xs text-red-600 mt-1">{errors.socials}</p>}
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <FieldLabel htmlFor="ba-plan" hint="You can change this any time.">
+                                            Plan you're interested in
+                                        </FieldLabel>
+                                        <select id="ba-plan" className={selectClass} value={plan} onChange={(e) => setPlan(e.target.value as PlanCode | "")}>
+                                            <option value="">Not sure yet</option>
+                                            <option value="free">Free</option>
+                                            <option value="growth">Growth</option>
+                                            <option value="pro">Pro</option>
+                                            <option value="multi_location">Multi-location</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <FieldLabel htmlFor="ba-gstin" hint="For GST invoices later.">
+                                            GSTIN
+                                        </FieldLabel>
+                                        <input
+                                            id="ba-gstin"
+                                            className={`${inputClass} uppercase`}
+                                            maxLength={15}
+                                            value={gstin}
+                                            onChange={(e) => setGstin(e.target.value.toUpperCase().replace(/\s/g, ""))}
+                                        />
+                                        {errors.gstin && <p className="text-xs text-red-600 mt-1">{errors.gstin}</p>}
+                                    </div>
+                                </div>
+                                <div>
+                                    <FieldLabel htmlFor="ba-message">Anything else?</FieldLabel>
+                                    <textarea
+                                        id="ba-message"
+                                        className={`${inputClass} min-h-[90px]`}
+                                        maxLength={1000}
+                                        value={message}
+                                        onChange={(e) => setMessage(e.target.value)}
+                                        placeholder="Best time to call, other locations, questions…"
+                                    />
+                                </div>
+                            </div>
+                        </details>
                     </div>
-                    <div className="md:col-span-2">
-                        <FieldLabel htmlFor="ba-categories">What kind of place?</FieldLabel>
-                        <ChipInput
-                            id="ba-categories"
-                            values={categories}
-                            onChange={setCategories}
-                            max={10}
-                            suggestions={CATEGORY_SUGGESTIONS}
-                            placeholder="Café"
-                        />
-                    </div>
-                    <div className="md:col-span-2">
-                        <FieldLabel htmlFor="ba-socials" hint="Instagram, website… (https:// links)">
-                            Social links
-                        </FieldLabel>
-                        <ChipInput
-                            id="ba-socials"
-                            values={socials}
-                            onChange={setSocials}
-                            max={10}
-                            placeholder="https://instagram.com/yourplace"
-                            normalize={(s) => {
-                                const t = s.trim();
-                                if (!t) return "";
-                                return /^https?:\/\//i.test(t) ? t.replace(/^http:\/\//i, "https://") : `https://${t}`;
-                            }}
-                        />
-                        {errors.socials && <p className="text-xs text-red-600 mt-1">{errors.socials}</p>}
-                    </div>
-                </div>
-            </SectionCard>
-
-            <SectionCard title="Contact">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <FieldLabel htmlFor="ba-contact">Your name *</FieldLabel>
-                        <input
-                            id="ba-contact"
-                            className={inputClass}
-                            maxLength={100}
-                            value={contactName}
-                            onChange={(e) => setContactName(e.target.value)}
-                        />
-                        {errors.contactName && <p className="text-xs text-red-600 mt-1">{errors.contactName}</p>}
-                    </div>
-                    <div>
-                        <FieldLabel htmlFor="ba-phone">Phone *</FieldLabel>
-                        <input
-                            id="ba-phone"
-                            type="tel"
-                            className={inputClass}
-                            maxLength={20}
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
-                            placeholder="+91 98xxxxxxxx"
-                        />
-                        {errors.phone && <p className="text-xs text-red-600 mt-1">{errors.phone}</p>}
-                    </div>
-                    <div className="md:col-span-2">
-                        <FieldLabel
-                            htmlFor="ba-email"
-                            hint="Use the email you sign in with — when we approve, the business is linked to that account."
-                        >
-                            Email *
-                        </FieldLabel>
-                        <input
-                            id="ba-email"
-                            type="email"
-                            className={inputClass}
-                            maxLength={255}
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                        />
-                        {errors.email && <p className="text-xs text-red-600 mt-1">{errors.email}</p>}
-                    </div>
-                </div>
-            </SectionCard>
-
-            <SectionCard title="Plan & billing (optional)">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <FieldLabel htmlFor="ba-plan" hint="You can change this any time.">
-                            Plan you're interested in
-                        </FieldLabel>
-                        <select id="ba-plan" className={selectClass} value={plan} onChange={(e) => setPlan(e.target.value as PlanCode | "")}>
-                            <option value="">Not sure yet</option>
-                            <option value="free">Free</option>
-                            <option value="growth">Growth</option>
-                            <option value="pro">Pro</option>
-                            <option value="multi_location">Multi-location</option>
-                        </select>
-                    </div>
-                    <div>
-                        <FieldLabel htmlFor="ba-gstin" hint="For GST invoices later.">
-                            GSTIN
-                        </FieldLabel>
-                        <input
-                            id="ba-gstin"
-                            className={`${inputClass} uppercase`}
-                            maxLength={15}
-                            value={gstin}
-                            onChange={(e) => setGstin(e.target.value.toUpperCase().replace(/\s/g, ""))}
-                            placeholder="Optional"
-                        />
-                        {errors.gstin && <p className="text-xs text-red-600 mt-1">{errors.gstin}</p>}
-                    </div>
-                    <div className="md:col-span-2">
-                        <FieldLabel htmlFor="ba-message">Anything else?</FieldLabel>
-                        <textarea
-                            id="ba-message"
-                            className={`${inputClass} min-h-[90px]`}
-                            maxLength={1000}
-                            value={message}
-                            onChange={(e) => setMessage(e.target.value)}
-                            placeholder="Best time to call, other locations, questions…"
-                        />
-                    </div>
-                </div>
-            </SectionCard>
+                </SectionCard>
+            )}
 
             {submitError && (
                 <p className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-xl p-3" role="alert">
@@ -354,18 +405,30 @@ export function BusinessApplicationPage() {
                 </p>
             )}
 
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <Button type="submit" variant="accent" size="lg" className="rounded-full" isLoading={submitting} disabled={submitting}>
-                    Submit application
-                </Button>
-                <p className="text-xs text-neutral-500">
-                    By applying you agree to the{" "}
-                    <a href="https://seekkrr.com/business-terms" target="_blank" rel="noopener noreferrer" className="underline">
-                        SeekKrr business terms
-                    </a>
-                    .
-                </p>
-            </div>
+            {step === 1 ? (
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <Button type="button" variant="accent" size="lg" className="rounded-full" onClick={goToBusinessStep}>
+                        Continue
+                    </Button>
+                    <p className="text-xs text-neutral-500">Got a claim link from our team? Open it instead — your listing is ready.</p>
+                </div>
+            ) : (
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <Button type="button" variant="ghost" size="lg" className="rounded-full" onClick={() => setStep(1)}>
+                        Back
+                    </Button>
+                    <Button type="submit" variant="accent" size="lg" className="rounded-full" isLoading={submitting} disabled={submitting}>
+                        Submit for review
+                    </Button>
+                    <p className="text-xs text-neutral-500">
+                        By applying you agree to the{" "}
+                        <a href="https://seekkrr.com/business-terms" target="_blank" rel="noopener noreferrer" className="underline">
+                            SeekKrr business terms
+                        </a>
+                        .
+                    </p>
+                </div>
+            )}
         </form>
     );
 }

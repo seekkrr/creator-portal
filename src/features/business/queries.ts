@@ -26,6 +26,15 @@ export const bkeys = {
     offerAnalytics: (markerId: string) => ["offers", markerId, "analytics"] as const,
 };
 
+/** Predefined business categories (profile + application forms). */
+export function useBusinessCategories() {
+    return useQuery({
+        queryKey: ["business-categories"],
+        queryFn: () => businessService.listCategories(),
+        staleTime: 10 * 60_000,
+    });
+}
+
 export function useHub() {
     const { businessId } = useBusiness();
     return useQuery({
