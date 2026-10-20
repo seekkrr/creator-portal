@@ -103,6 +103,27 @@ export const businessService = {
         return pickRedeemCode(res.data);
     },
 
+    /** Link a place that's already on SeekKrr (manager+). */
+    async linkPlace(businessId: string, markerId: string): Promise<Business> {
+        const res = await api.post<{ business: Business }>(`${biz(businessId)}/places`, { marker_id: markerId });
+        return res.data.business;
+    },
+
+    /** Remove a place from the business (owner). */
+    async unlinkPlace(businessId: string, markerId: string): Promise<Business> {
+        const res = await api.delete<{ business: Business }>(`${biz(businessId)}/places/${encodeURIComponent(markerId)}`);
+        return res.data.business;
+    },
+
+    /** Propose a new place; it's linked automatically once our team approves it. */
+    async requestPlace(
+        businessId: string,
+        body: { title: string; lat: number; lng: number; address?: string; confirm_nearby?: boolean },
+    ): Promise<Business> {
+        const res = await api.post<{ business: Business }>(`${biz(businessId)}/place-requests`, body);
+        return res.data.business;
+    },
+
     async setRedeemCode(businessId: string, markerId: string, code: string): Promise<RedeemCode> {
         const res = await api.put<RedeemCode>(
             `${biz(businessId)}/markers/${encodeURIComponent(markerId)}/redeem-code`,

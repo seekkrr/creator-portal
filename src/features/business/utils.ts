@@ -276,7 +276,7 @@ export const ROLE_LABELS: Record<MemberRole, string> = {
 
 export const ROLE_HINTS: Record<MemberRole, string> = {
     owner: "Everything, including billing and the team.",
-    manager: "Edits collabs, redeem codes and the profile; discovers and invites creators.",
+    manager: "Edits UGC briefs, redeem codes and the profile; discovers and invites creators.",
     staff: "Sees the redeem code and approves requests at the counter.",
 };
 

@@ -18,7 +18,6 @@ import type {
 } from "@services/business.types";
 import { useBusiness } from "../context";
 import {
-    DAY_LABELS,
     DELIVERABLE_LABELS,
     DELIVERABLE_TYPES,
     DISCLOSURE_OPTIONS,
@@ -29,6 +28,7 @@ import {
 import { Drawer } from "./Overlay";
 import { ChipInput } from "./ChipInput";
 import { CollabPreviewCard } from "./CollabPreviewCard";
+import { AvailabilityEditor } from "./AvailabilityEditor";
 import { FieldLabel, SegmentedControl, Toggle, inputClass, selectClass } from "./bits";
 
 interface Draft {
@@ -117,7 +117,7 @@ function toPayload(d: Draft): CollabPayload {
 
 function validate(d: Draft, isEdit: boolean, slotsUsed: number): Record<string, string> {
     const e: Record<string, string> = {};
-    if (!isEdit && !d.marker_id) e.marker_id = "Pick the place this collab is for.";
+    if (!isEdit && !d.marker_id) e.marker_id = "Pick the place this UGC brief is for.";
     if (!d.want.trim()) e.want = "Say what you'd like from creators.";
     if (d.want.length > 120) e.want = "Keep it under 120 characters.";
     if (!d.offer.trim()) e.offer = "Say what creators get.";
@@ -219,7 +219,6 @@ export function CollabEditorDrawer({
     const [draft, setDraft] = useState<Draft>(() => draftFrom(collab, defaultMarker));
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [saving, setSaving] = useState(false);
-    const [blackoutDraft, setBlackoutDraft] = useState("");
 
     const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft((d) => ({ ...d, [key]: value }));
 
@@ -292,7 +291,7 @@ export function CollabEditorDrawer({
             open={open}
             onClose={onClose}
             width="xl"
-            title={isEdit ? "Edit collab" : "Post a collab"}
+            title={isEdit ? "Edit UGC brief" : "Post a UGC brief"}
             subtitle={
                 isEdit
                     ? "Edits to the text are re-checked before creators see them."
@@ -304,7 +303,7 @@ export function CollabEditorDrawer({
                         Cancel
                     </Button>
                     <Button variant="accent" onClick={() => void save()} isLoading={saving} disabled={saving}>
-                        {isEdit ? "Save changes" : "Post collab"}
+                        {isEdit ? "Save changes" : "Post a UGC brief"}
                     </Button>
                 </>
             }
@@ -316,10 +315,12 @@ export function CollabEditorDrawer({
                             <div>
                                 <FieldLabel htmlFor="collab-place">Place</FieldLabel>
                                 {places.length === 0 ? (
-                                    <p className="text-sm text-amber-700 bg-amber-50 border border-amber-100 rounded-lg p-3">
-                                        No place is linked to this business yet. Contact partners@seekkrr.com to link your
-                                        location.
-                                    </p>
+                                    <div className="text-sm text-amber-800 bg-amber-50 border border-amber-100 rounded-lg p-3 space-y-2">
+                                        <p>UGC briefs live on a place on the SeekKrr map, and your business doesn't have one yet.</p>
+                                        <Link to="/business/locations?add=1" onClick={onClose} className="inline-block font-semibold underline">
+                                            Add your place
+                                        </Link>
+                                    </div>
                                 ) : (
                                     <select
                                         id="collab-place"
@@ -386,12 +387,12 @@ export function CollabEditorDrawer({
 
                     <Section title="How creators join">
                         <SegmentedControl<CollabMode>
-                            ariaLabel="Collab mode"
+                            ariaLabel="UGC brief mode"
                             value={draft.mode}
                             onChange={(m) => {
                                 if (m === "approval" && approvalLocked) {
                                     onUpgrade(
-                                        "Approval-mode collabs (you pick each creator) are on the Growth plan and above."
+                                        "Approval-mode UGC briefs (you pick each creator) are on the Growth plan and above."
                                     );
                                     return;
                                 }
@@ -456,7 +457,7 @@ export function CollabEditorDrawer({
                     <Section title="Slots & dates">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <FieldLabel htmlFor="collab-slots" hint="Total redemptions for this collab.">
+                                <FieldLabel htmlFor="collab-slots" hint="Total redemptions for this UGC brief.">
                                     Slots
                                 </FieldLabel>
                                 <input
@@ -681,182 +682,19 @@ export function CollabEditorDrawer({
 
                     <Section
                         title="Availability"
-                        hint="When creators can avail or redeem (India time). Leave empty for any day, any time."
+                        hint="When creators can come in, in India time. Leave it as is for any day, any time."
                         collapsible
                     >
-                        <div>
-                            <FieldLabel>Days of the week</FieldLabel>
-                            <div className="flex flex-wrap gap-1.5">
-                                {DAY_LABELS.map((label, idx) => {
-                                    const on = draft.days_of_week.includes(idx);
-                                    return (
-                                        <button
-                                            key={label}
-                                            type="button"
-                                            aria-pressed={on}
-                                            onClick={() =>
-                                                set(
-                                                    "days_of_week",
-                                                    on
-                                                        ? draft.days_of_week.filter((d) => d !== idx)
-                                                        : [...draft.days_of_week, idx]
-                                                )
-                                            }
-                                            className={`w-12 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                                                on
-                                                    ? "bg-primary-600 text-white border-primary-600"
-                                                    : "bg-white text-neutral-600 border-neutral-300 hover:border-primary-400"
-                                            }`}
-                                        >
-                                            {label}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                            <p className="text-xs text-neutral-500 mt-1">
-                                {draft.days_of_week.length === 0 ? "Every day" : `${draft.days_of_week.length} day(s) selected`}
-                            </p>
-                        </div>
-                        <div>
-                            <FieldLabel>Time windows</FieldLabel>
-                            <div className="space-y-2">
-                                {draft.time_windows.map((w, i) => (
-                                    <div key={i} className="flex items-center gap-2">
-                                        <input
-                                            type="time"
-                                            aria-label="Start"
-                                            className={`${inputClass} w-36`}
-                                            value={w.start}
-                                            onChange={(e) =>
-                                                set(
-                                                    "time_windows",
-                                                    draft.time_windows.map((x, idx) =>
-                                                        idx === i ? { ...x, start: e.target.value } : x
-                                                    )
-                                                )
-                                            }
-                                        />
-                                        <span className="text-neutral-400">to</span>
-                                        <input
-                                            type="time"
-                                            aria-label="End"
-                                            className={`${inputClass} w-36`}
-                                            value={w.end}
-                                            onChange={(e) =>
-                                                set(
-                                                    "time_windows",
-                                                    draft.time_windows.map((x, idx) =>
-                                                        idx === i ? { ...x, end: e.target.value } : x
-                                                    )
-                                                )
-                                            }
-                                        />
-                                        <button
-                                            type="button"
-                                            aria-label="Remove window"
-                                            onClick={() =>
-                                                set(
-                                                    "time_windows",
-                                                    draft.time_windows.filter((_, idx) => idx !== i)
-                                                )
-                                            }
-                                            className="p-2 rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                            {draft.time_windows.length < 4 && (
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    className="mt-2"
-                                    leftIcon={<Plus className="w-4 h-4" />}
-                                    onClick={() =>
-                                        set("time_windows", [...draft.time_windows, { start: "11:00", end: "17:00" }])
-                                    }
-                                >
-                                    Add time window
-                                </Button>
-                            )}
-                            {draft.time_windows.length === 0 && (
-                                <p className="text-xs text-neutral-500 mt-1">Any time of day</p>
-                            )}
-                            <FieldError msg={errors.time_windows} />
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <FieldLabel htmlFor="collab-cap" hint="Max redemptions per day. Optional.">
-                                    Daily cap
-                                </FieldLabel>
-                                <input
-                                    id="collab-cap"
-                                    type="number"
-                                    min={1}
-                                    max={100}
-                                    className={inputClass}
-                                    value={draft.daily_cap}
-                                    onChange={(e) => set("daily_cap", e.target.value)}
-                                    placeholder="No cap"
-                                />
-                                <FieldError msg={errors.daily_cap} />
-                            </div>
-                            <div>
-                                <FieldLabel htmlFor="collab-blackout" hint="Days the collab is off (festivals, full house).">
-                                    Blackout dates
-                                </FieldLabel>
-                                <div className="flex gap-2">
-                                    <input
-                                        id="collab-blackout"
-                                        type="date"
-                                        className={inputClass}
-                                        value={blackoutDraft}
-                                        onChange={(e) => setBlackoutDraft(e.target.value)}
-                                    />
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        disabled={!blackoutDraft || draft.blackout_dates.length >= 60}
-                                        onClick={() => {
-                                            if (blackoutDraft && !draft.blackout_dates.includes(blackoutDraft)) {
-                                                set("blackout_dates", [...draft.blackout_dates, blackoutDraft].sort());
-                                            }
-                                            setBlackoutDraft("");
-                                        }}
-                                    >
-                                        Add
-                                    </Button>
-                                </div>
-                            </div>
-                        </div>
-                        {draft.blackout_dates.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5">
-                                {draft.blackout_dates.map((d) => (
-                                    <span
-                                        key={d}
-                                        className="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full bg-neutral-100 text-neutral-700 text-xs border border-neutral-200"
-                                    >
-                                        {d}
-                                        <button
-                                            type="button"
-                                            aria-label={`Remove ${d}`}
-                                            onClick={() =>
-                                                set(
-                                                    "blackout_dates",
-                                                    draft.blackout_dates.filter((x) => x !== d)
-                                                )
-                                            }
-                                            className="p-0.5 rounded-full hover:bg-neutral-200"
-                                        >
-                                            <Trash2 className="w-3 h-3" />
-                                        </button>
-                                    </span>
-                                ))}
-                            </div>
-                        )}
+                        <AvailabilityEditor
+                            value={{
+                                days_of_week: draft.days_of_week,
+                                time_windows: draft.time_windows,
+                                daily_cap: draft.daily_cap,
+                                blackout_dates: draft.blackout_dates,
+                            }}
+                            onChange={(patch) => setDraft((d) => ({ ...d, ...patch }))}
+                            errors={{ time_windows: errors.time_windows, daily_cap: errors.daily_cap }}
+                        />
                     </Section>
                 </div>
 

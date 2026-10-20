@@ -28,7 +28,7 @@ const TABS: {
         params: { status: "requested" },
         emptyTitle: "No requests waiting",
         emptyBody:
-            "When a creator taps Avail on an approval collab — or asks for visit dates in advance — they land here with their profile for you to approve.",
+            "When a creator taps Avail on an approval UGC brief — or asks for visit dates in advance — they land here with their profile for you to approve.",
     },
     {
         value: "approved",
@@ -49,15 +49,15 @@ const TABS: {
         value: "completed",
         label: "Completed",
         params: { group: "completed" },
-        emptyTitle: "No completed collabs yet",
-        emptyBody: "Verified collabs end up here, with the content in your library.",
+        emptyTitle: "No completed requests yet",
+        emptyBody: "Verified requests end up here, with the content in your library.",
     },
     {
         value: "closed",
         label: "Closed",
         params: { group: "closed" },
         emptyTitle: "Nothing closed",
-        emptyBody: "Declined, expired, cancelled and no-show collabs are kept here for your records.",
+        emptyBody: "Declined, expired, cancelled and no-show requests are kept here for your records.",
     },
     {
         value: "invites",
@@ -124,7 +124,7 @@ export function RequestsPage() {
                         <thead className="bg-neutral-50 border-b border-neutral-200">
                             <tr>
                                 <th className="py-3 px-5 text-xs font-semibold text-neutral-500 uppercase tracking-wider">Creator</th>
-                                <th className="py-3 px-5 text-xs font-semibold text-neutral-500 uppercase tracking-wider">Collab</th>
+                                <th className="py-3 px-5 text-xs font-semibold text-neutral-500 uppercase tracking-wider">UGC brief</th>
                                 <th className="py-3 px-5 text-xs font-semibold text-neutral-500 uppercase tracking-wider">When</th>
                                 <th className="py-3 px-5 text-xs font-semibold text-neutral-500 uppercase tracking-wider">Status</th>
                                 <th className="py-3 px-5 text-xs font-semibold text-neutral-500 uppercase tracking-wider text-right">Actions</th>

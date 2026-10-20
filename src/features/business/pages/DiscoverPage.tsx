@@ -260,7 +260,7 @@ export function DiscoverPage() {
         <div className="space-y-6">
             <PageHeader
                 title="Discover creators"
-                description="SeekKrr Match ranks creators who are open to collabs for each of your collabs — with the reasons why."
+                description="SeekKrr Match ranks creators for each of your UGC briefs — with the reasons why."
             />
 
             {collabs.isLoading ? (
@@ -269,11 +269,11 @@ export function DiscoverPage() {
                 <div className="bg-white rounded-2xl border border-neutral-200">
                     <EmptyState
                         icon={<Handshake className="w-7 h-7" />}
-                        title="Post an active collab first"
-                        description="Matches are ranked for a specific collab, so start by posting one. Collabs under review show up here once approved."
+                        title="Post an active UGC brief first"
+                        description="Matches are ranked for a specific UGC brief, so start by posting one. UGC briefs under review show up here once approved."
                         action={
                             <Link to="/business/collabs?new=1">
-                                <Button variant="accent">Post a collab</Button>
+                                <Button variant="accent">Post a UGC brief</Button>
                             </Link>
                         }
                     />
@@ -349,8 +349,8 @@ export function DiscoverPage() {
                         <div className="bg-white rounded-2xl border border-neutral-200">
                             <EmptyState
                                 icon={<Sparkles className="w-7 h-7" />}
-                                title="No matches yet for this collab"
-                                description="Matches refresh every few hours as creators open their profiles to collabs and check in nearby. Meanwhile, creators can still find you on the map."
+                                title="No matches yet for this UGC brief"
+                                description="Matches refresh every few hours as creators turn on “Open to collabs” in their profile and check in nearby. Meanwhile, creators can still find you on the map."
                             />
                         </div>
                     ) : filtered.length === 0 ? (

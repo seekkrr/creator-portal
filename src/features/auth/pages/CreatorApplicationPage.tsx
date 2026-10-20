@@ -6,16 +6,11 @@ import { useAuthStore } from "@store/auth.store";
 import { useWorkspace } from "@hooks/useWorkspace";
 import { ApiRequestError } from "@services/api";
 import { creatorApplicationService } from "@services/creatorApplication.service";
+import { normalizeWebLink } from "@/utils/links";
 import { ChipInput } from "@features/business/components/ChipInput";
 
 const inputClass =
     "w-full px-3 py-2.5 bg-white border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-500";
-
-const toHttps = (s: string) => {
-    const t = s.trim();
-    if (!t) return "";
-    return /^https?:\/\//i.test(t) ? t.replace(/^http:\/\//i, "https://") : `https://${t}`;
-};
 
 type Outcome = "submitted" | "already_applied";
 
@@ -156,7 +151,7 @@ export function CreatorApplicationPage() {
                     Where do you post? *
                 </label>
                 <p className="text-xs text-neutral-500 mb-2">Paste your Instagram, YouTube or blog link and press Enter.</p>
-                <ChipInput id="ca-socials" values={socials} onChange={setSocials} max={10} placeholder="instagram.com/yourhandle" normalize={toHttps} />
+                <ChipInput id="ca-socials" values={socials} onChange={setSocials} max={10} placeholder="instagram.com/yourhandle" normalize={normalizeWebLink} />
                 {errors.socials && <p className="text-xs text-red-600 mt-1">{errors.socials}</p>}
             </div>
 

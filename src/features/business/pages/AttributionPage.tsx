@@ -18,7 +18,7 @@ export function AttributionPage() {
         staleTime: 60_000,
     });
     const collabs = useCollabs(true);
-    const collabName = (id: string) => collabs.data?.find((c) => c.id === id)?.offer ?? "Collab";
+    const collabName = (id: string) => collabs.data?.find((c) => c.id === id)?.offer ?? "UGC brief";
 
     if (attribution.isLoading) {
         return (
@@ -63,7 +63,7 @@ export function AttributionPage() {
             {!full_breakdown ? (
                 <UpgradeCallout
                     title="See which creators bring people in"
-                    description="Growth and Pro break attribution down per creator and per collab, so you know who to invite again."
+                    description="Growth and Pro break attribution down per creator and per UGC brief, so you know who to invite again."
                 />
             ) : by_creator.length === 0 ? (
                 <div className="bg-white rounded-2xl border border-neutral-200">
@@ -79,7 +79,7 @@ export function AttributionPage() {
                         <table className="w-full text-left border-collapse min-w-[640px]">
                             <thead>
                                 <tr className="border-b border-neutral-200">
-                                    {["Creator", "Clicks", "App opens", "Check-ins", "Collabs"].map((h, i) => (
+                                    {["Creator", "Clicks", "App opens", "Check-ins", "UGC briefs"].map((h, i) => (
                                         <th
                                             key={h}
                                             className={`py-2.5 px-5 text-xs font-semibold text-neutral-500 uppercase tracking-wider ${i > 0 && i < 4 ? "text-right" : ""}`}

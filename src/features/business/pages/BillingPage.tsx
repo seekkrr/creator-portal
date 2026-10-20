@@ -36,6 +36,7 @@ import {
 } from "../components/bits";
 import { ConfirmDialog } from "../components/Overlay";
 import { UpgradeDialog } from "../components/UpgradeDialog";
+import { CopyEmailButton } from "../components/CopyEmail";
 
 const PAID_STATUSES = ["active", "pending", "halted", "trialing"];
 
@@ -54,7 +55,7 @@ function PlanFeatures({ plan }: { plan: Plan }) {
     }
     const e = plan.entitlements ?? {};
     const rows: { label: string; value: string | boolean }[] = [
-        { label: "Active collabs", value: limitLabel(e.active_collabs) },
+        { label: "Active UGC briefs", value: limitLabel(e.active_collabs) },
         { label: "Redemptions / month", value: limitLabel(e.redemptions_per_month) },
         { label: "Approval mode + advance requests", value: !!e.approval_mode },
         { label: "Team members", value: limitLabel(e.team_members) },
@@ -457,11 +458,7 @@ export function BillingPage() {
         const isCurrent = plan.code === currentCode;
         if (plan.custom) {
             return (
-                <a href="mailto:partners@seekkrr.com?subject=SeekKrr%20Multi-location%20plan" className="block">
-                    <Button variant="outline" fullWidth>
-                        Contact us
-                    </Button>
-                </a>
+                <CopyEmailButton />
             );
         }
         if (isCurrent) {
@@ -506,7 +503,7 @@ export function BillingPage() {
                     <div className="flex-1">
                         <p className="text-xl font-display font-bold text-primary-900">Try Growth free for {trialDays} days</p>
                         <p className="text-sm text-neutral-600 mt-1">
-                            No card needed. Approval-mode collabs, advance requests, creator discovery, the content library
+                            No card needed. Approval-mode UGC briefs, advance requests, creator discovery, the content library
                             and attribution. You go back to Free automatically unless you subscribe.
                         </p>
                     </div>
@@ -579,7 +576,7 @@ export function BillingPage() {
                     {usage ? (
                         <div className="space-y-4">
                             <UsageMeter label="Redemptions" counter={usage.usage.redemptions} />
-                            <UsageMeter label="Active collabs" counter={usage.usage.active_collabs} />
+                            <UsageMeter label="Active UGC briefs" counter={usage.usage.active_collabs} />
                             <UsageMeter label="Profile reveals" counter={usage.usage.match_reveals} />
                             <UsageMeter label="Invites" counter={usage.usage.invites} />
                         </div>
@@ -735,8 +732,8 @@ export function BillingPage() {
                 title={effectiveStatus === "trialing" ? "End your free trial?" : "Cancel at the end of this period?"}
                 body={
                     effectiveStatus === "trialing"
-                        ? "You'll move to the Free plan now. Collabs over the Free limit are paused."
-                        : `You keep ${planName(plans, currentCode)} until ${formatDate(subscription?.current_period_end, "the end of this period")}, then move to Free. Collabs over the Free limit are paused.`
+                        ? "You'll move to the Free plan now. UGC briefs over the Free limit are paused."
+                        : `You keep ${planName(plans, currentCode)} until ${formatDate(subscription?.current_period_end, "the end of this period")}, then move to Free. UGC briefs over the Free limit are paused.`
                 }
                 confirmLabel={effectiveStatus === "trialing" ? "End trial" : "Cancel plan"}
                 variant="danger"

@@ -10,6 +10,7 @@ import type { Business, UpdateBusinessPayload } from "@services/business.types";
 import { useBusiness } from "../context";
 import { bkeys, useBusinessDetail } from "../queries";
 import { errorMessage } from "../utils";
+import { normalizeWebLink } from "@/utils/links";
 import { ChipInput } from "../components/ChipInput";
 import { CategoryPicker } from "../components/CategoryPicker";
 import { FieldLabel, PageHeader, SectionCard, Toggle, inputClass } from "../components/bits";
@@ -368,11 +369,7 @@ export function BusinessProfilePage() {
                             max={10}
                             disabled={readOnly}
                             placeholder="https://instagram.com/yourplace"
-                            normalize={(s) => {
-                                const t = s.trim();
-                                if (!t) return "";
-                                return /^https?:\/\//i.test(t) ? t.replace(/^http:\/\//i, "https://") : `https://${t}`;
-                            }}
+                            normalize={normalizeWebLink}
                         />
                         {errors.socials && <p className="text-xs text-red-600 mt-1">{errors.socials}</p>}
                     </SectionCard>

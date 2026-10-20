@@ -1,16 +1,18 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { Eye, EyeOff, KeyRound, MapPin, ShieldCheck } from "lucide-react";
+import { Clock, Eye, EyeOff, KeyRound, MapPin, Plus, ShieldCheck, XCircle } from "lucide-react";
 import { Button, EmptyState, ErrorState, Skeleton } from "@components/ui";
 import { businessService } from "@services/business.service";
 import type { HubPlace } from "@services/business.types";
 import { useBusiness } from "../context";
-import { bkeys, useHub } from "../queries";
+import { bkeys, useBusinessDetail, useHub } from "../queries";
 import { errorMessage, formatDate } from "../utils";
 import { PageHeader, Pill } from "../components/bits";
 import { Modal } from "../components/Overlay";
 import { PinInput } from "../components/PinInput";
+import { AddPlacePanel } from "../components/AddPlacePanel";
 
 function ChangeCodeDialog({
     place,
@@ -154,7 +156,7 @@ function PlaceCard({ place, canManage, onChange }: { place: HubPlace; canManage:
                 </div>
             ) : (
                 <p className="text-sm text-amber-800 bg-amber-50 border border-amber-100 rounded-xl p-3">
-                    Creators can't redeem collabs or check-in offers here until you set a code.
+                    Creators can't redeem UGC briefs or check-in offers here until you set a code.
                 </p>
             )}
             {revealed && code.isError && <p className="text-sm text-red-600">{errorMessage(code.error, "Couldn't load the code")}</p>}
@@ -176,13 +178,25 @@ function PlaceCard({ place, canManage, onChange }: { place: HubPlace; canManage:
 export function LocationsPage() {
     const { canManage } = useBusiness();
     const hub = useHub();
+    const detail = useBusinessDetail();
+    const [searchParams] = useSearchParams();
     const [editing, setEditing] = useState<HubPlace | null>(null);
+    const [adding, setAdding] = useState(searchParams.get("add") === "1");
+    const places = hub.data?.places ?? [];
+    const requests = detail.data?.place_requests ?? [];
 
     return (
         <div className="space-y-6">
             <PageHeader
                 title="Locations & redeem codes"
-                description="Each place has its own 4-digit code. Staff type it on the creator's phone (“Ask the staff to enter the code”) to redeem a collab or offer."
+                actions={
+                    canManage && places.length > 0 && !adding ? (
+                        <Button variant="outline" size="sm" className="rounded-full" onClick={() => setAdding(true)}>
+                            <Plus className="w-4 h-4" /> Add a place
+                        </Button>
+                    ) : undefined
+                }
+                description="Each place has its own 4-digit code. Staff type it on the creator's phone (“Ask the staff to enter the code”) to redeem a UGC brief or offer."
             />
 
             <div className="rounded-2xl bg-primary-900 text-white p-5 sm:p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -210,20 +224,62 @@ export function LocationsPage() {
                 </div>
             ) : hub.isError ? (
                 <ErrorState message="We couldn't load your places." onRetry={() => void hub.refetch()} />
-            ) : (hub.data?.places ?? []).length === 0 ? (
+            ) : places.length === 0 && !canManage ? (
                 <div className="bg-white rounded-2xl border border-neutral-200">
                     <EmptyState
                         icon={<MapPin className="w-7 h-7" />}
                         title="No place linked yet"
-                        description="Your business needs a place on the SeekKrr map. Email partners@seekkrr.com with your Google Maps link and we'll connect it."
+                        description="Ask a manager or the owner to add your place on the SeekKrr map."
                     />
                 </div>
-            ) : (
+            ) : places.length === 0 ? null : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {(hub.data?.places ?? []).map((p) => (
+                    {places.map((p) => (
                         <PlaceCard key={p.marker_id} place={p} canManage={canManage} onChange={() => setEditing(p)} />
                     ))}
                 </div>
+            )}
+
+            {canManage && (places.length === 0 || adding) && !hub.isLoading && !hub.isError && (
+                <section className="bg-white rounded-2xl border border-neutral-200 p-5 sm:p-6 space-y-4">
+                    <div className="flex items-start justify-between gap-3">
+                        <div>
+                            <h2 className="font-display font-semibold text-lg text-neutral-900">
+                                {places.length === 0 ? "Add your place to start" : "Add another place"}
+                            </h2>
+                            <p className="text-sm text-neutral-500">
+                                UGC briefs and offers live on a place on the SeekKrr map. Link yours, or drop a pin if it's new.
+                            </p>
+                        </div>
+                        {places.length > 0 && (
+                            <button type="button" onClick={() => setAdding(false)} className="text-sm text-neutral-500 hover:text-neutral-800">
+                                Cancel
+                            </button>
+                        )}
+                    </div>
+                    <AddPlacePanel onDone={() => setAdding(false)} />
+                </section>
+            )}
+
+            {requests.length > 0 && (
+                <section className="space-y-2" aria-label="Places under review">
+                    {requests.map((r) => (
+                        <div
+                            key={r.application_id}
+                            className={`flex items-start gap-3 rounded-2xl border p-4 text-sm ${
+                                r.status === "pending" ? "border-amber-200 bg-amber-50 text-amber-900" : "border-red-200 bg-red-50 text-red-900"
+                            }`}
+                        >
+                            {r.status === "pending" ? <Clock className="w-4 h-4 mt-0.5 shrink-0" /> : <XCircle className="w-4 h-4 mt-0.5 shrink-0" />}
+                            <p>
+                                <span className="font-semibold">{r.title}</span>{" "}
+                                {r.status === "pending"
+                                    ? "is under review. It'll show up here, linked to your business, once approved."
+                                    : `wasn't approved${r.reason ? `: ${r.reason}` : "."} You can add it again with the correct pin.`}
+                            </p>
+                        </div>
+                    ))}
+                </section>
             )}
 
             <p className="text-xs text-neutral-500">

@@ -32,6 +32,15 @@ export interface BusinessBilling {
 }
 
 /** Member view of a business (`GET /businesses/mine`, `GET /businesses/{id}`). */
+/** A new place the business proposed; linked automatically once approved. */
+export interface PlaceRequest {
+    application_id: string;
+    title: string;
+    status: "pending" | "rejected";
+    requested_at: string | null;
+    reason?: string | null;
+}
+
 export interface Business {
     id: string;
     slug: string | null;
@@ -40,6 +49,7 @@ export interface Business {
     description: string | null;
     categories: string[];
     sub_categories?: string[];
+    place_requests?: PlaceRequest[];
     region_id: string | null;
     socials: BusinessSocial[];
     photos: string[];
