@@ -1,12 +1,12 @@
 import { Link } from "react-router-dom";
-import { ShieldAlert, Store } from "lucide-react";
+import { ShieldAlert, Sparkles, Store } from "lucide-react";
 import { useAuthStore } from "@store/auth.store";
 import { evaluateCreatorAccess, type CreatorAccessDenialReason } from "@/types";
 
 const DENIAL_COPY: Record<CreatorAccessDenialReason, { title: string; body: string }> = {
     not_creator: {
         title: "Creator or Partner Access Required",
-        body: "This account isn't a creator or a business partner yet. Creators apply through the SeekKrr app; businesses can list themselves below.",
+        body: "This account isn't a creator or a business partner yet. Apply as a creator, or list your business — it only takes a minute.",
     },
     no_profile: {
         title: "Finishing Setup",
@@ -40,6 +40,15 @@ export function AccessDeniedPage() {
                 <p className="text-neutral-500 mb-8">{copy.body}</p>
 
                 <div className="space-y-3">
+                    {reason === "not_creator" && (
+                        <Link
+                            to="/creator/apply"
+                            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors font-medium"
+                        >
+                            <Sparkles className="w-4 h-4" />
+                            Become a creator
+                        </Link>
+                    )}
                     {reason === "not_creator" && (
                         <Link
                             to="/business/apply"

@@ -6,6 +6,7 @@ import type {
     Business,
     BusinessAnalytics,
     BusinessApplicationItem,
+    BusinessCategory,
     BusinessCollab,
     BusinessHub,
     CheckoutPayload,
@@ -39,6 +40,12 @@ const biz = (id: string) => `${BASE}/${encodeURIComponent(id)}`;
  */
 export const businessService = {
     // ── Businesses & team ────────────────────────────────────────────────────
+
+    /** Predefined categories (and sub-categories) a business can pick. */
+    async listCategories(): Promise<BusinessCategory[]> {
+        const res = await api.get<{ categories?: BusinessCategory[] }>(`${BASE}/categories`);
+        return res.data.categories ?? [];
+    },
 
     /** Businesses the signed-in user is a member of. */
     async listMine(): Promise<Business[]> {
