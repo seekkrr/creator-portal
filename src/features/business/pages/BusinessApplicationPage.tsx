@@ -9,6 +9,7 @@ import type { PlanCode, SubmittedBusinessApplication } from "@services/business.
 import type { Marker } from "@/types";
 import { GSTIN_PATTERN, errorMessage } from "../utils";
 import { Banner, FieldLabel, SectionCard, SegmentedControl, inputClass, selectClass } from "../components/bits";
+import { normalizeWebLink } from "@/utils/links";
 import { ChipInput } from "../components/ChipInput";
 import { CategoryPicker } from "../components/CategoryPicker";
 import { PlaceSearchSelect } from "../components/PlaceSearchSelect";
@@ -128,8 +129,8 @@ export function BusinessApplicationPage() {
                             },
                             {
                                 icon: <Store className="w-4 h-4" />,
-                                t: "Set your redeem code and post a collab",
-                                d: "Pick a 4-digit code for your staff, then post your first collab for creators nearby.",
+                                t: "Set your redeem code and post a UGC brief",
+                                d: "Pick a 4-digit code for your staff, then post your first UGC brief for creators nearby.",
                             },
                         ].map((s, i) => (
                             <li key={i} className="flex gap-3">
@@ -347,11 +348,7 @@ export function BusinessApplicationPage() {
                                         onChange={setSocials}
                                         max={10}
                                         placeholder="https://instagram.com/yourplace"
-                                        normalize={(s) => {
-                                            const t = s.trim();
-                                            if (!t) return "";
-                                            return /^https?:\/\//i.test(t) ? t.replace(/^http:\/\//i, "https://") : `https://${t}`;
-                                        }}
+                                        normalize={normalizeWebLink}
                                     />
                                     {errors.socials && <p className="text-xs text-red-600 mt-1">{errors.socials}</p>}
                                 </div>

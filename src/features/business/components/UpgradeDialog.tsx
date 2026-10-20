@@ -41,7 +41,7 @@ export function UpgradeDialog({ open, message, onClose }: UpgradeDialogProps) {
             }
         >
             <p className="text-sm text-neutral-600 pb-2">
-                Growth and Pro raise your monthly limits and unlock approval-mode collabs, creator discovery, the
+                Growth and Pro raise your monthly limits and unlock approval-mode UGC briefs, creator discovery, the
                 content library and attribution. Owners can start a 14-day free trial from Billing.
             </p>
         </Modal>

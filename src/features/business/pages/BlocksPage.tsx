@@ -51,7 +51,7 @@ export function BlocksPage() {
         <div className="space-y-6">
             <PageHeader
                 title="Blocked creators"
-                description="Blocked creators can't see your collabs, send you requests or appear in Discover — and you won't see them."
+                description="Blocked creators can't see your UGC briefs, send you requests or appear in Discover — and you won't see them."
             />
 
             <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm">
@@ -97,7 +97,7 @@ export function BlocksPage() {
                 open={!!target}
                 onClose={() => setTarget(null)}
                 title={`Unblock ${target ? (names.get(target.blocked_id)?.name ?? "this creator") : ""}?`}
-                body="They'll be able to see your collabs and send requests again."
+                body="They'll be able to see your UGC briefs and send requests again."
                 confirmLabel="Unblock"
                 onConfirm={async () => {
                     if (!target) return;

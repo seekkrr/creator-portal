@@ -51,7 +51,7 @@ const USAGE_LABELS: Record<keyof BusinessHub["usage"]["usage"], string> = {
     redemptions: "redemptions",
     match_reveals: "profile reveals",
     invites: "invites",
-    active_collabs: "active collabs",
+    active_collabs: "active UGC briefs",
 };
 
 function buildAlerts(hub: BusinessHub): Alert[] {
@@ -60,8 +60,9 @@ function buildAlerts(hub: BusinessHub): Alert[] {
         alerts.push({
             key: "no-place",
             tone: "info",
-            title: "No place linked yet",
-            body: "Collabs are attached to a place on the SeekKrr map. Email partners@seekkrr.com and we'll link yours.",
+            title: "Add your place to start",
+            body: "UGC briefs are attached to a place on the SeekKrr map. Link yours in a minute, or drop a pin if it's new.",
+            action: { to: "/business/locations?add=1", label: "Add your place" },
         });
     }
     for (const p of hub.places.filter((x) => !x.code_set)) {
@@ -69,7 +70,7 @@ function buildAlerts(hub: BusinessHub): Alert[] {
             key: `code-${p.marker_id}`,
             tone: "warning",
             title: `Set a redeem code for ${p.title ?? "your place"}`,
-            body: "Creators can't redeem collabs or check-in offers here until your staff has a 4-digit code.",
+            body: "Creators can't redeem UGC briefs or check-in offers here until your staff has a 4-digit code.",
             action: { to: "/business/locations", label: "Set code" },
         });
     }
@@ -130,7 +131,7 @@ function buildAlerts(hub: BusinessHub): Alert[] {
                         : `You've used ${counter.used} of ${counter.limit} ${label}`,
                 body:
                     key === "active_collabs"
-                        ? "Pause a collab or upgrade to run more at once."
+                        ? "Pause a UGC brief or upgrade to run more at once."
                         : "Limits reset at the start of each month — or upgrade for more.",
                 action: { to: "/business/billing", label: "Upgrade" },
             });
@@ -233,12 +234,12 @@ export function OverviewPage() {
                         {business.verified && <BadgeCheck className="w-6 h-6 text-primary-600" aria-label="Verified" />}
                     </span>
                 }
-                description="What needs your attention today, and how your collabs are doing."
+                description="What needs your attention today, and how your UGC briefs are doing."
                 actions={
                     canManage ? (
                         <Link to="/business/collabs?new=1" className="w-full sm:w-auto">
                             <Button variant="accent" leftIcon={<Plus className="w-4 h-4" />} fullWidth>
-                                Post a collab
+                                Post a UGC brief
                             </Button>
                         </Link>
                     ) : undefined
@@ -277,7 +278,7 @@ export function OverviewPage() {
                     </div>
                     <div className="flex-1">
                         <h2 className="text-xl sm:text-2xl font-display font-bold text-primary-900">
-                            Post your first collab — creators {regionName ? `in ${regionName}` : "nearby"} will see it on the
+                            Post your first UGC brief — creators {regionName ? `in ${regionName}` : "nearby"} will see it on the
                             map.
                         </h2>
                         <p className="text-neutral-600 mt-2">
@@ -289,7 +290,7 @@ export function OverviewPage() {
                     {canManage && (
                         <Link to="/business/collabs?new=1" className="shrink-0">
                             <Button variant="accent" size="lg" className="rounded-full" leftIcon={<Plus className="w-5 h-5" />}>
-                                Post a collab
+                                Post a UGC brief
                             </Button>
                         </Link>
                     )}
@@ -325,7 +326,7 @@ export function OverviewPage() {
                     value={data.content_to_review}
                     icon={<ClipboardCheck className="w-5 h-5" />}
                     tone="violet"
-                    hint={data.content_to_review ? "Verify to complete the collab" : undefined}
+                    hint={data.content_to_review ? "Verify to complete the request" : undefined}
                     to="/business/requests?tab=active"
                 />
             </div>
@@ -333,7 +334,7 @@ export function OverviewPage() {
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
                 <SectionCard
                     className="xl:col-span-2"
-                    title="Collab funnel"
+                    title="UGC brief funnel"
                     description={`Applications created in the last ${days} days`}
                     actions={
                         <SegmentedControl
@@ -377,7 +378,7 @@ export function OverviewPage() {
                     {usage ? (
                         <div className="space-y-4">
                             <UsageMeter label="Redemptions" counter={usage.usage.redemptions} />
-                            <UsageMeter label="Active collabs" counter={usage.usage.active_collabs} />
+                            <UsageMeter label="Active UGC briefs" counter={usage.usage.active_collabs} />
                             <UsageMeter label="Profile reveals" counter={usage.usage.match_reveals} />
                             <UsageMeter label="Invites" counter={usage.usage.invites} />
                             <Link
@@ -416,7 +417,7 @@ export function OverviewPage() {
                                     <div className="min-w-0 flex-1">
                                         <p className="text-sm font-medium text-neutral-900 truncate">{v.creator.display_name}</p>
                                         <p className="text-xs text-neutral-500">
-                                            {visitWindowLabel(v.visit_window) ?? "Walk-in — any day the collab is open"}
+                                            {visitWindowLabel(v.visit_window) ?? "Walk-in — any day the UGC brief is open"}
                                         </p>
                                     </div>
                                     {v.today && <Pill className="bg-green-50 text-green-700 border-green-200">Today</Pill>}

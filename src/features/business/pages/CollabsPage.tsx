@@ -108,12 +108,12 @@ function CollabCard({
 
             {moderation === "pending" && (
                 <p className="text-xs text-blue-800 bg-blue-50 border border-blue-100 rounded-xl p-2.5">
-                    Our team is reviewing this collab. It goes live for creators as soon as it's approved.
+                    Our team is reviewing this UGC brief. It goes live for creators as soon as it's approved.
                 </p>
             )}
             {moderation === "rejected" && (
                 <p className="text-xs text-red-800 bg-red-50 border border-red-100 rounded-xl p-2.5">
-                    {collab.moderation?.reason || "This collab didn't pass review."} Edit the text to send it for review
+                    {collab.moderation?.reason || "This UGC brief didn't pass review."} Edit the text to send it for review
                     again.
                 </p>
             )}
@@ -192,7 +192,7 @@ function CollabCard({
                             onClick={() => onStatus("active")}
                             disabled={busy}
                         >
-                            {collab.status === "archived" ? "Restore" : "Activate"}
+                            {collab.status === "archived" ? "Restore" : "Resume"}
                         </Button>
                     )}
                     {collab.status !== "archived" && (
@@ -254,11 +254,11 @@ export function CollabsPage() {
         try {
             await businessService.setCollabStatus(businessId, collab.id, status);
             toast.success(
-                status === "active" ? "Collab is live again." : status === "paused" ? "Collab paused." : "Collab archived."
+                status === "active" ? "UGC brief is live again." : status === "paused" ? "UGC brief paused." : "UGC brief archived."
             );
             await invalidate();
         } catch (e) {
-            notifyError(e, "Couldn't change the collab status");
+            notifyError(e, "Couldn't change the UGC brief status");
             throw e;
         } finally {
             setBusyId(null);
@@ -270,11 +270,11 @@ export function CollabsPage() {
     return (
         <div className="space-y-6">
             <PageHeader
-                title="Collabs"
+                title="UGC Content"
                 description={
                     usage
-                        ? `${usage.used} active of ${usage.limit ?? "unlimited"} on your plan. Creators see active, approved collabs on the map.`
-                        : "Creators see your active, approved collabs on the map."
+                        ? `${usage.used} active of ${usage.limit ?? "unlimited"} on your plan. Creators see active, approved UGC briefs on the map.`
+                        : "Creators see your active, approved UGC briefs on the map."
                 }
                 actions={
                     canManage ? (
@@ -284,7 +284,7 @@ export function CollabsPage() {
                             onClick={() => setEditor({ open: true })}
                             className="w-full sm:w-auto"
                         >
-                            New collab
+                            Post a UGC brief
                         </Button>
                     ) : undefined
                 }
@@ -299,18 +299,18 @@ export function CollabsPage() {
                     ))}
                 </div>
             ) : collabs.isError ? (
-                <ErrorState message="We couldn't load your collabs." onRetry={() => void collabs.refetch()} />
+                <ErrorState message="We couldn't load your UGC briefs." onRetry={() => void collabs.refetch()} />
             ) : items.length === 0 ? (
                 <div className="bg-white rounded-2xl border border-neutral-200">
                     {filter === "active" && (collabs.data ?? []).length === 0 ? (
                         <EmptyState
                             icon={<Handshake className="w-7 h-7" />}
-                            title={`Post your first collab — creators ${regionName ? `in ${regionName}` : "nearby"} will see it on the map`}
-                            description="Open collabs can be redeemed on the spot with your staff code. Approval collabs let you pick each creator first."
+                            title={`Post your first UGC brief — creators ${regionName ? `in ${regionName}` : "nearby"} will see it on the map`}
+                            description="Open UGC briefs can be redeemed on the spot with your staff code. Approval UGC briefs let you pick each creator first."
                             action={
                                 canManage ? (
                                     <Button variant="accent" leftIcon={<Plus className="w-4 h-4" />} onClick={() => setEditor({ open: true })}>
-                                        Post a collab
+                                        Post a UGC brief
                                     </Button>
                                 ) : undefined
                             }
@@ -318,12 +318,12 @@ export function CollabsPage() {
                     ) : (
                         <EmptyState
                             icon={<Handshake className="w-7 h-7" />}
-                            title={`No ${filter === "all" ? "" : filter} collabs`}
+                            title={`No ${filter === "all" ? "" : `${filter} `}UGC briefs`}
                             description={
                                 filter === "paused"
-                                    ? "Paused collabs are hidden from creators until you activate them again."
+                                    ? "Paused UGC briefs are hidden from creators until you resume them."
                                     : filter === "archived"
-                                      ? "Archived collabs are kept for your records."
+                                      ? "Archived UGC briefs are kept for your records."
                                       : "Nothing here yet."
                             }
                         />
@@ -354,15 +354,15 @@ export function CollabsPage() {
                     places={places}
                     approvalAllowed={approvalAllowed}
                     onClose={() => setEditor({ open: false })}
-                    onError={(e) => notifyError(e, "Couldn't save the collab")}
+                    onError={(e) => notifyError(e, "Couldn't save the UGC brief")}
                     onUpgrade={showUpgrade}
                     onSaved={(saved, created) => {
                         setEditor({ open: false });
                         void invalidate();
                         if (saved.moderation?.status === "pending") {
-                            toast.info("Saved — it's under review and goes live once approved.");
+                            toast.info("UGC brief saved — it's under review and goes live once approved.");
                         } else {
-                            toast.success(created ? "Collab posted! Creators nearby can see it now." : "Collab updated.");
+                            toast.success(created ? "UGC brief posted! Creators nearby can see it now." : "UGC brief updated.");
                         }
                         if (created) setFilter("active");
                     }}
@@ -372,7 +372,7 @@ export function CollabsPage() {
             <ConfirmDialog
                 open={!!archiveTarget}
                 onClose={() => setArchiveTarget(null)}
-                title="Archive this collab?"
+                title="Archive this UGC brief?"
                 body="Creators won't see it any more, and pending requests and invites are cancelled. You can restore it later."
                 confirmLabel="Archive"
                 variant="danger"

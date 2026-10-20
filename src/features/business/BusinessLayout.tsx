@@ -7,6 +7,7 @@ import { BUSINESS_NAV } from "./nav";
 import { useHub } from "./queries";
 import { roleAtLeast } from "./utils";
 import { Banner } from "./components/bits";
+import { CopyEmailText } from "./components/CopyEmail";
 
 function NavBadge({ count }: { count: number }) {
     if (!count) return null;
@@ -123,8 +124,8 @@ export function BusinessLayout() {
                 <div className="flex-1 min-w-0 space-y-6">
                     {ctx.business.status === "suspended" && (
                         <Banner tone="danger" icon={<ShieldAlert className="w-5 h-5" />} title="This business is suspended">
-                            Creators can't see your collabs right now and most changes are disabled. Contact
-                            support@seekkrr.com.
+                            Creators can't see your UGC briefs right now and most changes are disabled. Contact{" "}
+                            <CopyEmailText />
                         </Banner>
                     )}
                     <Outlet />

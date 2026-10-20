@@ -98,7 +98,7 @@ function ContentLibrary() {
                 <EmptyState
                     icon={<Images className="w-7 h-7" />}
                     title="Your content library is empty"
-                    description="When creators redeem a collab, they post within the brief's deadline and submit their links. Everything lands here with its reuse rights."
+                    description="When creators redeem a UGC brief, they post within its deadline and submit their links. Everything lands here with its reuse rights."
                 />
             </div>
         );
@@ -117,7 +117,7 @@ function ContentLibrary() {
                 <table className="w-full text-left border-collapse min-w-[820px]">
                     <thead className="bg-neutral-50 border-b border-neutral-200">
                         <tr>
-                            {["Creator", "Content", "Check", "Usage rights", "Collab"].map((h) => (
+                            {["Creator", "Content", "Check", "Usage rights", "UGC brief"].map((h) => (
                                 <th key={h} className="py-3 px-5 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
                                     {h}
                                 </th>
@@ -210,7 +210,7 @@ function Redemptions() {
                 <table className="w-full text-left border-collapse min-w-[760px]">
                     <thead className="bg-neutral-50 border-b border-neutral-200">
                         <tr>
-                            {["Creator", "Collab", "Redeemed", "Content", "Status"].map((h) => (
+                            {["Creator", "UGC brief", "Redeemed", "Content", "Status"].map((h) => (
                                 <th key={h} className="py-3 px-5 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
                                     {h}
                                 </th>

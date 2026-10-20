@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { MapPin, Plus } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button, EmptyState, ErrorState, Skeleton } from "@components/ui";
 import { useBusiness } from "../context";
 import { useHub } from "../queries";
@@ -24,7 +25,7 @@ export function OffersPage() {
         <div className="space-y-6">
             <PageHeader
                 title="Check-in offers"
-                description="Fixed discounts that travellers unlock by checking in — they redeem them with the same staff code as collabs."
+                description="Fixed discounts that travellers unlock by checking in — they redeem them with the same staff code as UGC briefs."
                 actions={
                     canManage && markerId ? (
                         <Button
@@ -47,8 +48,13 @@ export function OffersPage() {
                 <div className="bg-white rounded-2xl border border-neutral-200">
                     <EmptyState
                         icon={<MapPin className="w-7 h-7" />}
-                        title="No place linked yet"
-                        description="Offers belong to a place on the SeekKrr map. Email partners@seekkrr.com and we'll link your location."
+                        title="Add your place first"
+                        description="Offers belong to a place on the SeekKrr map. Link yours, or drop a pin if it's new."
+                        action={
+                            <Link to="/business/locations?add=1">
+                                <Button variant="accent" className="rounded-full">Add your place</Button>
+                            </Link>
+                        }
                     />
                 </div>
             ) : (

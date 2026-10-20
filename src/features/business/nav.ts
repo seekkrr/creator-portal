@@ -36,9 +36,9 @@ export const BUSINESS_NAV: BusinessNavGroup[] = [
         items: [{ to: "/business", label: "Overview", icon: LayoutDashboard, end: true }],
     },
     {
-        title: "Collabs",
+        title: "Creators",
         items: [
-            { to: "/business/collabs", label: "Collabs", icon: Handshake },
+            { to: "/business/collabs", label: "UGC Content", icon: Handshake },
             { to: "/business/requests", label: "Requests & visits", icon: Inbox, badge: "pending_requests" },
             { to: "/business/discover", label: "Discover creators", icon: Sparkles, minRole: "manager" },
         ],
