@@ -10,13 +10,12 @@ export function LoginPage() {
     const { login, checkAuth } = useAuthStore();
     const navigate = useNavigate();
     const location = useLocation();
-    // Where ProtectedRoute (or a claim link) sent the user from.
+    // Where ProtectedRoute sent the user from.
     const from = (location.state as { from?: Location } | null)?.from;
     const fromPath = from ? `${from.pathname}${from.search ?? ""}` : null;
     // Onboarding pages any signed-in user may open, even without portal access yet.
     const isCreatorApply = !!fromPath && fromPath.startsWith("/creator/apply");
-    const isOnboardingPath =
-        !!fromPath && (isCreatorApply || fromPath.startsWith("/business/apply") || fromPath.startsWith("/business/claim/"));
+    const isOnboardingPath = !!fromPath && (isCreatorApply || fromPath.startsWith("/business/apply"));
 
     const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
         if (!credentialResponse.credential) {

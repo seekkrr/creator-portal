@@ -9,7 +9,7 @@ export function PublicLayout() {
     const location = useLocation();
     const isLoginPage = location.pathname === "/creator/login";
     const { homePath, access } = useWorkspace();
-    // Signed-in users without a workspace yet (e.g. opening a claim link) go to the application.
+    // Signed-in users without a workspace yet go to the application.
     const dashboardPath = access.allowed ? homePath : "/business/apply";
 
     return (

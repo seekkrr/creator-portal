@@ -109,7 +109,6 @@ const BusinessApplicationPage = lazyBusiness(
     () => import("@features/business/pages/BusinessApplicationPage"),
     "BusinessApplicationPage"
 );
-const BusinessClaimPage = lazyBusiness(() => import("@features/business/pages/ClaimPage"), "ClaimPage");
 
 const page = (node: ReactNode) => <SuspenseWrapper>{node}</SuspenseWrapper>;
 
@@ -148,11 +147,6 @@ export const router = createBrowserRouter(
                                 <ContactUsPage />
                             </SuspenseWrapper>
                         ),
-                    },
-                    {
-                        // Claim link for a listing created by SeekKrr (previewable signed out).
-                        path: "/business/claim/:token",
-                        element: page(<BusinessClaimPage />),
                     },
                 ],
             },
