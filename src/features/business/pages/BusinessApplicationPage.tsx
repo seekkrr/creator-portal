@@ -410,7 +410,6 @@ export function BusinessApplicationPage() {
                     <Button type="button" variant="accent" size="lg" className="rounded-full" onClick={goToBusinessStep}>
                         Continue
                     </Button>
-                    <p className="text-xs text-neutral-500">Got a claim link from our team? Open it instead — your listing is ready.</p>
                 </div>
             ) : (
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3">

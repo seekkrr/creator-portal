@@ -11,7 +11,6 @@ import type {
     BusinessHub,
     CheckoutPayload,
     CheckoutResult,
-    ClaimPreview,
     CollabApplication,
     CollabPayload,
     CollabStatus,
@@ -110,22 +109,6 @@ export const businessService = {
             { code }
         );
         return pickRedeemCode(res.data);
-    },
-
-    // ── Claim links (sales-assisted onboarding) ──────────────────────────────
-
-    async claimPreview(token: string): Promise<ClaimPreview> {
-        const res = await api.get<ClaimPreview>(`${BASE}/claim/${encodeURIComponent(token)}`);
-        const { business, already_claimed, requires_phone_verification, phone_hint, expires_at } = res.data;
-        return { business, already_claimed, requires_phone_verification, phone_hint, expires_at };
-    },
-
-    async claim(token: string, phoneJsonUrl?: string): Promise<Business> {
-        const res = await api.post<{ business: Business }>(`${BASE}/claim`, {
-            token,
-            ...(phoneJsonUrl ? { phone_json_url: phoneJsonUrl } : {}),
-        });
-        return res.data.business;
     },
 
     // ── Hub & analytics ──────────────────────────────────────────────────────

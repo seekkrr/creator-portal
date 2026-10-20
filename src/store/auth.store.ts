@@ -31,8 +31,8 @@ interface AuthActions {
     checkAuth: () => Promise<boolean>;
     /**
      * Re-fetch the user, creator profile and business memberships WITHOUT
-     * toggling `isLoading` (which would unmount the router). Use after a claim,
-     * a team change or a business profile edit.
+     * toggling `isLoading` (which would unmount the router). Use after a team
+     * change or a business profile edit.
      */
     refreshSession: () => Promise<void>;
     clearError: () => void;

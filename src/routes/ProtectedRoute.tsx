@@ -37,7 +37,7 @@ export function ProtectedRoute({ children, workspace = "creator" }: ProtectedRou
     const access = evaluatePortalAccess(user, creator, businesses);
 
     if (workspace === "business") {
-        // Signed in but not a member of any business → apply (or claim) first.
+        // Signed in but not a member of any business → apply first.
         return access.business ? <>{children}</> : <Navigate to={BUSINESS_APPLY} replace />;
     }
 

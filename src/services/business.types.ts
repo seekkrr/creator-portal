@@ -592,7 +592,7 @@ export interface ReportPayload {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Onboarding: applications & claim links
+// Onboarding: applications
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface SubmitBusinessApplicationPayload {
@@ -623,19 +623,4 @@ export interface SubmittedBusinessApplication {
     business_name: string;
     status: string;
     applied_at: string | null;
-}
-
-export interface ClaimPreview {
-    business: {
-        name: string;
-        tagline: string | null;
-        photos: string[];
-        logo_url: string | null;
-        region_name: string | null;
-        categories: string[];
-    };
-    already_claimed: boolean;
-    requires_phone_verification: boolean;
-    phone_hint: string | null;
-    expires_at: string | null;
 }
