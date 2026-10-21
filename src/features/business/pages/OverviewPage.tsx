@@ -61,7 +61,7 @@ function buildAlerts(hub: BusinessHub): Alert[] {
             key: "no-place",
             tone: "info",
             title: "Add your place to start",
-            body: "UGC briefs are attached to a place on the SeekKrr map. Link yours in a minute, or drop a pin if it's new.",
+            body: "Add your location to help creators reach you, drop a pin on the map.",
             action: { to: "/business/locations?add=1", label: "Add your place" },
         });
     }
@@ -334,7 +334,7 @@ export function OverviewPage() {
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
                 <SectionCard
                     className="xl:col-span-2"
-                    title="UGC brief funnel"
+                    title="Overview"
                     description={`Applications created in the last ${days} days`}
                     actions={
                         <SegmentedControl

@@ -7,6 +7,7 @@ import {
     KeyRound,
     LayoutDashboard,
     LineChart,
+    MessagesSquare,
     Sparkles,
     Store,
     Tag,
@@ -40,6 +41,7 @@ export const BUSINESS_NAV: BusinessNavGroup[] = [
         items: [
             { to: "/business/collabs", label: "UGC Content", icon: Handshake },
             { to: "/business/requests", label: "Requests & visits", icon: Inbox, badge: "pending_requests" },
+            { to: "/business/messages", label: "Messages", icon: MessagesSquare },
             { to: "/business/discover", label: "Discover creators", icon: Sparkles, minRole: "manager" },
         ],
     },
