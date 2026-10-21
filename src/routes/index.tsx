@@ -105,6 +105,7 @@ const BusinessTeamPage = lazyBusiness(() => import("@features/business/pages/Tea
 const BusinessBillingPage = lazyBusiness(() => import("@features/business/pages/BillingPage"), "BillingPage");
 const BusinessProfilePage = lazyBusiness(() => import("@features/business/pages/BusinessProfilePage"), "BusinessProfilePage");
 const BusinessBlocksPage = lazyBusiness(() => import("@features/business/pages/BlocksPage"), "BlocksPage");
+const BusinessMessagesPage = lazyBusiness(() => import("@features/business/pages/MessagesPage"), "MessagesPage");
 const BusinessApplicationPage = lazyBusiness(
     () => import("@features/business/pages/BusinessApplicationPage"),
     "BusinessApplicationPage"
@@ -346,6 +347,7 @@ export const router = createBrowserRouter(
                             { index: true, element: page(<BusinessOverviewPage />) },
                             { path: "collabs", element: page(<BusinessCollabsPage />) },
                             { path: "requests", element: page(<BusinessRequestsPage />) },
+                            { path: "messages", element: page(<BusinessMessagesPage />) },
                             { path: "discover", element: page(<BusinessDiscoverPage />) },
                             { path: "content", element: page(<BusinessContentPage />) },
                             { path: "attribution", element: page(<BusinessAttributionPage />) },
