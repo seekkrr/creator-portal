@@ -10,7 +10,8 @@ import { ApiRequestError } from "@services/api";
 import type { BusinessMemberEntry, MemberRole } from "@services/business.types";
 import { useBusiness } from "../context";
 import { useBusinessDetail, useHub, useInvalidateBusiness, useUpgradePrompt } from "../queries";
-import { ROLE_HINTS, ROLE_LABELS, errorMessage, formatDate, isQuotaError, limitLabel } from "../utils";
+import { ROLE_LABELS, errorMessage, formatDate, isQuotaError, limitLabel, roleHints } from "../utils";
+import { usePartnerPortal } from "../partnerPortal";
 import { CreatorAvatar, FieldLabel, PageHeader, Pill, SectionCard, inputClass, selectClass } from "../components/bits";
 import { ConfirmDialog } from "../components/Overlay";
 import { UpgradeDialog } from "../components/UpgradeDialog";
@@ -32,6 +33,8 @@ export function TeamPage() {
     const hub = useHub();
     const invalidate = useInvalidateBusiness();
     const { notifyError, upgrade, showUpgrade } = useUpgradePrompt();
+    const { plansVisible, matchmakingVisible } = usePartnerPortal();
+    const hints = roleHints({ plans: plansVisible, matchmaking: matchmakingVisible });
 
     const members: BusinessMemberEntry[] = detail.data?.members ?? business.members ?? [];
     const names = useQueries({
@@ -107,7 +110,7 @@ export function TeamPage() {
                 description={
                     seatLimit === undefined
                         ? "Who can manage this business on SeekKrr."
-                        : `${members.length} of ${limitLabel(seatLimit)} seats used on your plan.`
+                        : `${members.length} of ${limitLabel(seatLimit)} seats used${plansVisible ? " on your plan" : ""}.`
                 }
             />
 
@@ -150,7 +153,9 @@ export function TeamPage() {
                     </form>
                     {seatsFull && !formError && (
                         <p className="text-xs text-amber-700 mt-2">
-                            All {seatLimit} seat{seatLimit === 1 ? "" : "s"} on your plan are in use — upgrade to add more people.
+                            {plansVisible
+                                ? `All ${seatLimit} seat${seatLimit === 1 ? "" : "s"} on your plan are in use — upgrade to add more people.`
+                                : `All ${seatLimit} seat${seatLimit === 1 ? " is" : "s are"} in use.`}
                         </p>
                     )}
                     {formError && (
@@ -159,8 +164,8 @@ export function TeamPage() {
                         </p>
                     )}
                     <p className="text-xs text-neutral-500 mt-3">
-                        <span className="font-medium">Manager:</span> {ROLE_HINTS.manager}{" "}
-                        <span className="font-medium">Staff:</span> {ROLE_HINTS.staff}
+                        <span className="font-medium">Manager:</span> {hints.manager}{" "}
+                        <span className="font-medium">Staff:</span> {hints.staff}
                     </p>
                 </SectionCard>
             ) : (

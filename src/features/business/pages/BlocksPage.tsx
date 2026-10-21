@@ -7,6 +7,7 @@ import { businessService } from "@services/business.service";
 import type { BlockEntry } from "@services/business.types";
 import { useBusiness } from "../context";
 import { bkeys, useApplications, useInvalidateBusiness } from "../queries";
+import { usePartnerPortal } from "../partnerPortal";
 import { errorMessage, formatDate } from "../utils";
 import { CreatorAvatar, PageHeader } from "../components/bits";
 import { ConfirmDialog } from "../components/Overlay";
@@ -31,6 +32,7 @@ export function BlocksPage() {
         return map;
     }, [history.data]);
     const [target, setTarget] = useState<BlockEntry | null>(null);
+    const { matchmakingVisible } = usePartnerPortal();
 
     const creatorBlocks = (blocks.data ?? []).filter((b) => b.blocked_type === "creator");
 
@@ -51,7 +53,11 @@ export function BlocksPage() {
         <div className="space-y-6">
             <PageHeader
                 title="Blocked creators"
-                description="Blocked creators can't see your UGC briefs, send you requests or appear in Discover — and you won't see them."
+                description={
+                    matchmakingVisible
+                        ? "Blocked creators can't see your UGC briefs, send you requests or appear in Discover — and you won't see them."
+                        : "Blocked creators can't see your UGC briefs or send you requests — and you won't see them."
+                }
             />
 
             <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm">

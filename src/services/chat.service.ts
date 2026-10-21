@@ -24,6 +24,10 @@ export interface ChatMessage {
     masked?: boolean;
     sender_name?: string | null;
     created_at?: string | null;
+    /** The collab a message or event is about (one chat holds all of a creator's collabs). */
+    application_id?: string | null;
+    /** Request / invite cards: what the collab is. */
+    meta?: { want?: string | null; offer?: string | null; visit_window?: { from: string; to: string } | null } | null;
 }
 
 /** Collab chats, read-only in the portal (replies happen in the SeekKrr app). */

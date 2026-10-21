@@ -13,6 +13,7 @@ import { normalizeWebLink } from "@/utils/links";
 import { ChipInput } from "../components/ChipInput";
 import { CategoryPicker } from "../components/CategoryPicker";
 import { PlaceSearchSelect } from "../components/PlaceSearchSelect";
+import { usePartnerPortal } from "../partnerPortal";
 
 
 type LocationMode = "search" | "maps";
@@ -23,6 +24,7 @@ export function BusinessApplicationPage() {
     const logout = useAuthStore((s) => s.logout);
     const navigate = useNavigate();
     const { access, businesses } = useWorkspace();
+    const { plansVisible } = usePartnerPortal();
 
     const [businessName, setBusinessName] = useState("");
     const [contactName, setContactName] = useState(user ? `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim() : "");
@@ -79,7 +81,7 @@ export function BusinessApplicationPage() {
                 categories,
                 sub_categories: subCategories,
                 social_links: socials,
-                requested_plan: plan || null,
+                requested_plan: plansVisible ? plan || null : null,
                 gstin: gstin || null,
                 message: message.trim() || null,
                 source: "portal",
@@ -118,7 +120,9 @@ export function BusinessApplicationPage() {
                             {
                                 icon: <Mail className="w-4 h-4" />,
                                 t: "You get an approval email",
-                                d: "Your business profile is created on the Free plan, with a 14-day Growth trial available.",
+                                d: plansVisible
+                                    ? "Your business profile is created on the Free plan, with a 14-day Growth trial available."
+                                    : "Your business profile is created and the Partner Portal opens for you.",
                             },
                             {
                                 icon: <LogIn className="w-4 h-4" />,
@@ -195,7 +199,9 @@ export function BusinessApplicationPage() {
                 </h1>
                 <p className="text-neutral-500 mt-1">
                     {step === 1
-                        ? "Free to start. First, how can we reach you?"
+                        ? plansVisible
+                            ? "Free to start. First, how can we reach you?"
+                            : "First, how can we reach you?"
                         : "Just the basics — you can add photos, socials and more after approval."}
                 </p>
                 <div className="mt-4 h-1.5 rounded-full bg-neutral-100 overflow-hidden" aria-hidden>
@@ -353,20 +359,22 @@ export function BusinessApplicationPage() {
                                     {errors.socials && <p className="text-xs text-red-600 mt-1">{errors.socials}</p>}
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    {plansVisible && (
+                                        <div>
+                                            <FieldLabel htmlFor="ba-plan" hint="You can change this any time.">
+                                                Plan you're interested in
+                                            </FieldLabel>
+                                            <select id="ba-plan" className={selectClass} value={plan} onChange={(e) => setPlan(e.target.value as PlanCode | "")}>
+                                                <option value="">Not sure yet</option>
+                                                <option value="free">Free</option>
+                                                <option value="growth">Growth</option>
+                                                <option value="pro">Pro</option>
+                                                <option value="multi_location">Multi-location</option>
+                                            </select>
+                                        </div>
+                                    )}
                                     <div>
-                                        <FieldLabel htmlFor="ba-plan" hint="You can change this any time.">
-                                            Plan you're interested in
-                                        </FieldLabel>
-                                        <select id="ba-plan" className={selectClass} value={plan} onChange={(e) => setPlan(e.target.value as PlanCode | "")}>
-                                            <option value="">Not sure yet</option>
-                                            <option value="free">Free</option>
-                                            <option value="growth">Growth</option>
-                                            <option value="pro">Pro</option>
-                                            <option value="multi_location">Multi-location</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <FieldLabel htmlFor="ba-gstin" hint="For GST invoices later.">
+                                        <FieldLabel htmlFor="ba-gstin" hint={plansVisible ? "For GST invoices later." : "Optional."}>
                                             GSTIN
                                         </FieldLabel>
                                         <input

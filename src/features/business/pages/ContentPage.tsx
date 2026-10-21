@@ -83,6 +83,7 @@ function ContentLibrary() {
                 </div>
                 <UpgradeCallout
                     title="Unlock your content library"
+                    plainTitle="Your content library"
                     description="See every reel, post and review creators made for you — with link checks, reuse rights and expiry dates — on Growth and above."
                 />
             </div>

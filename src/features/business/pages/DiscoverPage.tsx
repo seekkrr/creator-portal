@@ -8,6 +8,7 @@ import { businessService } from "@services/business.service";
 import type { CreatorMatch, CreatorSummary } from "@services/business.types";
 import { useBusiness } from "../context";
 import { bkeys, useCollabs, useInvalidateBusiness, useUpgradePrompt } from "../queries";
+import { usePartnerPortal } from "../partnerPortal";
 import { PLATFORM_LABELS, limitLabel } from "../utils";
 import {
     CreatorAvatar,
@@ -54,11 +55,13 @@ function MatchCard({
     onReveal,
     onInvite,
     onView,
+    plansVisible,
 }: {
     match: CreatorMatch;
     onReveal: () => void;
     onInvite: () => void;
     onView: () => void;
+    plansVisible: boolean;
 }) {
     const c = match.creator;
     const blurred = !match.revealed;
@@ -121,14 +124,14 @@ function MatchCard({
 
             {match.breakdown ? (
                 <MatchBreakdown breakdown={match.breakdown} />
-            ) : (
+            ) : plansVisible ? (
                 <p className="text-[11px] text-neutral-400">
                     <Link to="/business/billing" className="underline hover:text-primary-700">
                         Upgrade
                     </Link>{" "}
                     to see the full score breakdown.
                 </p>
-            )}
+            ) : null}
 
             {blurred && (
                 <div className="rounded-xl bg-neutral-50 border border-dashed border-neutral-300 p-3 text-xs text-neutral-500 flex items-center gap-2">
@@ -160,6 +163,7 @@ export function DiscoverPage() {
     const queryClient = useQueryClient();
     const invalidate = useInvalidateBusiness();
     const { notifyError, upgrade } = useUpgradePrompt();
+    const { plansVisible, matchmakingVisible } = usePartnerPortal();
     const collabs = useCollabs(false);
     const [searchParams, setSearchParams] = useSearchParams();
 
@@ -174,7 +178,7 @@ export function DiscoverPage() {
     const matches = useQuery({
         queryKey: bkeys.matches(businessId, collabId),
         queryFn: () => businessService.matches(businessId, collabId, 30),
-        enabled: canManage && !!collabId,
+        enabled: canManage && matchmakingVisible && !!collabId,
         staleTime: 60_000,
     });
 
@@ -334,6 +338,7 @@ export function DiscoverPage() {
                             compact
                             title="You've used this month's profile reveals"
                             description="Upgrade for more reveals and invites, plus the full Match breakdown."
+                            plainDescription="Reveals reset at the start of each month."
                         />
                     )}
 
@@ -373,6 +378,7 @@ export function DiscoverPage() {
                                         setInviteTarget(m);
                                     }}
                                     onView={() => setProfile(m)}
+                                    plansVisible={plansVisible}
                                 />
                             ))}
                         </div>

@@ -4,6 +4,7 @@ import { BadgeCheck, Lock, Sparkles } from "lucide-react";
 import { Button } from "@components/ui";
 import type { ApplicationStatus, UsageCounter } from "@services/business.types";
 import { APPLICATION_STATUS_META, limitLabel, usageRatio } from "../utils";
+import { usePartnerPortal } from "../partnerPortal";
 
 export function PageHeader({
     title,
@@ -289,16 +290,24 @@ export function Banner({
     );
 }
 
-/** Inline upgrade call-to-action for plan-gated features. */
+/**
+ * Inline upgrade call-to-action for plan-gated features. With plans hidden it
+ * shows `plainTitle`/`plainDescription` (no plan names) and no "See plans" button.
+ */
 export function UpgradeCallout({
     title,
+    plainTitle,
     description,
+    plainDescription = "This isn't available for your business right now.",
     compact = false,
 }: {
     title: string;
+    plainTitle?: string;
     description: ReactNode;
+    plainDescription?: ReactNode;
     compact?: boolean;
 }) {
+    const { plansVisible } = usePartnerPortal();
     return (
         <div
             className={`rounded-2xl border border-dashed border-primary-200 bg-gradient-to-br from-primary-50 to-white ${
@@ -309,14 +318,18 @@ export function UpgradeCallout({
                 <Lock className="w-5 h-5" />
             </div>
             <div className="flex-1 min-w-0">
-                <p className="font-display font-semibold text-primary-900">{title}</p>
-                <p className="text-sm text-neutral-600 mt-0.5">{description}</p>
+                <p className="font-display font-semibold text-primary-900">
+                    {plansVisible ? title : (plainTitle ?? title)}
+                </p>
+                <p className="text-sm text-neutral-600 mt-0.5">{plansVisible ? description : plainDescription}</p>
             </div>
-            <Link to="/business/billing" className="shrink-0">
-                <Button variant="accent" size="sm" leftIcon={<Sparkles className="w-4 h-4" />}>
-                    See plans
-                </Button>
-            </Link>
+            {plansVisible && (
+                <Link to="/business/billing" className="shrink-0">
+                    <Button variant="accent" size="sm" leftIcon={<Sparkles className="w-4 h-4" />}>
+                        See plans
+                    </Button>
+                </Link>
+            )}
         </div>
     );
 }

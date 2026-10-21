@@ -19,6 +19,7 @@ import { businessService } from "@services/business.service";
 import type { BusinessCollab, CollabStatus } from "@services/business.types";
 import { useBusiness } from "../context";
 import { useCollabs, useHub, useInvalidateBusiness, useRegionName, useUpgradePrompt } from "../queries";
+import { usePartnerPortal } from "../partnerPortal";
 import { availabilitySummary, briefChips, formatShortDate } from "../utils";
 import { PageHeader, Pill } from "../components/bits";
 import { CollabEditorDrawer } from "../components/CollabEditorDrawer";
@@ -48,10 +49,13 @@ function CollabCard({
     onStatus,
     onArchive,
     busy,
+    showFindCreators,
 }: {
     collab: BusinessCollab;
     placeTitle: string | null;
     canManage: boolean;
+    /** Matchmaking is on: link to Discover creators for this brief. */
+    showFindCreators: boolean;
     onEdit: () => void;
     onStatus: (s: CollabStatus) => void;
     onArchive: () => void;
@@ -206,7 +210,7 @@ function CollabCard({
                             Archive
                         </Button>
                     )}
-                    {live && (
+                    {live && showFindCreators && (
                         <Link
                             to={`/business/discover?collab=${collab.id}`}
                             className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md font-medium text-primary-700 hover:bg-primary-50"
@@ -229,6 +233,7 @@ export function CollabsPage() {
     const hub = useHub();
     const invalidate = useInvalidateBusiness();
     const { notifyError, showUpgrade, upgrade } = useUpgradePrompt();
+    const { plansVisible, matchmakingVisible } = usePartnerPortal();
     const [searchParams, setSearchParams] = useSearchParams();
     const [editor, setEditor] = useState<{ open: boolean; collab?: BusinessCollab }>({ open: false });
     const [archiveTarget, setArchiveTarget] = useState<BusinessCollab | null>(null);
@@ -273,7 +278,9 @@ export function CollabsPage() {
                 title="UGC Content"
                 description={
                     usage
-                        ? `${usage.used} active of ${usage.limit ?? "unlimited"} on your plan. Creators see active, approved UGC briefs on the map.`
+                        ? plansVisible
+                            ? `${usage.used} active of ${usage.limit ?? "unlimited"} on your plan. Creators see active, approved UGC briefs on the map.`
+                            : `${usage.used} active UGC brief${usage.used === 1 ? "" : "s"}. Creators see active, approved UGC briefs on the map.`
                         : "Creators see your active, approved UGC briefs on the map."
                 }
                 actions={
@@ -337,6 +344,7 @@ export function CollabsPage() {
                             collab={c}
                             placeTitle={placeTitle(c.marker_id)}
                             canManage={canManage}
+                            showFindCreators={matchmakingVisible && canManage}
                             busy={busyId === c.id}
                             onEdit={() => setEditor({ open: true, collab: c })}
                             onStatus={(s) => void changeStatus(c, s).catch(() => undefined)}

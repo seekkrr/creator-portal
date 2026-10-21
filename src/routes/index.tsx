@@ -3,6 +3,8 @@ import { createBrowserRouter, Navigate, Link } from "react-router-dom";
 import { AuthLayout, DashboardLayout, PublicLayout } from "@layouts/index";
 import { HomeRedirect, ProtectedRoute } from "./ProtectedRoute";
 import { SuspenseWrapper, RootWrapper } from "@components/index";
+import { SectionGate } from "@features/business/components/SectionGate";
+import type { PartnerSection } from "@services/business.types";
 import { lazyRetry } from "@utils/lazyRetry";
 
 // Lazy load pages with retry mechanism
@@ -112,6 +114,8 @@ const BusinessApplicationPage = lazyBusiness(
 );
 
 const page = (node: ReactNode) => <SuspenseWrapper>{node}</SuspenseWrapper>;
+/** A Partner Portal page the admin can hide; hidden pages redirect to the Overview. */
+const gated = (section: PartnerSection, node: ReactNode) => <SectionGate section={section}>{page(node)}</SectionGate>;
 
 export const router = createBrowserRouter(
     [
@@ -347,16 +351,16 @@ export const router = createBrowserRouter(
                             { index: true, element: page(<BusinessOverviewPage />) },
                             { path: "collabs", element: page(<BusinessCollabsPage />) },
                             { path: "requests", element: page(<BusinessRequestsPage />) },
-                            { path: "messages", element: page(<BusinessMessagesPage />) },
-                            { path: "discover", element: page(<BusinessDiscoverPage />) },
-                            { path: "content", element: page(<BusinessContentPage />) },
-                            { path: "attribution", element: page(<BusinessAttributionPage />) },
-                            { path: "offers", element: page(<BusinessOffersPage />) },
+                            { path: "messages", element: gated("messages", <BusinessMessagesPage />) },
+                            { path: "discover", element: gated("matchmaking", <BusinessDiscoverPage />) },
+                            { path: "content", element: gated("content_library", <BusinessContentPage />) },
+                            { path: "attribution", element: gated("attribution", <BusinessAttributionPage />) },
+                            { path: "offers", element: gated("offers", <BusinessOffersPage />) },
                             { path: "locations", element: page(<BusinessLocationsPage />) },
-                            { path: "team", element: page(<BusinessTeamPage />) },
-                            { path: "billing", element: page(<BusinessBillingPage />) },
+                            { path: "team", element: gated("team", <BusinessTeamPage />) },
+                            { path: "billing", element: gated("plans", <BusinessBillingPage />) },
                             { path: "profile", element: page(<BusinessProfilePage />) },
-                            { path: "blocks", element: page(<BusinessBlocksPage />) },
+                            { path: "blocks", element: gated("blocked_creators", <BusinessBlocksPage />) },
                             { path: "*", element: <Navigate to="/business" replace /> },
                         ],
                     },

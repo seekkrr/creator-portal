@@ -24,6 +24,8 @@ export function isQuotaError(e: unknown): e is ApiRequestError {
     return e instanceof ApiRequestError && (e.status === 402 || e.code === "QUOTA_EXCEEDED");
 }
 
+export { NEUTRAL_LIMIT_MESSAGE, neutralPlanMessage } from "./planWording";
+
 export function isNotFound(e: unknown): boolean {
     return e instanceof ApiRequestError && e.status === 404;
 }
@@ -243,7 +245,7 @@ export function usageRatio(c: UsageCounter | null | undefined): number | null {
 export const PLAN_ORDER = ["free", "growth", "pro", "multi_location"];
 
 export function planName(plans: Plan[] | undefined, code: string | null | undefined): string {
-    if (!code) return "Free";
+    if (!code) return "—";
     const p = plans?.find((x) => x.code === code);
     if (p?.name) return p.name;
     return code.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -261,9 +263,20 @@ export const PLAN_STATUS_META: Record<string, { label: string; className: string
 };
 
 const FREE_STATUS_META = { label: "Free", className: "bg-neutral-100 text-neutral-700 border-neutral-200" };
+const INCLUDED_STATUS_META = { label: "Included", className: "bg-green-50 text-green-700 border-green-200" };
 
-export function planStatusMeta(status: string | null | undefined): { label: string; className: string } {
-    return PLAN_STATUS_META[status ?? "free"] ?? FREE_STATUS_META;
+/**
+ * Pill for the effective plan status. A business with no paid subscription
+ * reports status "free" even when the platform default plan (e.g. Growth)
+ * applies — that's "Included", not "Free".
+ */
+export function planStatusMeta(
+    status: string | null | undefined,
+    planCode?: string | null
+): { label: string; className: string } {
+    const s = status ?? "free";
+    if (s === "free" && planCode && planCode !== "free") return INCLUDED_STATUS_META;
+    return PLAN_STATUS_META[s] ?? FREE_STATUS_META;
 }
 
 // ── Team ────────────────────────────────────────────────────────────────────
@@ -279,6 +292,15 @@ export const ROLE_HINTS: Record<MemberRole, string> = {
     manager: "Edits UGC briefs, redeem codes and the profile; discovers and invites creators.",
     staff: "Sees the redeem code and approves requests at the counter.",
 };
+
+/** Role hints without the parts the admin has hidden (billing, creator discovery). */
+export function roleHints(opts: { plans: boolean; matchmaking: boolean }): Record<MemberRole, string> {
+    return {
+        owner: opts.plans ? ROLE_HINTS.owner : "Everything, including the team.",
+        manager: opts.matchmaking ? ROLE_HINTS.manager : "Edits UGC briefs, redeem codes and the profile.",
+        staff: ROLE_HINTS.staff,
+    };
+}
 
 const ROLE_RANK: Record<MemberRole, number> = { staff: 0, manager: 1, owner: 2 };
 

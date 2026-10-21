@@ -4,6 +4,7 @@ import { ArrowLeft, MessagesSquare, Smartphone } from "lucide-react";
 import { EmptyState, ErrorState, Skeleton } from "@components/ui";
 import { chatService, type ChatMessage, type ChatThread } from "@services/chat.service";
 import { useBusiness } from "../context";
+import { usePartnerPortal } from "../partnerPortal";
 import { errorMessage } from "../utils";
 import { CreatorAvatar, PageHeader } from "../components/bits";
 
@@ -34,6 +35,7 @@ function when(iso?: string | null): string {
 /** Collab chats with creators, read-only. Replies happen in the SeekKrr app's Collabs tab. */
 export function MessagesPage() {
     const { businessId } = useBusiness();
+    const { matchmakingVisible } = usePartnerPortal();
     const threads = useQuery({
         queryKey: ["business-chats", businessId],
         queryFn: () => chatService.listThreads(businessId),
@@ -72,7 +74,11 @@ export function MessagesPage() {
                 <EmptyState
                     icon={<MessagesSquare className="w-10 h-10 text-neutral-400" />}
                     title="No chats yet"
-                    description="A chat opens when a creator requests a visit, accepts your invite or redeems a UGC brief."
+                    description={
+                        matchmakingVisible
+                            ? "A chat opens when a creator requests a visit, accepts your invite or redeems a UGC brief."
+                            : "A chat opens when a creator requests a visit or redeems a UGC brief."
+                    }
                 />
             ) : (
                 <div className="grid lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)] gap-4">
@@ -164,14 +170,26 @@ function Bubble({ m }: { m: ChatMessage }) {
         );
     }
     const ours = m.side === "business";
+    // Requests and invites arrive as cards; the note may be empty.
+    const card = m.type === "request" || m.type === "invite";
     return (
         <div className={`flex ${ours ? "justify-end" : "justify-start"}`}>
             <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm ${ours ? "bg-primary-900 text-white rounded-br-md" : "bg-white border border-neutral-200 rounded-bl-md"}`}>
                 {m.sender_name && <p className={`text-[11px] font-bold ${ours ? "text-white/80" : "text-fuchsia-700"}`}>{m.sender_name}</p>}
+                {card && (
+                    <p className={`text-[11px] font-semibold uppercase tracking-wide ${ours ? "text-white/70" : "text-neutral-500"}`}>
+                        {m.type === "request" ? "Collab request" : "Invite"}
+                        {m.meta?.offer ? ` · For: ${m.meta.offer}` : ""}
+                    </p>
+                )}
                 {m.type === "photo" && m.media_url && (
                     <img src={m.media_url} alt="Photo from the chat" className="rounded-lg mb-1 max-h-60 object-cover" />
                 )}
-                {m.body && <p className="whitespace-pre-wrap break-words">{m.body}</p>}
+                {m.body ? (
+                    <p className="whitespace-pre-wrap break-words">{m.body}</p>
+                ) : (
+                    card && <p className={`italic ${ours ? "text-white/70" : "text-neutral-500"}`}>No note</p>
+                )}
                 <p className={`text-[10px] mt-0.5 ${ours ? "text-white/60" : "text-neutral-400"}`}>{when(m.created_at)}</p>
             </div>
         </div>

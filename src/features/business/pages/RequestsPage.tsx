@@ -7,6 +7,7 @@ import { businessService } from "@services/business.service";
 import type { BusinessApplicationItem, ListApplicationsParams } from "@services/business.types";
 import { useBusiness } from "../context";
 import { useApplications, useHub, useInvalidateBusiness, useUpgradePrompt } from "../queries";
+import { usePartnerPortal } from "../partnerPortal";
 import { SOURCE_LABELS, relativeTime, visitWindowLabel } from "../utils";
 import { ApplicationStatusPill, CreatorAvatar, PageHeader, VerifiedTick } from "../components/bits";
 import { ConfirmDialog } from "../components/Overlay";
@@ -71,9 +72,12 @@ const TABS: {
 export function RequestsPage() {
     const { businessId } = useBusiness();
     const [searchParams, setSearchParams] = useSearchParams();
+    const { matchmakingVisible } = usePartnerPortal();
+    // Invites come from matchmaking; their tab goes when the admin hides it.
+    const tabs = matchmakingVisible ? TABS : TABS.filter((t) => t.value !== "invites");
     const tabParam = searchParams.get("tab") as Tab | null;
-    const tab: Tab = TABS.some((t) => t.value === tabParam) ? (tabParam as Tab) : "requested";
-    const current = TABS.find((t) => t.value === tab) ?? TABS[0];
+    const tab: Tab = tabs.some((t) => t.value === tabParam) ? (tabParam as Tab) : "requested";
+    const current = tabs.find((t) => t.value === tab) ?? tabs[0];
     const apps = useApplications(current?.params ?? { status: "requested" });
     const hub = useHub();
     const invalidate = useInvalidateBusiness();
@@ -89,7 +93,7 @@ export function RequestsPage() {
     };
 
     const pending = hub.data?.pending_requests ?? 0;
-    const filters = TABS.map((t) => ({
+    const filters = tabs.map((t) => ({
         value: t.value,
         label: t.value === "requested" && pending ? `${t.label} (${pending})` : t.label,
     }));
@@ -177,7 +181,7 @@ export function RequestsPage() {
                                                 <p className="text-sm text-neutral-900 truncate">{a.collab?.offer ?? "—"}</p>
                                                 <p className="text-xs text-neutral-500 flex items-center gap-1.5">
                                                     {SOURCE_LABELS[a.source] ?? a.source}
-                                                    {a.match && (
+                                                    {a.match && matchmakingVisible && (
                                                         <span className="inline-flex items-center gap-0.5 text-primary-700">
                                                             <Sparkles className="w-3 h-3" /> {a.match.score}% match
                                                         </span>

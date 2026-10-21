@@ -142,9 +142,13 @@ export type EffectivePlanStatus =
     | "trial_ended"
     | "payment_failed";
 
+/** Where the effective plan comes from: an admin override, a paid subscription or the platform default. */
+export type PlanSource = "override" | "subscription" | "default";
+
 export interface BusinessUsage {
     plan_code: string;
     status: EffectivePlanStatus | string;
+    source?: PlanSource;
     entitlements: PlanEntitlements;
     override_until: string | null;
     trial_ends_at: string | null;
@@ -633,4 +637,26 @@ export interface SubmittedBusinessApplication {
     business_name: string;
     status: string;
     applied_at: string | null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Partner Portal settings (admin-controlled)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Sections an admin can show or hide in the Partner Portal. */
+export type PartnerSection =
+    | "plans"
+    | "matchmaking"
+    | "attribution"
+    | "content_library"
+    | "offers"
+    | "team"
+    | "messages"
+    | "blocked_creators";
+
+/** `GET /config/partner-portal`. */
+export interface PartnerPortalSettings {
+    sections: Record<PartnerSection, boolean>;
+    default_plan: string | null;
+    updated_at: string | null;
 }

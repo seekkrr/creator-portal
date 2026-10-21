@@ -17,6 +17,7 @@ import type {
     UsageRights,
 } from "@services/business.types";
 import { useBusiness } from "../context";
+import { usePartnerPortal } from "../partnerPortal";
 import {
     DELIVERABLE_LABELS,
     DELIVERABLE_TYPES,
@@ -224,6 +225,7 @@ export function CollabEditorDrawer({
 
     const placeTitle = places.find((p) => p.marker_id === draft.marker_id)?.title ?? null;
     const approvalLocked = !approvalAllowed && collab?.mode !== "approval";
+    const { plansVisible } = usePartnerPortal();
 
     const preview = useMemo(() => {
         const p = toPayload(draft);
@@ -392,7 +394,9 @@ export function CollabEditorDrawer({
                             onChange={(m) => {
                                 if (m === "approval" && approvalLocked) {
                                     onUpgrade(
-                                        "Approval-mode UGC briefs (you pick each creator) are on the Growth plan and above."
+                                        plansVisible
+                                            ? "Approval-mode UGC briefs (you pick each creator) are on the Growth plan and above."
+                                            : "Approval-mode UGC briefs aren't available for your business right now."
                                     );
                                     return;
                                 }
@@ -422,14 +426,17 @@ export function CollabEditorDrawer({
                                     profile. You approve each one in Requests, then they redeem with your code.
                                 </>
                             )}
-                            {approvalLocked && (
-                                <>
-                                    {" "}
-                                    <Link to="/business/billing" className="text-primary-700 font-medium underline">
-                                        Approval mode is on Growth and above.
-                                    </Link>
-                                </>
-                            )}
+                            {approvalLocked &&
+                                (plansVisible ? (
+                                    <>
+                                        {" "}
+                                        <Link to="/business/billing" className="text-primary-700 font-medium underline">
+                                            Approval mode is on Growth and above.
+                                        </Link>
+                                    </>
+                                ) : (
+                                    <span className="text-neutral-500"> Approval mode isn't available for your business right now.</span>
+                                ))}
                         </p>
                         {draft.mode === "approval" && (
                             <Toggle
