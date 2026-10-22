@@ -7,6 +7,13 @@
  */
 export const ALLOWED_CREATOR_ROLES = ["admin", "super_admin"] as const;
 
+/**
+ * Platform staff (the admin portal roles). The backend lets them act as the
+ * owner of any business, so they can open one in the Partner Portal's admin
+ * view (`/business/...?business=<id>`) without being on its team.
+ */
+export const PLATFORM_ADMIN_ROLES = ["admin", "super_admin", "moderator"] as const;
+
 export interface User {
     _id: string;
     first_name: string;
@@ -93,6 +100,13 @@ export function hasBusinessAccess(
     return roles.includes("business") && (businesses?.length ?? 0) > 0;
 }
 
+/** Platform admin (admin, super_admin or moderator). */
+export function isPlatformAdmin(user: { role?: unknown } | null | undefined): boolean {
+    if (!user) return false;
+    const roles = Array.isArray(user.role) ? user.role : user.role ? [user.role] : [];
+    return roles.some((r) => (PLATFORM_ADMIN_ROLES as readonly unknown[]).includes(r));
+}
+
 export interface PortalAccess {
     /** May enter the portal at all (creator and/or business workspace). */
     allowed: boolean;
@@ -100,6 +114,8 @@ export interface PortalAccess {
     creator: boolean;
     /** Business (Partner Portal) workspace. */
     business: boolean;
+    /** A platform admin is viewing a business they may not belong to (`?business=<id>`). */
+    adminView: boolean;
     /** Why creator access was denied — only meaningful when `allowed` is false. */
     reason?: CreatorAccessDenialReason;
 }
@@ -107,19 +123,26 @@ export interface PortalAccess {
 /**
  * Role-scoped portal access. One account may hold both roles; business-only
  * users never see quest tooling and creator-only users never see business tooling.
+ *
+ * `adminViewBusinessId`: the business a platform admin asked to open. It lets
+ * admins into the business workspace even without a business of their own;
+ * for everyone else it is ignored.
  */
 export function evaluatePortalAccess(
     user: { role?: unknown; is_creator?: boolean } | null | undefined,
     creator: { status?: string } | null | undefined,
-    businesses: readonly unknown[] | null | undefined
+    businesses: readonly unknown[] | null | undefined,
+    adminViewBusinessId?: string | null
 ): PortalAccess {
     const creatorAccess = evaluateCreatorAccess(user, creator);
-    const business = hasBusinessAccess(user, businesses);
+    const adminView = !!adminViewBusinessId && isPlatformAdmin(user);
+    const business = hasBusinessAccess(user, businesses) || adminView;
     const allowed = creatorAccess.allowed || business;
     return {
         allowed,
         creator: creatorAccess.allowed,
         business,
+        adminView,
         reason: allowed ? undefined : creatorAccess.reason,
     };
 }

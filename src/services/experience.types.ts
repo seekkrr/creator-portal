@@ -16,7 +16,7 @@ export interface ExperienceCurator {
     name: string;
     title: string;
     years: number | null;
-    photo_url: string;
+    photo_url: string | null;
     note: string;
 }
 
@@ -24,7 +24,7 @@ export interface ExperienceLocation {
     address: string;
     lat: number | null;
     lng: number | null;
-    map_url: string;
+    map_url: string | null;
 }
 
 /** A titled paragraph: highlights, what's included, cancellation policy sections. */
@@ -37,7 +37,7 @@ export interface ItineraryItem {
     time_label: string;
     title: string;
     description: string;
-    image_url: string;
+    image_url: string | null;
 }
 
 export interface ExperienceFaq {

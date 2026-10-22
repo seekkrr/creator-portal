@@ -1,13 +1,15 @@
 import { useMemo } from "react";
 import { Navigate, NavLink, Outlet } from "react-router-dom";
-import { ShieldAlert } from "lucide-react";
+import { LogOut, ShieldAlert, ShieldCheck } from "lucide-react";
+import { LoadingFallback } from "@components/LoadingFallback";
+import { Button } from "@components/ui";
 import { useWorkspace } from "@hooks/useWorkspace";
 import { BusinessContext, type BusinessContextValue } from "./context";
 import { BUSINESS_NAV } from "./nav";
 import { useHub } from "./queries";
 import { usePartnerPortal } from "./partnerPortal";
 import { useBusinessFeatures } from "./features";
-import { roleAtLeast } from "./utils";
+import { errorMessage, roleAtLeast } from "./utils";
 import { Banner } from "./components/bits";
 import { CopyEmailText } from "./components/CopyEmail";
 
@@ -105,12 +107,37 @@ function BusinessNav({ ctx }: { ctx: BusinessContextValue }) {
     );
 }
 
+/** Slim strip shown while a platform admin works on a business (admin view). */
+function AdminViewBanner({ name, onExit }: { name: string; onExit: () => void }) {
+    return (
+        <div
+            role="status"
+            className="mb-4 flex items-center gap-3 px-4 py-2 rounded-xl border border-amber-200 bg-amber-50 text-sm text-amber-900"
+        >
+            <ShieldCheck className="w-4 h-4 shrink-0" />
+            <p className="flex-1 min-w-0 truncate">
+                <span className="font-semibold">Admin view:</span> {name}
+                <span className="hidden sm:inline text-amber-800/80"> · you have owner access</span>
+            </p>
+            <button
+                type="button"
+                onClick={onExit}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-amber-900 hover:bg-amber-100 shrink-0"
+            >
+                <LogOut className="w-3.5 h-3.5" />
+                Exit
+            </button>
+        </div>
+    );
+}
+
 /**
- * Partner Portal shell: resolves the active business (workspace picker),
- * provides it to every page, and renders the role-filtered section nav.
+ * Partner Portal shell: resolves the active business (workspace picker, or the
+ * business a platform admin opened with `?business=<id>`), provides it to every
+ * page, and renders the role-filtered section nav.
  */
 export function BusinessLayout() {
-    const { activeBusiness } = useWorkspace();
+    const { activeBusiness, adminView } = useWorkspace();
 
     const ctx = useMemo<BusinessContextValue | null>(() => {
         if (!activeBusiness) return null;
@@ -124,10 +151,29 @@ export function BusinessLayout() {
         };
     }, [activeBusiness]);
 
+    if (!ctx && adminView.active) {
+        if (adminView.isLoading) return <LoadingFallback message="Opening the business..." />;
+        return (
+            <Banner
+                tone="danger"
+                icon={<ShieldAlert className="w-5 h-5" />}
+                title="Couldn't open this business"
+                action={
+                    <Button variant="outline" size="sm" onClick={adminView.exit}>
+                        Exit admin view
+                    </Button>
+                }
+            >
+                {errorMessage(adminView.error, "Check the business ID and try again.")}
+            </Banner>
+        );
+    }
+
     if (!ctx) return <Navigate to="/business/apply" replace />;
 
     return (
         <BusinessContext.Provider value={ctx}>
+            {adminView.active && <AdminViewBanner name={ctx.business.name} onExit={adminView.exit} />}
             <div className="lg:flex lg:gap-8 animate-fade-in">
                 <BusinessNav ctx={ctx} />
                 <div className="flex-1 min-w-0 space-y-6">
