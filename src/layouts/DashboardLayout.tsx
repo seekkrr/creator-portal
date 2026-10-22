@@ -78,7 +78,9 @@ function BusinessPicker({ ws, onPick }: { ws: Workspace; onPick?: () => void }) 
             )}
             <span className="min-w-0 text-left">
                 <span className="block text-sm font-semibold text-neutral-900 truncate max-w-[12rem]">{active.name}</span>
-                <span className="block text-[11px] text-neutral-500 capitalize leading-tight">{active.my_role ?? "member"}</span>
+                <span className="block text-[11px] text-neutral-500 capitalize leading-tight">
+                    {active.admin_view ? "Admin view" : (active.my_role ?? "member")}
+                </span>
             </span>
         </>
     );
@@ -117,7 +119,9 @@ function BusinessPicker({ ws, onPick }: { ws: Workspace; onPick?: () => void }) 
                             >
                                 <span className="flex-1 min-w-0">
                                     <span className="block text-sm font-medium text-neutral-900 truncate">{b.name}</span>
-                                    <span className="block text-xs text-neutral-500 capitalize">{b.my_role ?? "member"}</span>
+                                    <span className="block text-xs text-neutral-500 capitalize">
+                                        {b.admin_view ? "Admin view" : (b.my_role ?? "member")}
+                                    </span>
                                 </span>
                                 {b.id === active.id && <Check className="w-4 h-4 text-primary-600" />}
                             </button>
@@ -137,10 +141,10 @@ export function DashboardLayout() {
     const { mode, access, rememberMode } = ws;
     const businessMode = mode === "business";
 
-    // Remember the last workspace a dual-role user worked in (used after login).
+    // Remember the last workspace a dual-role user worked in (used after login). An admin view isn't theirs.
     useEffect(() => {
-        if (mode === "business" ? access.business : access.creator) rememberMode(mode);
-    }, [mode, access.business, access.creator, rememberMode]);
+        if (mode === "business" ? access.business && !access.adminView : access.creator) rememberMode(mode);
+    }, [mode, access.business, access.adminView, access.creator, rememberMode]);
 
     const handleLogout = async () => {
         await logout();

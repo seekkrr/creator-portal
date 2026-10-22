@@ -70,6 +70,8 @@ export interface Business {
     billing?: BusinessBilling;
     /** What SeekKrr switched on for this business (admin-only switches). */
     features?: Partial<BusinessFeatures> | null;
+    /** Client-only: a platform admin opened this business in the admin view (not one of their own). */
+    admin_view?: boolean;
 }
 
 /**

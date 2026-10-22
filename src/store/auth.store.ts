@@ -11,6 +11,7 @@ const ACCESS_DENIAL_MESSAGE: Record<CreatorAccessDenialReason, string> = {
 };
 import { authService } from "@services/auth.service";
 import { authStorage } from "@services/api";
+import { adminViewIdFor } from "./adminView.store";
 
 interface AuthState {
     user: User | null;
@@ -107,9 +108,10 @@ export const useAuthStore = create<AuthStore>()(
                     const { user, creator, businesses } = await authService.getCurrentUser();
 
                     // RBAC: ACTIVE creators (is_creator + creators.status==='active'),
-                    // staff, or members of a business (Partner Portal) may enter.
+                    // staff, or members of a business (Partner Portal) may enter;
+                    // platform admins too when opening a business (admin view).
                     // is_verified is a badge, not a gate.
-                    const access = evaluatePortalAccess(user, creator, businesses);
+                    const access = evaluatePortalAccess(user, creator, businesses, adminViewIdFor(user));
                     if (!access.allowed) {
                         set({
                             user, // keep so the UI knows who was rejected
@@ -149,7 +151,7 @@ export const useAuthStore = create<AuthStore>()(
                 if (!authService.hasStoredToken()) return;
                 try {
                     const { user, creator, businesses } = await authService.getCurrentUser();
-                    const access = evaluatePortalAccess(user, creator, businesses);
+                    const access = evaluatePortalAccess(user, creator, businesses, adminViewIdFor(user));
                     set({
                         user,
                         creator: creator ?? null,

@@ -107,7 +107,8 @@ function formFrom(e: Experience | null): ExperienceForm {
             note: e?.curator?.note ?? "",
         },
         highlights: e?.highlights ?? [],
-        itinerary: e?.itinerary ?? [],
+        // Stored without a photo, an item's image_url is null; the form edits strings.
+        itinerary: (e?.itinerary ?? []).map((x) => ({ ...x, image_url: x.image_url ?? "" })),
         included: e?.included ?? [],
         cancellation_policy: e?.cancellation_policy ?? [],
         faqs: e?.faqs ?? [],
@@ -138,7 +139,7 @@ function toPayload(f: ExperienceForm): ExperiencePayload {
         tags: f.tags,
         marker_id: custom ? null : f.marker_id || null,
         location: custom
-            ? { address: f.address.trim(), lat: f.lat, lng: f.lng, map_url: f.map_url.trim() }
+            ? { address: f.address.trim(), lat: f.lat, lng: f.lng, map_url: f.map_url.trim() || null }
             : undefined,
         duration_text: f.duration_text.trim(),
         media: f.media,
@@ -149,7 +150,8 @@ function toPayload(f: ExperienceForm): ExperiencePayload {
                   name: f.curator.name.trim(),
                   title: f.curator.title.trim(),
                   years: years !== null && Number.isFinite(years) ? years : null,
-                  photo_url: f.curator.photo_url,
+                  // An empty link is no link (the API only takes full https links).
+                  photo_url: (f.curator.photo_url ?? "").trim() || null,
                   note: f.curator.note.trim(),
               }
             : null,
@@ -159,9 +161,9 @@ function toPayload(f: ExperienceForm): ExperiencePayload {
                 time_label: x.time_label.trim(),
                 title: x.title.trim(),
                 description: x.description.trim(),
-                image_url: x.image_url,
+                image_url: (x.image_url ?? "").trim() || null,
             }))
-            .filter((x) => filled(x.time_label, x.title, x.description, x.image_url)),
+            .filter((x) => filled(x.time_label, x.title, x.description, x.image_url ?? "")),
         included: trimTitled(f.included),
         cancellation_policy: trimTitled(f.cancellation_policy),
         faqs: f.faqs
@@ -190,6 +192,17 @@ function validate(f: ExperienceForm): Record<string, string> {
     }
     const years = f.curator.years.trim();
     if (years && (!/^\d+$/.test(years) || Number(years) > 80)) e.curator_years = "Years must be a whole number.";
+    // A filled row needs its title (or question); say which section, since rows have no field slot.
+    const untitled = (rows: TitledText[]) => rows.some((r) => !r.title.trim() && r.description.trim());
+    const missing = [
+        untitled(f.highlights) && "Highlights",
+        f.itinerary.some((r) => !r.title.trim() && filled(r.time_label, r.description, r.image_url ?? "")) &&
+            "What You'll Do",
+        untitled(f.included) && "What's Included",
+        untitled(f.cancellation_policy) && "Cancellation policy",
+        f.faqs.some((q) => !q.question.trim() && q.answer.trim()) && "FAQs",
+    ].filter(Boolean);
+    if (missing.length) e.rows = `Add a title to every filled row in: ${missing.join(", ")}.`;
     f.options.forEach((o, i) => {
         if (!filled(o.name, o.description, o.duration_minutes, o.price)) return;
         if (!o.name.trim()) e[`option_${i}`] = "Give this option a name.";
@@ -313,7 +326,7 @@ function EditorForm({ experience }: { experience: Experience | null }) {
         const errs = validate(form);
         setErrors(errs);
         if (Object.keys(errs).length) {
-            toast.error("Please fix the highlighted fields.");
+            toast.error(errs.rows ?? "Please fix the highlighted fields.");
             return null;
         }
         setBusy("save");
@@ -856,7 +869,7 @@ function EditorForm({ experience }: { experience: Experience | null }) {
                                     <div className="flex flex-col sm:flex-row gap-3">
                                         <ImagePicker
                                             id={`exp-itinerary-img-${i}`}
-                                            value={item.image_url}
+                                            value={item.image_url ?? ""}
                                             onChange={(url) => update({ image_url: url })}
                                             businessId={businessId}
                                             label="Image"

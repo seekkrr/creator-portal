@@ -4,12 +4,14 @@ import { useWorkspaceStore } from "@store/workspace.store";
 import { LoadingFallback } from "@components/LoadingFallback";
 import { evaluatePortalAccess } from "@/types";
 import { ACCESS_DENIED, BUSINESS_APPLY, BUSINESS_HOME, resolveHomePath } from "@hooks/useWorkspace";
+import { useAdminViewId } from "@hooks/useAdminView";
 import type { ReactNode } from "react";
 
 /**
  * Which workspace a route group belongs to:
  *  - "creator":  quest tooling — creators (and staff) only; business-only users go to the Partner Portal.
- *  - "business": Partner Portal — business members only; everyone else is offered the application.
+ *  - "business": Partner Portal — business members only (and platform admins opening a business
+ *                with `?business=<id>`); everyone else is offered the application.
  *  - "any":      any signed-in user (e.g. the business application form).
  */
 export type RouteWorkspace = "creator" | "business" | "any";
@@ -22,6 +24,7 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ children, workspace = "creator" }: ProtectedRouteProps) {
     const { isAuthenticated, isLoading, user, creator, businesses } = useAuthStore();
     const location = useLocation();
+    const adminViewId = useAdminViewId();
 
     if (isLoading) {
         return <LoadingFallback message="Checking authentication..." />;
@@ -34,7 +37,7 @@ export function ProtectedRoute({ children, workspace = "creator" }: ProtectedRou
 
     if (!user || workspace === "any") return <>{children}</>;
 
-    const access = evaluatePortalAccess(user, creator, businesses);
+    const access = evaluatePortalAccess(user, creator, businesses, adminViewId);
 
     if (workspace === "business") {
         // Signed in but not a member of any business → apply first.
@@ -51,9 +54,10 @@ export function ProtectedRoute({ children, workspace = "creator" }: ProtectedRou
 export function HomeRedirect() {
     const { isAuthenticated, isLoading, user, creator, businesses } = useAuthStore();
     const prefs = useWorkspaceStore((s) => (user ? s.prefs[user._id] : undefined));
+    const adminViewId = useAdminViewId();
 
     if (isLoading) return <LoadingFallback message="Checking authentication..." />;
     if (!isAuthenticated || !user) return <Navigate to="/creator/login" replace />;
-    const access = evaluatePortalAccess(user, creator, businesses);
+    const access = evaluatePortalAccess(user, creator, businesses, adminViewId);
     return <Navigate to={resolveHomePath(access, prefs)} replace />;
 }
