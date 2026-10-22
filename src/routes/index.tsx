@@ -4,7 +4,8 @@ import { AuthLayout, DashboardLayout, PublicLayout } from "@layouts/index";
 import { HomeRedirect, ProtectedRoute } from "./ProtectedRoute";
 import { SuspenseWrapper, RootWrapper } from "@components/index";
 import { SectionGate } from "@features/business/components/SectionGate";
-import type { PartnerSection } from "@services/business.types";
+import { FeatureGate } from "@features/business/components/FeatureGate";
+import type { BusinessFeature, PartnerSection } from "@services/business.types";
 import { lazyRetry } from "@utils/lazyRetry";
 
 // Lazy load pages with retry mechanism
@@ -108,6 +109,19 @@ const BusinessBillingPage = lazyBusiness(() => import("@features/business/pages/
 const BusinessProfilePage = lazyBusiness(() => import("@features/business/pages/BusinessProfilePage"), "BusinessProfilePage");
 const BusinessBlocksPage = lazyBusiness(() => import("@features/business/pages/BlocksPage"), "BlocksPage");
 const BusinessMessagesPage = lazyBusiness(() => import("@features/business/pages/MessagesPage"), "MessagesPage");
+const BusinessExperiencesPage = lazyBusiness(() => import("@features/business/pages/ExperiencesPage"), "ExperiencesPage");
+const BusinessExperienceEditorPage = lazyBusiness(
+    () => import("@features/business/pages/ExperienceEditorPage"),
+    "ExperienceEditorPage"
+);
+const BusinessExperienceSlotsPage = lazyBusiness(
+    () => import("@features/business/pages/ExperienceSlotsPage"),
+    "ExperienceSlotsPage"
+);
+const BusinessExperienceBookingsPage = lazyBusiness(
+    () => import("@features/business/pages/ExperienceBookingsPage"),
+    "ExperienceBookingsPage"
+);
 const BusinessApplicationPage = lazyBusiness(
     () => import("@features/business/pages/BusinessApplicationPage"),
     "BusinessApplicationPage"
@@ -116,6 +130,8 @@ const BusinessApplicationPage = lazyBusiness(
 const page = (node: ReactNode) => <SuspenseWrapper>{node}</SuspenseWrapper>;
 /** A Partner Portal page the admin can hide; hidden pages redirect to the Overview. */
 const gated = (section: PartnerSection, node: ReactNode) => <SectionGate section={section}>{page(node)}</SectionGate>;
+/** Pages of a per-business product (Collabs, Experiences); when it's off they show a friendly note. */
+const featured = (feature: BusinessFeature, element: ReactNode) => <FeatureGate feature={feature}>{element}</FeatureGate>;
 
 export const router = createBrowserRouter(
     [
@@ -349,18 +365,32 @@ export const router = createBrowserRouter(
                         ),
                         children: [
                             { index: true, element: page(<BusinessOverviewPage />) },
-                            { path: "collabs", element: page(<BusinessCollabsPage />) },
-                            { path: "requests", element: page(<BusinessRequestsPage />) },
-                            { path: "messages", element: gated("messages", <BusinessMessagesPage />) },
-                            { path: "discover", element: gated("matchmaking", <BusinessDiscoverPage />) },
-                            { path: "content", element: gated("content_library", <BusinessContentPage />) },
-                            { path: "attribution", element: gated("attribution", <BusinessAttributionPage />) },
+                            { path: "experiences", element: featured("experiences", page(<BusinessExperiencesPage />)) },
+                            {
+                                path: "experiences/new",
+                                element: featured("experiences", page(<BusinessExperienceEditorPage />)),
+                            },
+                            {
+                                path: "experiences/:experienceId",
+                                element: featured("experiences", page(<BusinessExperienceEditorPage />)),
+                            },
+                            {
+                                path: "experiences/:experienceId/slots",
+                                element: featured("experiences", page(<BusinessExperienceSlotsPage />)),
+                            },
+                            { path: "bookings", element: featured("experiences", page(<BusinessExperienceBookingsPage />)) },
+                            { path: "collabs", element: featured("collabs", page(<BusinessCollabsPage />)) },
+                            { path: "requests", element: featured("collabs", page(<BusinessRequestsPage />)) },
+                            { path: "messages", element: featured("collabs", gated("messages", <BusinessMessagesPage />)) },
+                            { path: "discover", element: featured("collabs", gated("matchmaking", <BusinessDiscoverPage />)) },
+                            { path: "content", element: featured("collabs", gated("content_library", <BusinessContentPage />)) },
+                            { path: "attribution", element: featured("collabs", gated("attribution", <BusinessAttributionPage />)) },
                             { path: "offers", element: gated("offers", <BusinessOffersPage />) },
                             { path: "locations", element: page(<BusinessLocationsPage />) },
                             { path: "team", element: gated("team", <BusinessTeamPage />) },
                             { path: "billing", element: gated("plans", <BusinessBillingPage />) },
                             { path: "profile", element: page(<BusinessProfilePage />) },
-                            { path: "blocks", element: gated("blocked_creators", <BusinessBlocksPage />) },
+                            { path: "blocks", element: featured("collabs", gated("blocked_creators", <BusinessBlocksPage />)) },
                             { path: "*", element: <Navigate to="/business" replace /> },
                         ],
                     },

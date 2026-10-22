@@ -68,7 +68,20 @@ export interface Business {
     created_at: string | null;
     /** Owner only. */
     billing?: BusinessBilling;
+    /** What SeekKrr switched on for this business (admin-only switches). */
+    features?: Partial<BusinessFeatures> | null;
 }
+
+/**
+ * Per-business products, switched by SeekKrr admins. Missing values fall back
+ * to the backend defaults for existing businesses: collabs on, experiences off.
+ */
+export interface BusinessFeatures {
+    collabs: boolean;
+    experiences: boolean;
+}
+
+export type BusinessFeature = keyof BusinessFeatures;
 
 /** Body for `PATCH /businesses/{id}` (manager+; name/show_on_website/billing are owner only). */
 export interface UpdateBusinessPayload {

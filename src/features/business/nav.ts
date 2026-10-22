@@ -1,5 +1,6 @@
 import {
     Ban,
+    CalendarCheck,
     CreditCard,
     Handshake,
     Images,
@@ -11,10 +12,11 @@ import {
     Sparkles,
     Store,
     Tag,
+    Ticket,
     Users,
     type LucideIcon,
 } from "lucide-react";
-import type { MemberRole, PartnerSection } from "@services/business.types";
+import type { BusinessFeature, MemberRole, PartnerSection } from "@services/business.types";
 
 export interface BusinessNavItem {
     to: string;
@@ -26,6 +28,8 @@ export interface BusinessNavItem {
     badge?: "pending_requests";
     /** Admin-controlled section; the item is hidden when it's switched off. */
     section?: PartnerSection;
+    /** Per-business product (admin switch); the item is hidden when it's off for this business. */
+    feature?: BusinessFeature;
 }
 
 export interface BusinessNavGroup {
@@ -39,25 +43,57 @@ export const BUSINESS_NAV: BusinessNavGroup[] = [
         items: [{ to: "/business", label: "Overview", icon: LayoutDashboard, end: true }],
     },
     {
+        title: "Experiences",
+        items: [
+            { to: "/business/experiences", label: "Experiences", icon: Ticket, feature: "experiences" },
+            { to: "/business/bookings", label: "Bookings", icon: CalendarCheck, feature: "experiences" },
+        ],
+    },
+    {
         title: "Creators",
         items: [
-            { to: "/business/collabs", label: "UGC Content", icon: Handshake },
-            { to: "/business/requests", label: "Requests & visits", icon: Inbox, badge: "pending_requests" },
-            { to: "/business/messages", label: "Messages", icon: MessagesSquare, section: "messages" },
+            { to: "/business/collabs", label: "UGC Content", icon: Handshake, feature: "collabs" },
+            {
+                to: "/business/requests",
+                label: "Requests & visits",
+                icon: Inbox,
+                badge: "pending_requests",
+                feature: "collabs",
+            },
+            {
+                to: "/business/messages",
+                label: "Messages",
+                icon: MessagesSquare,
+                section: "messages",
+                feature: "collabs",
+            },
             {
                 to: "/business/discover",
                 label: "Discover creators",
                 icon: Sparkles,
                 minRole: "manager",
                 section: "matchmaking",
+                feature: "collabs",
             },
         ],
     },
     {
         title: "Proof of value",
         items: [
-            { to: "/business/content", label: "Redemptions & content", icon: Images, section: "content_library" },
-            { to: "/business/attribution", label: "Attribution", icon: LineChart, section: "attribution" },
+            {
+                to: "/business/content",
+                label: "Redemptions & content",
+                icon: Images,
+                section: "content_library",
+                feature: "collabs",
+            },
+            {
+                to: "/business/attribution",
+                label: "Attribution",
+                icon: LineChart,
+                section: "attribution",
+                feature: "collabs",
+            },
         ],
     },
     {
@@ -79,6 +115,7 @@ export const BUSINESS_NAV: BusinessNavGroup[] = [
                 icon: Ban,
                 minRole: "manager",
                 section: "blocked_creators",
+                feature: "collabs",
             },
         ],
     },

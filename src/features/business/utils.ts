@@ -30,6 +30,11 @@ export function isNotFound(e: unknown): boolean {
     return e instanceof ApiRequestError && e.status === 404;
 }
 
+/** 403 — e.g. a product SeekKrr hasn't switched on for this business. */
+export function isForbidden(e: unknown): boolean {
+    return e instanceof ApiRequestError && e.status === 403;
+}
+
 // ── Formatting ──────────────────────────────────────────────────────────────
 
 const inr = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });

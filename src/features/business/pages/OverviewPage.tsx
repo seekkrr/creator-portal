@@ -14,6 +14,7 @@ import {
     MapPin,
     Plus,
     Star,
+    Ticket,
 } from "lucide-react";
 import { Button, ErrorState, Skeleton } from "@components/ui";
 import { businessService } from "@services/business.service";
@@ -21,6 +22,9 @@ import type { BusinessHub, CollabFunnel, PartnerSection } from "@services/busine
 import { useBusiness } from "../context";
 import { bkeys, useCollabs, useHub, useRegionName } from "../queries";
 import { usePartnerPortal } from "../partnerPortal";
+import { useBusinessFeatures } from "../features";
+import { ExperiencesSummary } from "../experiences/ExperiencesSummary";
+import { CopyEmailText } from "../components/CopyEmail";
 import {
     planName,
     planStatusMeta,
@@ -210,7 +214,118 @@ function Funnel({
     );
 }
 
+function PlacesCard({ places }: { places: BusinessHub["places"] }) {
+    return (
+        <SectionCard
+            title="Your places"
+            actions={
+                <Link to="/business/locations" className="text-sm font-medium text-primary-700 hover:underline">
+                    Manage
+                </Link>
+            }
+        >
+            {places.length === 0 ? (
+                <p className="text-sm text-neutral-500">No place linked yet.</p>
+            ) : (
+                <ul className="space-y-2">
+                    {places.map((p) => (
+                        <li key={p.marker_id} className="flex items-center gap-2 text-sm">
+                            <KeyRound className={`w-4 h-4 ${p.code_set ? "text-green-600" : "text-amber-500"}`} />
+                            <span className="flex-1 truncate">{p.title ?? p.marker_id}</span>
+                            <span className={`text-xs ${p.code_set ? "text-green-700" : "text-amber-700"}`}>
+                                {p.code_set ? "Code set" : "No code"}
+                            </span>
+                        </li>
+                    ))}
+                </ul>
+            )}
+        </SectionCard>
+    );
+}
+
+/** Overview for a business without Collabs: experiences (when on) and places. */
+function PlainOverview({ showExperiences }: { showExperiences: boolean }) {
+    const { business, canManage } = useBusiness();
+    const hub = useHub();
+    const places = hub.data?.places ?? [];
+
+    return (
+        <div className="space-y-6">
+            <PageHeader
+                title={
+                    <span className="inline-flex items-center gap-2">
+                        {business.name}
+                        {business.verified && <BadgeCheck className="w-6 h-6 text-primary-600" aria-label="Verified" />}
+                    </span>
+                }
+                description={
+                    showExperiences ? "Your experiences and today's bookings at a glance." : "Your business on SeekKrr."
+                }
+                actions={
+                    canManage && showExperiences ? (
+                        <Link to="/business/experiences/new" className="w-full sm:w-auto">
+                            <Button variant="accent" leftIcon={<Plus className="w-4 h-4" />} fullWidth>
+                                New experience
+                            </Button>
+                        </Link>
+                    ) : undefined
+                }
+            />
+
+            {hub.isSuccess && places.length === 0 && (
+                <Banner
+                    tone="info"
+                    icon={<AlertTriangle className="w-5 h-5" />}
+                    title="Add your place to start"
+                    action={
+                        <Link
+                            to="/business/locations?add=1"
+                            className="inline-block px-4 py-2 rounded-full bg-white border border-current/20 text-sm font-semibold hover:bg-white/70 whitespace-nowrap"
+                        >
+                            Add your place
+                        </Link>
+                    }
+                >
+                    Drop a pin on the map so customers can find you.
+                </Banner>
+            )}
+
+            {showExperiences ? (
+                <ExperiencesSummary />
+            ) : (
+                <Banner tone="info" icon={<Ticket className="w-5 h-5" />} title="Nothing is switched on yet">
+                    Collabs and Experiences are turned off for this business. Contact SeekKrr to turn them on:{" "}
+                    <CopyEmailText />
+                </Banner>
+            )}
+
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                <div className="xl:col-start-3">
+                    {hub.isLoading ? <Skeleton height={140} /> : <PlacesCard places={places} />}
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export function OverviewPage() {
+    const { features, isLoading } = useBusinessFeatures();
+    if (isLoading) {
+        return (
+            <div className="space-y-6">
+                <Skeleton height={40} className="w-72" />
+                <Skeleton height={260} />
+            </div>
+        );
+    }
+    return features.collabs ? (
+        <CollabOverview showExperiences={features.experiences} />
+    ) : (
+        <PlainOverview showExperiences={features.experiences} />
+    );
+}
+
+function CollabOverview({ showExperiences }: { showExperiences: boolean }) {
     const { business, businessId, canManage } = useBusiness();
     const [days, setDays] = useState<"7" | "30" | "90">("30");
     const hub = useHub();
@@ -292,6 +407,8 @@ export function OverviewPage() {
                     ))}
                 </div>
             )}
+
+            {showExperiences && <ExperiencesSummary />}
 
             {noCollabs && (
                 <div className="rounded-3xl border-2 border-primary-900 bg-white shadow-[6px_6px_0_0_#fecd36] p-6 sm:p-8 flex flex-col md:flex-row md:items-center gap-6">
@@ -461,30 +578,7 @@ export function OverviewPage() {
                     )}
                 </SectionCard>
 
-                <SectionCard
-                    title="Your places"
-                    actions={
-                        <Link to="/business/locations" className="text-sm font-medium text-primary-700 hover:underline">
-                            Manage
-                        </Link>
-                    }
-                >
-                    {data.places.length === 0 ? (
-                        <p className="text-sm text-neutral-500">No place linked yet.</p>
-                    ) : (
-                        <ul className="space-y-2">
-                            {data.places.map((p) => (
-                                <li key={p.marker_id} className="flex items-center gap-2 text-sm">
-                                    <KeyRound className={`w-4 h-4 ${p.code_set ? "text-green-600" : "text-amber-500"}`} />
-                                    <span className="flex-1 truncate">{p.title ?? p.marker_id}</span>
-                                    <span className={`text-xs ${p.code_set ? "text-green-700" : "text-amber-700"}`}>
-                                        {p.code_set ? "Code set" : "No code"}
-                                    </span>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                </SectionCard>
+                <PlacesCard places={data.places} />
             </div>
         </div>
     );
