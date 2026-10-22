@@ -22,6 +22,7 @@ import type {
     CreatorSummary,
 } from "@services/business.types";
 import { useBusiness } from "../context";
+import { usePartnerPortal } from "../partnerPortal";
 import {
     PLATFORM_LABELS,
     SOURCE_LABELS,
@@ -108,6 +109,7 @@ export function CreatorProfileDrawer({
     onError,
 }: CreatorProfileDrawerProps) {
     const { businessId, canManage } = useBusiness();
+    const { show, matchmakingVisible } = usePartnerPortal();
     const [busy, setBusy] = useState<string | null>(null);
     const [confirm, setConfirm] = useState<null | "decline" | "cancel" | "block">(null);
     const [reportOpen, setReportOpen] = useState(false);
@@ -117,7 +119,16 @@ export function CreatorProfileDrawer({
     // Local copy so a verify / rating result shows immediately, even after the
     // item moves to another tab of the list behind the drawer.
     const [app, setApp] = useState<BusinessApplicationItem | undefined>(application);
-    const m = match ?? app?.match ?? null;
+    // Match scores and reasons are part of matchmaking, which the admin can hide.
+    const m = matchmakingVisible ? (match ?? app?.match ?? null) : null;
+    const blockBody = [
+        matchmakingVisible
+            ? "They won't see your UGC briefs, can't send you requests and won't appear in Discover."
+            : "They won't see your UGC briefs and can't send you requests.",
+        show("blocked_creators") ? "You can unblock them later from Blocked creators." : "",
+    ]
+        .filter(Boolean)
+        .join(" ");
     const stats = creator.stats ?? {};
 
     const run = async (key: string, fn: () => Promise<unknown>, success: string, close = false) => {
@@ -453,7 +464,9 @@ export function CreatorProfileDrawer({
                         <div className="rounded-2xl border border-neutral-200 p-4 space-y-3">
                             <h3 className="text-sm font-semibold text-neutral-900">Rate this creator</h3>
                             <p className="text-xs text-neutral-500">
-                                Ratings feed SeekKrr Match and help other places pick reliable creators.
+                                {matchmakingVisible
+                                    ? "Ratings feed SeekKrr Match and help other places pick reliable creators."
+                                    : "Ratings help other places pick reliable creators."}
                             </p>
                             <StarInput value={score} onChange={setScore} />
                             <textarea
@@ -525,7 +538,7 @@ export function CreatorProfileDrawer({
                 open={confirm === "block"}
                 onClose={() => setConfirm(null)}
                 title={`Block ${creator.display_name}?`}
-                body="They won't see your UGC briefs, can't send you requests and won't appear in Discover. You can unblock them later from Blocked creators."
+                body={blockBody}
                 confirmLabel="Block"
                 variant="danger"
                 onConfirm={() =>

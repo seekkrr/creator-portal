@@ -21,6 +21,7 @@ import type {
     ListApplicationsParams,
     MatchesResponse,
     MemberRole,
+    PartnerPortalSettings,
     RedeemCode,
     ReportPayload,
     SubmitBusinessApplicationPayload,
@@ -38,6 +39,18 @@ const biz = (id: string) => `${BASE}/${encodeURIComponent(id)}`;
  * from the shared axios client — e.g. 402 `QUOTA_EXCEEDED` for plan limits.
  */
 export const businessService = {
+    // ── Partner Portal settings ──────────────────────────────────────────────
+
+    /** Which Partner Portal sections the admin has switched on (any signed-in user). */
+    async partnerPortalSettings(): Promise<PartnerPortalSettings> {
+        const res = await api.get<Partial<PartnerPortalSettings>>("/api/v2/config/partner-portal");
+        return {
+            sections: (res.data.sections ?? {}) as PartnerPortalSettings["sections"],
+            default_plan: res.data.default_plan ?? null,
+            updated_at: res.data.updated_at ?? null,
+        };
+    },
+
     // ── Businesses & team ────────────────────────────────────────────────────
 
     /** Predefined categories (and sub-categories) a business can pick. */

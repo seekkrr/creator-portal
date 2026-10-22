@@ -370,7 +370,7 @@ export function BillingPage() {
     const canManage = can_manage_billing && isOwner;
     const currentCode = usage?.plan_code ?? "free";
     const effectiveStatus = usage?.status ?? "free";
-    const statusMeta = planStatusMeta(effectiveStatus);
+    const statusMeta = planStatusMeta(effectiveStatus, currentCode);
     const sortedPlans = [...plans].sort((a, b) => {
         const ia = PLAN_ORDER.indexOf(String(a.code));
         const ib = PLAN_ORDER.indexOf(String(b.code));
@@ -378,7 +378,9 @@ export function BillingPage() {
     });
     const growth = plans.find((p) => p.code === "growth");
     const trialDays = growth?.trial_days ?? 14;
-    const canTrial = canManage && !subscription?.trial_used && effectiveStatus === "free" && trialDays > 0;
+    // No trial pitch when the business already gets Growth (or more) without paying.
+    const canTrial =
+        canManage && !subscription?.trial_used && effectiveStatus === "free" && currentCode === "free" && trialDays > 0;
     const hasPaidSub =
         !!subscription && PAID_STATUSES.includes(String(subscription.status)) && !subscription.cancel_at_period_end;
     const currentPrice = plans.find((p) => p.code === currentCode)?.price_monthly_inr ?? 0;

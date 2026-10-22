@@ -14,13 +14,19 @@ import {
     MapPin,
     Plus,
     Star,
+    Ticket,
 } from "lucide-react";
 import { Button, ErrorState, Skeleton } from "@components/ui";
 import { businessService } from "@services/business.service";
-import type { BusinessHub, CollabFunnel } from "@services/business.types";
+import type { BusinessHub, CollabFunnel, PartnerSection } from "@services/business.types";
 import { useBusiness } from "../context";
 import { bkeys, useCollabs, useHub, useRegionName } from "../queries";
+import { usePartnerPortal } from "../partnerPortal";
+import { useBusinessFeatures } from "../features";
+import { ExperiencesSummary } from "../experiences/ExperiencesSummary";
+import { CopyEmailText } from "../components/CopyEmail";
 import {
+    planName,
     planStatusMeta,
     daysUntil,
     formatDate,
@@ -54,8 +60,12 @@ const USAGE_LABELS: Record<keyof BusinessHub["usage"]["usage"], string> = {
     active_collabs: "active UGC briefs",
 };
 
-function buildAlerts(hub: BusinessHub): Alert[] {
+/** Usage counters that belong to matchmaking (reveals and invites). */
+const MATCH_COUNTERS = new Set<string>(["match_reveals", "invites"]);
+
+function buildAlerts(hub: BusinessHub, show: (section: PartnerSection) => boolean): Alert[] {
     const alerts: Alert[] = [];
+    const plans = show("plans");
     if (hub.places.length === 0) {
         alerts.push({
             key: "no-place",
@@ -76,15 +86,16 @@ function buildAlerts(hub: BusinessHub): Alert[] {
     }
     const usage = hub.usage;
     if (usage) {
-        if (usage.status === "halted" || usage.status === "payment_failed") {
+        // Payment and trial notices only make sense while plans are shown.
+        if (plans && (usage.status === "halted" || usage.status === "payment_failed")) {
             alerts.push({
                 key: "payment",
                 tone: "danger",
                 title: "Your last payment failed",
-                body: "Update your payment in Razorpay to keep your plan. We'll move you to Free after the grace period.",
+                body: "Update your payment in Razorpay to keep your plan. We'll move you off the paid plan after the grace period.",
                 action: { to: "/business/billing", label: "Billing" },
             });
-        } else if (usage.status === "pending") {
+        } else if (plans && usage.status === "pending") {
             alerts.push({
                 key: "pending",
                 tone: "warning",
@@ -92,7 +103,7 @@ function buildAlerts(hub: BusinessHub): Alert[] {
                 body: "Razorpay is still confirming your payment — this usually takes a few minutes.",
             });
         }
-        if (usage.status === "trialing" && usage.trial_ends_at) {
+        if (plans && usage.status === "trialing" && usage.trial_ends_at) {
             const d = daysUntil(usage.trial_ends_at);
             if (d !== null && d <= 5) {
                 alerts.push({
@@ -104,12 +115,12 @@ function buildAlerts(hub: BusinessHub): Alert[] {
                 });
             }
         }
-        if (usage.status === "trial_ended") {
+        if (plans && usage.status === "trial_ended") {
             alerts.push({
                 key: "trial-ended",
                 tone: "info",
                 title: "Your free trial has ended",
-                body: "You're on the Free plan now. Upgrade any time to get your limits back.",
+                body: `You're on the ${planName(undefined, usage.plan_code)} plan now. Upgrade any time for higher limits.`,
                 action: { to: "/business/billing", label: "See plans" },
             });
         }
@@ -119,6 +130,7 @@ function buildAlerts(hub: BusinessHub): Alert[] {
         ][]) {
             // A 0 limit means the feature isn't in the plan — not a "limit reached" moment.
             if (counter?.limit === 0) continue;
+            if (MATCH_COUNTERS.has(key) && !show("matchmaking")) continue;
             const ratio = usageRatio(counter);
             if (ratio === null || ratio < 0.8) continue;
             const label = USAGE_LABELS[key] ?? key;
@@ -129,18 +141,29 @@ function buildAlerts(hub: BusinessHub): Alert[] {
                     ratio >= 1
                         ? `You've reached your ${label} limit`
                         : `You've used ${counter.used} of ${counter.limit} ${label}`,
-                body:
-                    key === "active_collabs"
+                body: plans
+                    ? key === "active_collabs"
                         ? "Pause a UGC brief or upgrade to run more at once."
-                        : "Limits reset at the start of each month — or upgrade for more.",
-                action: { to: "/business/billing", label: "Upgrade" },
+                        : "Limits reset at the start of each month — or upgrade for more."
+                    : key === "active_collabs"
+                      ? "Pause a UGC brief to start another one."
+                      : "Limits reset at the start of each month.",
+                action: plans ? { to: "/business/billing", label: "Upgrade" } : undefined,
             });
         }
     }
     return alerts;
 }
 
-function Funnel({ funnel, checkins }: { funnel: CollabFunnel; checkins: number }) {
+function Funnel({
+    funnel,
+    checkins,
+    showInvites,
+}: {
+    funnel: CollabFunnel;
+    checkins: number;
+    showInvites: boolean;
+}) {
     const stages: { key: keyof CollabFunnel; label: string }[] = [
         { key: "requested", label: "Requested" },
         { key: "approved", label: "Approved" },
@@ -180,7 +203,9 @@ function Funnel({ funnel, checkins }: { funnel: CollabFunnel; checkins: number }
                 })}
             </div>
             <div className="flex flex-wrap gap-2 text-xs">
-                <Pill className="bg-violet-50 text-violet-700 border-violet-200">{funnel.invited ?? 0} invited</Pill>
+                {showInvites && (
+                    <Pill className="bg-violet-50 text-violet-700 border-violet-200">{funnel.invited ?? 0} invited</Pill>
+                )}
                 <Pill className="bg-neutral-100 text-neutral-600 border-neutral-200">{funnel.declined ?? 0} declined</Pill>
                 <Pill className="bg-neutral-100 text-neutral-600 border-neutral-200">{funnel.expired ?? 0} expired</Pill>
                 <Pill className="bg-red-50 text-red-700 border-red-200">{funnel.no_show ?? 0} no-shows</Pill>
@@ -189,7 +214,118 @@ function Funnel({ funnel, checkins }: { funnel: CollabFunnel; checkins: number }
     );
 }
 
+function PlacesCard({ places }: { places: BusinessHub["places"] }) {
+    return (
+        <SectionCard
+            title="Your places"
+            actions={
+                <Link to="/business/locations" className="text-sm font-medium text-primary-700 hover:underline">
+                    Manage
+                </Link>
+            }
+        >
+            {places.length === 0 ? (
+                <p className="text-sm text-neutral-500">No place linked yet.</p>
+            ) : (
+                <ul className="space-y-2">
+                    {places.map((p) => (
+                        <li key={p.marker_id} className="flex items-center gap-2 text-sm">
+                            <KeyRound className={`w-4 h-4 ${p.code_set ? "text-green-600" : "text-amber-500"}`} />
+                            <span className="flex-1 truncate">{p.title ?? p.marker_id}</span>
+                            <span className={`text-xs ${p.code_set ? "text-green-700" : "text-amber-700"}`}>
+                                {p.code_set ? "Code set" : "No code"}
+                            </span>
+                        </li>
+                    ))}
+                </ul>
+            )}
+        </SectionCard>
+    );
+}
+
+/** Overview for a business without Collabs: experiences (when on) and places. */
+function PlainOverview({ showExperiences }: { showExperiences: boolean }) {
+    const { business, canManage } = useBusiness();
+    const hub = useHub();
+    const places = hub.data?.places ?? [];
+
+    return (
+        <div className="space-y-6">
+            <PageHeader
+                title={
+                    <span className="inline-flex items-center gap-2">
+                        {business.name}
+                        {business.verified && <BadgeCheck className="w-6 h-6 text-primary-600" aria-label="Verified" />}
+                    </span>
+                }
+                description={
+                    showExperiences ? "Your experiences and today's bookings at a glance." : "Your business on SeekKrr."
+                }
+                actions={
+                    canManage && showExperiences ? (
+                        <Link to="/business/experiences/new" className="w-full sm:w-auto">
+                            <Button variant="accent" leftIcon={<Plus className="w-4 h-4" />} fullWidth>
+                                New experience
+                            </Button>
+                        </Link>
+                    ) : undefined
+                }
+            />
+
+            {hub.isSuccess && places.length === 0 && (
+                <Banner
+                    tone="info"
+                    icon={<AlertTriangle className="w-5 h-5" />}
+                    title="Add your place to start"
+                    action={
+                        <Link
+                            to="/business/locations?add=1"
+                            className="inline-block px-4 py-2 rounded-full bg-white border border-current/20 text-sm font-semibold hover:bg-white/70 whitespace-nowrap"
+                        >
+                            Add your place
+                        </Link>
+                    }
+                >
+                    Drop a pin on the map so customers can find you.
+                </Banner>
+            )}
+
+            {showExperiences ? (
+                <ExperiencesSummary />
+            ) : (
+                <Banner tone="info" icon={<Ticket className="w-5 h-5" />} title="Nothing is switched on yet">
+                    Collabs and Experiences are turned off for this business. Contact SeekKrr to turn them on:{" "}
+                    <CopyEmailText />
+                </Banner>
+            )}
+
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                <div className="xl:col-start-3">
+                    {hub.isLoading ? <Skeleton height={140} /> : <PlacesCard places={places} />}
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export function OverviewPage() {
+    const { features, isLoading } = useBusinessFeatures();
+    if (isLoading) {
+        return (
+            <div className="space-y-6">
+                <Skeleton height={40} className="w-72" />
+                <Skeleton height={260} />
+            </div>
+        );
+    }
+    return features.collabs ? (
+        <CollabOverview showExperiences={features.experiences} />
+    ) : (
+        <PlainOverview showExperiences={features.experiences} />
+    );
+}
+
+function CollabOverview({ showExperiences }: { showExperiences: boolean }) {
     const { business, businessId, canManage } = useBusiness();
     const [days, setDays] = useState<"7" | "30" | "90">("30");
     const hub = useHub();
@@ -200,6 +336,7 @@ export function OverviewPage() {
         staleTime: 60_000,
     });
     const regionName = useRegionName();
+    const { show, plansVisible, matchmakingVisible } = usePartnerPortal();
 
     if (hub.isLoading) {
         return (
@@ -220,9 +357,9 @@ export function OverviewPage() {
     }
 
     const data = hub.data;
-    const alerts = buildAlerts(data);
+    const alerts = buildAlerts(data, show);
     const usage = data.usage;
-    const statusMeta = planStatusMeta(usage?.status);
+    const statusMeta = planStatusMeta(usage?.status, usage?.plan_code);
     const noCollabs = collabs.isSuccess && collabs.data.length === 0;
 
     return (
@@ -270,6 +407,8 @@ export function OverviewPage() {
                     ))}
                 </div>
             )}
+
+            {showExperiences && <ExperiencesSummary />}
 
             {noCollabs && (
                 <div className="rounded-3xl border-2 border-primary-900 bg-white shadow-[6px_6px_0_0_#fecd36] p-6 sm:p-8 flex flex-col md:flex-row md:items-center gap-6">
@@ -319,7 +458,7 @@ export function OverviewPage() {
                     value={data.redeemed_today}
                     icon={<CheckCircle2 className="w-5 h-5" />}
                     tone="green"
-                    to="/business/content?tab=redemptions"
+                    to={show("content_library") ? "/business/content?tab=redemptions" : undefined}
                 />
                 <KpiCard
                     label="Content to review"
@@ -356,7 +495,11 @@ export function OverviewPage() {
                         <ErrorState message="Analytics are unavailable right now." onRetry={() => void analytics.refetch()} />
                     ) : (
                         <>
-                            <Funnel funnel={analytics.data.funnel} checkins={analytics.data.checkins} />
+                            <Funnel
+                                funnel={analytics.data.funnel}
+                                checkins={analytics.data.checkins}
+                                showInvites={matchmakingVisible}
+                            />
                             {analytics.data.rating.count > 0 && (
                                 <p className="mt-4 text-sm text-neutral-600 inline-flex items-center gap-1.5">
                                     <Star className="w-4 h-4 fill-highlight text-amber-500" />
@@ -373,20 +516,28 @@ export function OverviewPage() {
 
                 <SectionCard
                     title="This month's usage"
-                    actions={<Pill className={statusMeta.className}>{statusMeta.label}</Pill>}
+                    actions={
+                        plansVisible ? <Pill className={statusMeta.className}>{statusMeta.label}</Pill> : undefined
+                    }
                 >
                     {usage ? (
                         <div className="space-y-4">
                             <UsageMeter label="Redemptions" counter={usage.usage.redemptions} />
                             <UsageMeter label="Active UGC briefs" counter={usage.usage.active_collabs} />
-                            <UsageMeter label="Profile reveals" counter={usage.usage.match_reveals} />
-                            <UsageMeter label="Invites" counter={usage.usage.invites} />
-                            <Link
-                                to="/business/billing"
-                                className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-700 hover:underline"
-                            >
-                                <CreditCard className="w-4 h-4" /> Plan & billing
-                            </Link>
+                            {matchmakingVisible && (
+                                <>
+                                    <UsageMeter label="Profile reveals" counter={usage.usage.match_reveals} />
+                                    <UsageMeter label="Invites" counter={usage.usage.invites} />
+                                </>
+                            )}
+                            {plansVisible && (
+                                <Link
+                                    to="/business/billing"
+                                    className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-700 hover:underline"
+                                >
+                                    <CreditCard className="w-4 h-4" /> Plan & billing
+                                </Link>
+                            )}
                         </div>
                     ) : (
                         <p className="text-sm text-neutral-500">Usage isn't available yet.</p>
@@ -427,30 +578,7 @@ export function OverviewPage() {
                     )}
                 </SectionCard>
 
-                <SectionCard
-                    title="Your places"
-                    actions={
-                        <Link to="/business/locations" className="text-sm font-medium text-primary-700 hover:underline">
-                            Manage
-                        </Link>
-                    }
-                >
-                    {data.places.length === 0 ? (
-                        <p className="text-sm text-neutral-500">No place linked yet.</p>
-                    ) : (
-                        <ul className="space-y-2">
-                            {data.places.map((p) => (
-                                <li key={p.marker_id} className="flex items-center gap-2 text-sm">
-                                    <KeyRound className={`w-4 h-4 ${p.code_set ? "text-green-600" : "text-amber-500"}`} />
-                                    <span className="flex-1 truncate">{p.title ?? p.marker_id}</span>
-                                    <span className={`text-xs ${p.code_set ? "text-green-700" : "text-amber-700"}`}>
-                                        {p.code_set ? "Code set" : "No code"}
-                                    </span>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                </SectionCard>
+                <PlacesCard places={data.places} />
             </div>
         </div>
     );

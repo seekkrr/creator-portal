@@ -5,6 +5,8 @@ import { useWorkspace } from "@hooks/useWorkspace";
 import { BusinessContext, type BusinessContextValue } from "./context";
 import { BUSINESS_NAV } from "./nav";
 import { useHub } from "./queries";
+import { usePartnerPortal } from "./partnerPortal";
+import { useBusinessFeatures } from "./features";
 import { roleAtLeast } from "./utils";
 import { Banner } from "./components/bits";
 import { CopyEmailText } from "./components/CopyEmail";
@@ -20,9 +22,16 @@ function NavBadge({ count }: { count: number }) {
 
 function BusinessNav({ ctx }: { ctx: BusinessContextValue }) {
     const { data: hub } = useHub();
+    const { show } = usePartnerPortal();
+    const { has } = useBusinessFeatures();
     const groups = BUSINESS_NAV.map((g) => ({
         ...g,
-        items: g.items.filter((i) => !i.minRole || roleAtLeast(ctx.role, i.minRole)),
+        items: g.items.filter(
+            (i) =>
+                (!i.minRole || roleAtLeast(ctx.role, i.minRole)) &&
+                (!i.section || show(i.section)) &&
+                (!i.feature || has(i.feature))
+        ),
     })).filter((g) => g.items.length);
 
     const badgeFor = (badge?: string) => (badge === "pending_requests" ? (hub?.pending_requests ?? 0) : 0);
