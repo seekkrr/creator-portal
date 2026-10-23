@@ -125,7 +125,8 @@ export function EarningsPage() {
                 title={`SeekKrr collects payments and pays you out${commissionPct !== null ? `; commission ${pct(commissionPct)}` : ""}.`}
             >
                 Customers pay in the SeekKrr app when they book. SeekKrr keeps its commission on the price before GST — with or without GST —
-                and transfers the rest to your bank account. GST isn't commissioned and isn't part of your earnings.
+                and transfers the rest to your bank account, together with the GST collected on your bookings. GST isn't commissioned; you pay it
+                to the government.
             </Banner>
 
             <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm p-4 flex flex-wrap items-end gap-3">
@@ -193,7 +194,7 @@ export function EarningsPage() {
                             hint={summary.balance > 0.004 ? "SeekKrr will pay this out" : "Nothing waiting"}
                         />
                         {summary.gst_collected !== null && (
-                            <KpiCard label="GST collected" value={formatMoney(summary.gst_collected)} icon={<Landmark className="w-5 h-5" />} hint="Not part of your earnings" />
+                            <KpiCard label="GST collected" value={formatMoney(summary.gst_collected)} icon={<Landmark className="w-5 h-5" />} hint="Included in your earnings · you pay it to the government" />
                         )}
                     </div>
 
