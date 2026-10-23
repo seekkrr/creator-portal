@@ -283,7 +283,7 @@ export interface BookingsPage {
 // Earnings (owner / manager)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Rupees. Commission is on the price before GST; GST is never part of `net`. */
+/** Rupees. Commission is on the price before GST; `net` includes the GST, which the business pays to the government. */
 export interface EarningsSummary {
     /** Paid by customers. */
     gross: number;
