@@ -91,6 +91,14 @@ const PayoutAccountsPage = lazyRetry(() =>
     }))
 );
 
+// Command chat (no AI) — creator area and Partner Portal.
+const CreatorChatPage = lazyRetry(() =>
+    import("@features/command-chat/pages/CreatorChatPage").then((m) => ({ default: m.CreatorChatPage }))
+);
+const BusinessChatPage = lazyRetry(() =>
+    import("@features/command-chat/pages/BusinessChatPage").then((m) => ({ default: m.BusinessChatPage }))
+);
+
 // ── Partner Portal (business workspace) ─────────────────────────────────────
 const lazyBusiness = <K extends string>(load: () => Promise<Record<K, ComponentType>>, name: K) =>
     lazyRetry(() => load().then((m) => ({ default: m[name] })));
@@ -343,6 +351,14 @@ export const router = createBrowserRouter(
                                     </SuspenseWrapper>
                                 ),
                             },
+                            {
+                                path: "chat",
+                                element: (
+                                    <SuspenseWrapper>
+                                        <CreatorChatPage />
+                                    </SuspenseWrapper>
+                                ),
+                            },
                         ],
                     },
                 ],
@@ -365,6 +381,8 @@ export const router = createBrowserRouter(
                         ),
                         children: [
                             { index: true, element: page(<BusinessOverviewPage />) },
+                            // Every team role; the server decides what each may run.
+                            { path: "chat", element: page(<BusinessChatPage />) },
                             { path: "experiences", element: featured("experiences", page(<BusinessExperiencesPage />)) },
                             {
                                 path: "experiences/new",

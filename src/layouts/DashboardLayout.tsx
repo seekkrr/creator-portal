@@ -12,6 +12,7 @@ const CREATOR_LINKS = [
     { to: "/creator/narratives", label: "My Narratives" },
     { to: "/creator/tasks", label: "My Tasks" },
     { to: "/creator/payout-accounts", label: "My Payouts" },
+    { to: "/creator/chat", label: "Chat" },
     { to: "/creator/profile", label: "Profile" },
 ];
 

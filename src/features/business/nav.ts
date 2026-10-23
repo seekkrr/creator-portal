@@ -8,6 +8,7 @@ import {
     KeyRound,
     LayoutDashboard,
     LineChart,
+    MessageSquareText,
     MessagesSquare,
     Sparkles,
     Store,
@@ -40,7 +41,11 @@ export interface BusinessNavGroup {
 export const BUSINESS_NAV: BusinessNavGroup[] = [
     {
         title: null,
-        items: [{ to: "/business", label: "Overview", icon: LayoutDashboard, end: true }],
+        items: [
+            { to: "/business", label: "Overview", icon: LayoutDashboard, end: true },
+            // Command chat: every role sees it; the server decides what each may run.
+            { to: "/business/chat", label: "Chat", icon: MessageSquareText },
+        ],
     },
     {
         title: "Experiences",
