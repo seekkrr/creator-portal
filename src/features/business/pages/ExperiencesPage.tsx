@@ -10,6 +10,7 @@ import { FeatureOff } from "../components/FeatureGate";
 import { useExperiences } from "../experiences/queries";
 import { ExperienceStatusPill } from "../experiences/ui";
 import { coverOf, formatDayLabel } from "../experiences/utils";
+import { gstLabel } from "../experiences/money";
 
 type Filter = "current" | ExperienceStatus;
 
@@ -81,7 +82,10 @@ function ExperienceCard({ experience, canManage }: { experience: Experience; can
 
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutral-500">
                     {experience.price_from !== null && experience.price_from !== undefined && (
-                        <span>From {formatINR(experience.price_from)}</span>
+                        <span title="Price set by SeekKrr">
+                            From {formatINR(experience.price_from)}
+                            {experience.gst?.enabled && experience.price_from > 0 ? ` ${gstLabel(experience.gst)}` : ""}
+                        </span>
                     )}
                     {experience.duration_text && <span>{experience.duration_text}</span>}
                     {experience.options.length > 0 && <span>{plural(experience.options.length, "option")}</span>}

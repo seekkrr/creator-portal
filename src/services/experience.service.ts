@@ -141,6 +141,19 @@ export const experienceService = {
         return res.data.booking ?? null;
     },
 
+    // ── Earnings (owner / manager) ───────────────────────────────────────────
+
+    /**
+     * What customers paid, SeekKrr's commission, and the payouts made to the
+     * business: `{summary, bookings, payouts}` (raw; see `earningsFrom`).
+     */
+    async earnings(businessId: string, range: { from?: string; to?: string } = {}): Promise<unknown> {
+        const res = await api.get<unknown>(`${biz(businessId)}/earnings`, {
+            params: { from: range.from || undefined, to: range.to || undefined },
+        });
+        return res.data;
+    },
+
     async cancelBooking(businessId: string, bookingId: string, reason: string): Promise<ExperienceBooking | null> {
         const res = await api.post<{ booking?: ExperienceBooking }>(
             `${biz(businessId)}/experience-bookings/${encodeURIComponent(bookingId)}/cancel`,

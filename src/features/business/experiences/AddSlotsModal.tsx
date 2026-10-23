@@ -7,7 +7,8 @@ import { useBusiness } from "../context";
 import { DAY_LABELS, errorMessage, isForbidden } from "../utils";
 import { FieldLabel, SegmentedControl, inputClass, selectClass } from "../components/bits";
 import { Modal } from "../components/Overlay";
-import { PaymentsNote } from "./ui";
+import { PaymentsNote, SeekKrrPrice } from "./ui";
+import { priceOf } from "./money";
 import { addDays, daysInRange, formatDayLabel, isValidTime, todayIso, weekdayOf } from "./utils";
 
 const MAX_SLOTS = 500;
@@ -23,6 +24,7 @@ const chip = (on: boolean) =>
 /**
  * Bulk-create slots: one option, specific dates or a date range filtered by
  * weekdays, and one or more time windows — every date gets every window.
+ * Prices are set by SeekKrr (shown read-only), so they aren't sent.
  */
 export function AddSlotsModal({
     experience,
@@ -46,8 +48,6 @@ export function AddSlotsModal({
     const [weekdays, setWeekdays] = useState<number[]>(ALL_DAYS);
     const [times, setTimes] = useState<SlotTimeWindow[]>([{ start: "10:00", end: "11:00" }]);
     const [capacity, setCapacity] = useState("10");
-    const [price, setPrice] = useState(firstOption?.price !== null && firstOption?.price !== undefined ? String(firstOption.price) : "");
-    const [priceTouched, setPriceTouched] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
 
@@ -61,14 +61,6 @@ export function AddSlotsModal({
     const validTimes = times.filter((t) => isValidTime(t.start) && isValidTime(t.end) && t.end > t.start);
     const uniqueTimes = new Set(validTimes.map((t) => `${t.start}-${t.end}`)).size;
     const requested = chosenDays.length * uniqueTimes;
-
-    const pickOption = (id: string) => {
-        setOptionId(id);
-        if (!priceTouched) {
-            const o = options.find((x) => x.id === id);
-            setPrice(o?.price !== null && o?.price !== undefined ? String(o.price) : "");
-        }
-    };
 
     const addDate = () => {
         if (!dateDraft || dateDraft < today) return;
@@ -97,7 +89,6 @@ export function AddSlotsModal({
         });
 
     const cap = Number(capacity);
-    const p = price.trim() === "" ? 0 : Number(price);
 
     /** First problem with the form, or null when it can be sent. */
     const problem = (): string | null => {
@@ -112,7 +103,6 @@ export function AddSlotsModal({
         if (validTimes.length !== times.length) return "Each time window needs a start and an end after it.";
         if (uniqueTimes !== times.length) return "Two time windows are the same.";
         if (!Number.isInteger(cap) || cap < 1 || cap > 10000) return "Capacity must be a whole number, 1 or more.";
-        if (Number.isNaN(p) || p < 0) return "Price can't be negative.";
         if (requested > MAX_SLOTS) {
             return `That's ${requested} slots — add up to ${MAX_SLOTS} at a time (shorten the range or use fewer times).`;
         }
@@ -127,7 +117,6 @@ export function AddSlotsModal({
         const payload: BulkSlotsPayload = {
             times: [...validTimes].sort((a, b) => a.start.localeCompare(b.start)),
             capacity: cap,
-            price: p,
         };
         if (options.length) payload.option_id = optionId;
         if (mode === "dates") payload.dates = chosenDays;
@@ -181,7 +170,7 @@ export function AddSlotsModal({
                             id="slots-option"
                             className={selectClass}
                             value={optionId}
-                            onChange={(e) => pickOption(e.target.value)}
+                            onChange={(e) => setOptionId(e.target.value)}
                         >
                             {options.map((o) => (
                                 <option key={o.id} value={o.id}>
@@ -367,21 +356,9 @@ export function AddSlotsModal({
                         />
                     </div>
                     <div>
-                        <FieldLabel htmlFor="slots-price" hint="Per person. Leave empty for free.">
-                            Price (₹)
-                        </FieldLabel>
-                        <input
-                            id="slots-price"
-                            className={inputClass}
-                            inputMode="decimal"
-                            maxLength={8}
-                            value={price}
-                            onChange={(e) => {
-                                setPriceTouched(true);
-                                setPrice(e.target.value.replace(/[^\d.]/g, ""));
-                            }}
-                            placeholder="0"
-                        />
+                        <span className="block text-sm font-medium text-neutral-700 mb-1.5">Price</span>
+                        <SeekKrrPrice compact price={priceOf(experience, optionId || null)} gst={experience.gst} />
+                        <p className="text-xs text-neutral-500 mt-1">Set by SeekKrr.</p>
                     </div>
                 </div>
 

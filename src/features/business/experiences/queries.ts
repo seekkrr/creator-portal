@@ -4,6 +4,7 @@ import { experienceService } from "@services/experience.service";
 import type { ListBookingsParams } from "@services/experience.types";
 import { useBusiness } from "../context";
 import { isForbidden, isNotFound } from "../utils";
+import { earningsFrom } from "./money";
 
 /** Keys live under ["business", id] so `useInvalidateBusiness` refreshes them too. */
 export const xkeys = {
@@ -13,6 +14,7 @@ export const xkeys = {
     slots: (id: string, experienceId: string, range: { from?: string; to?: string }) =>
         ["business", id, "experiences", "slots", experienceId, range] as const,
     bookings: (id: string, params: ListBookingsParams) => ["business", id, "experiences", "bookings", params] as const,
+    earnings: (id: string, range: { from?: string; to?: string }) => ["business", id, "experiences", "earnings", range] as const,
 };
 
 /** Don't retry answers that won't change (feature off, not found). */
@@ -57,6 +59,19 @@ export function useExperienceBookings(params: ListBookingsParams, enabled = true
         queryKey: xkeys.bookings(businessId, params),
         queryFn: () => experienceService.listBookings(businessId, params),
         staleTime: 15_000,
+        retry: retryUnlessFinal,
+        placeholderData: (prev) => prev,
+        enabled,
+    });
+}
+
+/** Earnings summary, paid bookings and payouts (owners and managers). */
+export function useEarnings(range: { from?: string; to?: string }, enabled = true) {
+    const { businessId } = useBusiness();
+    return useQuery({
+        queryKey: xkeys.earnings(businessId, range),
+        queryFn: async () => earningsFrom(await experienceService.earnings(businessId, range)),
+        staleTime: 30_000,
         retry: retryUnlessFinal,
         placeholderData: (prev) => prev,
         enabled,

@@ -35,7 +35,8 @@ import { CopyEmailText } from "../components/CopyEmail";
 import { ConfirmDialog } from "../components/Overlay";
 import { FeatureOff } from "../components/FeatureGate";
 import { useExperience, useExperienceSlots, useInvalidateExperiences, xkeys } from "../experiences/queries";
-import { ExperienceStatusPill, ImagePicker, PaymentsNote, PhotoListEditor, RepeatableList } from "../experiences/ui";
+import { ExperienceStatusPill, ImagePicker, PaymentsNote, PhotoListEditor, RepeatableList, SeekKrrPrice } from "../experiences/ui";
+import { formatPrice, priceOf } from "../experiences/money";
 import { ExperiencePreview } from "../experiences/ExperiencePreview";
 import {
     OPTIONS_HINT,
@@ -48,12 +49,12 @@ import {
 
 // ── Form model ──────────────────────────────────────────────────────────────
 
+/** Prices aren't part of the form: SeekKrr sets them (shown read-only). */
 interface OptionForm {
     id: string;
     name: string;
     description: string;
     duration_minutes: string;
-    price: string;
 }
 
 interface ExperienceForm {
@@ -117,7 +118,6 @@ function formFrom(e: Experience | null): ExperienceForm {
             name: o.name ?? "",
             description: o.description ?? "",
             duration_minutes: numStr(o.duration_minutes),
-            price: numStr(o.price),
         })),
     };
 }
@@ -170,14 +170,28 @@ function toPayload(f: ExperienceForm): ExperiencePayload {
             .map((x) => ({ question: x.question.trim(), answer: x.answer.trim() }))
             .filter((x) => filled(x.question, x.answer)),
         options: f.options
-            .filter((o) => filled(o.name, o.description, o.duration_minutes, o.price))
+            .filter((o) => filled(o.name, o.description, o.duration_minutes))
             .map((o) => ({
                 id: o.id,
                 name: o.name.trim(),
                 description: o.description.trim(),
                 duration_minutes: o.duration_minutes.trim() === "" ? null : Number.parseInt(o.duration_minutes, 10),
-                price: o.price.trim() === "" ? null : Number(o.price),
             })),
+    };
+}
+
+/**
+ * Echo each option's current price (set by SeekKrr) back unchanged, so a save
+ * never clears it; a changed price would be refused ("Prices are set by SeekKrr.").
+ */
+function withSeekKrrPrices(payload: ExperiencePayload, experience: Experience | null): ExperiencePayload {
+    if (!experience) return payload;
+    return {
+        ...payload,
+        options: payload.options.map((o) => {
+            const price = experience.options.find((x) => x.id === o.id)?.price;
+            return price === null || price === undefined ? o : { ...o, price };
+        }),
     };
 }
 
@@ -204,12 +218,10 @@ function validate(f: ExperienceForm): Record<string, string> {
     ].filter(Boolean);
     if (missing.length) e.rows = `Add a title to every filled row in: ${missing.join(", ")}.`;
     f.options.forEach((o, i) => {
-        if (!filled(o.name, o.description, o.duration_minutes, o.price)) return;
+        if (!filled(o.name, o.description, o.duration_minutes)) return;
         if (!o.name.trim()) e[`option_${i}`] = "Give this option a name.";
         else if (o.duration_minutes.trim() && !/^\d+$/.test(o.duration_minutes.trim())) {
             e[`option_${i}`] = "Duration is in whole minutes.";
-        } else if (o.price.trim() && (Number.isNaN(Number(o.price)) || Number(o.price) < 0)) {
-            e[`option_${i}`] = "Price can't be negative.";
         }
     });
     return e;
@@ -224,6 +236,7 @@ const SECTIONS = [
     { id: "exp-included", label: "What's Included" },
     { id: "exp-cancellation", label: "Cancellation" },
     { id: "exp-faqs", label: "FAQs" },
+    { id: "exp-price", label: "Price" },
     { id: "exp-options", label: "Options" },
 ] as const;
 
@@ -332,7 +345,7 @@ function EditorForm({ experience }: { experience: Experience | null }) {
         setBusy("save");
         try {
             const saved = experience
-                ? await experienceService.update(businessId, experience.id, payload)
+                ? await experienceService.update(businessId, experience.id, withSeekKrrPrices(payload, experience))
                 : await experienceService.create(businessId, payload);
             queryClient.setQueryData(xkeys.detail(businessId, saved.id), saved);
             void invalidate();
@@ -345,7 +358,8 @@ function EditorForm({ experience }: { experience: Experience | null }) {
             }
             return saved;
         } catch (e) {
-            if (isForbidden(e)) toast.error("Experiences aren't turned on for this business.");
+            // 403 is either the product switch or "Prices are set by SeekKrr."
+            if (isForbidden(e) && !/price/i.test(errorMessage(e, ""))) toast.error("Experiences aren't turned on for this business.");
             else toast.error(errorMessage(e, "Couldn't save the experience"));
             return null;
         } finally {
@@ -413,7 +427,9 @@ function EditorForm({ experience }: { experience: Experience | null }) {
         },
     ];
 
-    const optionPrices = payload.options.map((o) => o.price).filter((p): p is number => p !== null && !Number.isNaN(p));
+    const optionPrices = (experience?.options ?? [])
+        .map((o) => priceOf(experience, o.id))
+        .filter((p): p is number => p !== null && !Number.isNaN(p));
     const placeTitle = places.find((p) => p.id === form.marker_id)?.title ?? "";
 
     const actionButtons = canManage ? (
@@ -1034,14 +1050,38 @@ function EditorForm({ experience }: { experience: Experience | null }) {
                         </SectionCard>
                     </Anchor>
 
+                    <Anchor id="exp-price">
+                        <SectionCard title="Price" description="Prices and GST are set by SeekKrr. Write to us if they need to change.">
+                            <div className="space-y-3">
+                                {experience && experience.options.length > 0 ? (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        {experience.options.map((o) => (
+                                            <SeekKrrPrice
+                                                key={o.id}
+                                                label={o.name || "Unnamed option"}
+                                                price={priceOf(experience, o.id)}
+                                                gst={experience.gst}
+                                            />
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <SeekKrrPrice price={experience?.price_per_person ?? null} gst={experience?.gst} />
+                                )}
+                                {experience?.price_from !== null && experience?.price_from !== undefined && (
+                                    <p className="text-xs text-neutral-500">Customers see: From {formatPrice(experience.price_from)}</p>
+                                )}
+                                <PaymentsNote />
+                            </div>
+                        </SectionCard>
+                    </Anchor>
+
                     <Anchor id="exp-options">
                         <SectionCard title="Options (session types)" description={OPTIONS_HINT}>
                             <div className="space-y-4">
-                                <PaymentsNote />
                                 <RepeatableList
                                     items={form.options}
                                     onChange={(v) => set("options", v)}
-                                    newItem={() => ({ id: newOptionId(), name: "", description: "", duration_minutes: "", price: "" })}
+                                    newItem={() => ({ id: newOptionId(), name: "", description: "", duration_minutes: "" })}
                                     addLabel="Add option"
                                     itemLabel="option"
                                     max={20}
@@ -1049,7 +1089,7 @@ function EditorForm({ experience }: { experience: Experience | null }) {
                                     emptyText="No options — every slot is the same experience."
                                     renderItem={(item, update, i) => (
                                         <div className="space-y-2">
-                                            <div className="grid grid-cols-1 sm:grid-cols-[1fr_9rem_9rem] gap-2">
+                                            <div className="grid grid-cols-1 sm:grid-cols-[1fr_9rem] gap-2">
                                                 <input
                                                     aria-label={`Option ${i + 1} name`}
                                                     className={inputClass}
@@ -1070,19 +1110,8 @@ function EditorForm({ experience }: { experience: Experience | null }) {
                                                     />
                                                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-neutral-400">min</span>
                                                 </div>
-                                                <div className="relative">
-                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-neutral-400">₹</span>
-                                                    <input
-                                                        aria-label={`Option ${i + 1} price per person`}
-                                                        className={`${inputClass} pl-7`}
-                                                        inputMode="decimal"
-                                                        maxLength={8}
-                                                        value={item.price}
-                                                        onChange={(e) => update({ price: e.target.value.replace(/[^\d.]/g, "") })}
-                                                        placeholder="800"
-                                                    />
-                                                </div>
                                             </div>
+                                            <SeekKrrPrice compact price={priceOf(experience, item.id)} gst={experience?.gst} />
                                             <textarea
                                                 aria-label={`Option ${i + 1} description`}
                                                 className={textareaClass}
@@ -1096,7 +1125,7 @@ function EditorForm({ experience }: { experience: Experience | null }) {
                                     )}
                                 />
                                 <p className="text-xs text-neutral-500">
-                                    Prices are per person. Each slot can have its own price — set it when you add slots.
+                                    Prices are per person and set by SeekKrr. Each slot uses its option's price.
                                 </p>
                             </div>
                         </SectionCard>
