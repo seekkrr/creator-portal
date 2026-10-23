@@ -7,7 +7,9 @@
  * return 403 unless the business has `features.experiences`.
  *
  * Times are local IST ("HH:MM", Asia/Kolkata); dates are "YYYY-MM-DD".
- * Prices are informational — bookings are free and confirmed immediately.
+ * Prices (and GST) are set by SeekKrr admins; businesses see them read-only.
+ * Customers pay SeekKrr in the app when they book; SeekKrr pays the business
+ * out, minus its commission (on the price before GST).
  */
 
 export type ExperienceStatus = "draft" | "published" | "paused" | "archived";
@@ -51,7 +53,15 @@ export interface ExperienceOption {
     name: string;
     description: string;
     duration_minutes: number | null;
+    /** Per person, set by SeekKrr (read-only here). Null = the experience's price per person. */
     price: number | null;
+}
+
+/** GST on an experience, set by SeekKrr. `inclusive` = the price already includes GST. */
+export interface ExperienceGst {
+    enabled: boolean;
+    rate_pct: number;
+    inclusive: boolean;
 }
 
 export interface ExperienceStats {
@@ -83,6 +93,9 @@ export interface Experience {
     faqs: ExperienceFaq[];
     gallery: string[];
     options: ExperienceOption[];
+    /** Per person, set by SeekKrr (null = not set yet). */
+    price_per_person?: number | null;
+    gst?: ExperienceGst | null;
     /** Min price of upcoming open slots, else min option price. */
     price_from: number | null;
     currency: string;
@@ -117,7 +130,11 @@ export interface ExperiencePayload {
     included: TitledText[];
     cancellation_policy: TitledText[];
     faqs: ExperienceFaq[];
-    options: ExperienceOption[];
+    /**
+     * `price` is never edited here: it's echoed back unchanged for options that
+     * already have one (a changed price is refused with 403 "Prices are set by SeekKrr.").
+     */
+    options: (Omit<ExperienceOption, "price"> & { price?: number | null })[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -140,8 +157,9 @@ export interface ExperienceSlot {
     capacity: number;
     booked: number;
     remaining?: number;
-    /** Per person, informational. */
+    /** Per person, computed by SeekKrr: option price ?? experience price ?? 0 (read-only). */
     price: number;
+    gst?: ExperienceGst | null;
     status: SlotStatus;
     created_at?: string | null;
 }
@@ -164,7 +182,6 @@ export interface BulkSlotsPayload {
     weekdays?: number[];
     times: SlotTimeWindow[];
     capacity: number;
-    price: number;
 }
 
 export interface BulkSlotsResult {
@@ -174,10 +191,9 @@ export interface BulkSlotsResult {
     skipped?: number;
 }
 
-/** Body for `PATCH /businesses/{bid}/experience-slots/{sid}` (capacity ≥ booked). */
+/** Body for `PATCH /businesses/{bid}/experience-slots/{sid}` (capacity ≥ booked). Prices are set by SeekKrr. */
 export interface UpdateSlotPayload {
     capacity?: number;
-    price?: number;
     start_time?: string;
     end_time?: string;
 }
@@ -186,7 +202,31 @@ export interface UpdateSlotPayload {
 // Bookings
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type ExperienceBookingStatus = "confirmed" | "cancelled" | "checked_in" | "no_show";
+export type ExperienceBookingStatus = "pending_payment" | "confirmed" | "cancelled" | "checked_in" | "no_show" | "expired";
+
+export type ExperiencePaymentStatus = "not_required" | "pending" | "paid" | "refund_pending" | "refunded" | "failed";
+
+/** The customer's payment to SeekKrr for a booking (amount in rupees). */
+export interface ExperienceBookingPayment {
+    status: ExperiencePaymentStatus | string;
+    amount?: number | null;
+    currency?: string | null;
+    paid_at?: string | null;
+    refunded_at?: string | null;
+}
+
+/** Price breakdown stored on the booking when it was made. */
+export interface ExperienceBookingPricing {
+    unit_price?: number | null;
+    people?: number | null;
+    /** Taxable value. */
+    subtotal?: number | null;
+    gst_enabled?: boolean;
+    gst_rate_pct?: number | null;
+    gst_inclusive?: boolean;
+    gst_amount?: number | null;
+    total?: number | null;
+}
 
 export interface ExperienceBookingItem {
     slot_id: string;
@@ -213,7 +253,10 @@ export interface ExperienceBooking {
     status: ExperienceBookingStatus;
     cancelled_by: "user" | "business" | "admin" | null;
     cancel_reason: string | null;
-    payment: { status: string } | null;
+    payment: ExperienceBookingPayment | null;
+    pricing?: ExperienceBookingPricing | null;
+    /** "offline" = added by the business, not booked in the app. */
+    source?: "app" | "offline" | null;
     contact: { name: string | null; phone: string | null } | null;
     note: string | null;
     created_at: string | null;
@@ -234,4 +277,57 @@ export interface BookingsPage {
     total: number;
     page: number;
     page_size: number;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Earnings (owner / manager)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Rupees. Commission is on the price before GST; GST is never part of `net`. */
+export interface EarningsSummary {
+    /** Paid by customers. */
+    gross: number;
+    refunds: number | null;
+    commission: number;
+    gst_collected: number | null;
+    /** What the business earned: price before GST − commission, after refunds. */
+    net: number;
+    paid_out: number;
+    /** net − paid_out: still to be paid to the business. */
+    balance: number;
+}
+
+export interface EarningsBooking {
+    id: string;
+    code: string | null;
+    experience_title: string | null;
+    customer_name: string | null;
+    people: number | null;
+    date: string | null;
+    subtotal: number | null;
+    gst_amount: number | null;
+    gst_rate_pct: number | null;
+    total: number | null;
+    commission: number | null;
+    commission_pct: number | null;
+    net: number | null;
+    payment_status: string | null;
+    paid_at: string | null;
+    source: string | null;
+}
+
+export interface EarningsPayout {
+    id: string;
+    amount: number;
+    reference: string | null;
+    paid_on: string | null;
+    note: string | null;
+}
+
+export interface Earnings {
+    summary: EarningsSummary;
+    /** SeekKrr's commission rate for this business, when the server sends it. */
+    commission_pct: number | null;
+    bookings: EarningsBooking[];
+    payouts: EarningsPayout[];
 }

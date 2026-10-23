@@ -7,11 +7,12 @@ import { experienceService } from "@services/experience.service";
 import type { ExperienceBooking, ExperienceBookingStatus, ListBookingsParams } from "@services/experience.types";
 import { useBusiness } from "../context";
 import { errorMessage, isForbidden, plural, relativeTime } from "../utils";
-import { PageHeader, SegmentedControl, inputClass, selectClass } from "../components/bits";
+import { PageHeader, Pill, SegmentedControl, inputClass, selectClass } from "../components/bits";
 import { ConfirmDialog } from "../components/Overlay";
 import { FeatureOff } from "../components/FeatureGate";
 import { useExperienceBookings, useExperiences, useInvalidateExperiences } from "../experiences/queries";
-import { BookingStatusPill, PaymentsNote } from "../experiences/ui";
+import { BookingStatusPill, PaymentPill, PaymentsNote } from "../experiences/ui";
+import { bookingAmount, formatMoney } from "../experiences/money";
 import { addDays, formatDayLabel, formatTimeRange, todayIso } from "../experiences/utils";
 
 type StatusFilter = "all" | ExperienceBookingStatus;
@@ -20,6 +21,7 @@ type DayPreset = "today" | "tomorrow" | "any" | "custom";
 const STATUS_FILTERS: { label: string; value: StatusFilter }[] = [
     { label: "All", value: "all" },
     { label: "Confirmed", value: "confirmed" },
+    { label: "Awaiting payment", value: "pending_payment" },
     { label: "Checked in", value: "checked_in" },
     { label: "Cancelled", value: "cancelled" },
     { label: "No-show", value: "no_show" },
@@ -148,29 +150,30 @@ export function ExperienceBookingsPage() {
 
             <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse min-w-[880px]">
+                    <table className="w-full text-left border-collapse min-w-[980px]">
                         <thead className="bg-neutral-50 border-b border-neutral-200">
                             <tr>
                                 <th className={th}>Code</th>
                                 <th className={th}>Customer</th>
                                 <th className={th}>Booked</th>
                                 <th className={`${th} text-right`}>People</th>
+                                <th className={th}>Payment</th>
                                 <th className={th}>Status</th>
                                 <th className={`${th} text-right`}>Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-neutral-100">
                             {bookings.isLoading ? (
-                                <SkeletonTableRows columns={6} rows={4} />
+                                <SkeletonTableRows columns={7} rows={4} />
                             ) : bookings.isError ? (
                                 <tr>
-                                    <td colSpan={6} className="p-0">
+                                    <td colSpan={7} className="p-0">
                                         <ErrorState message="We couldn't load the bookings." onRetry={() => void bookings.refetch()} />
                                     </td>
                                 </tr>
                             ) : rows.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="p-0">
+                                    <td colSpan={7} className="p-0">
                                         <EmptyState
                                             icon={<CalendarCheck className="w-7 h-7" />}
                                             title={preset === "today" ? "No bookings for today" : "No bookings here"}
@@ -184,6 +187,9 @@ export function ExperienceBookingsPage() {
                                         <td className="py-3.5 px-5">
                                             <p className="font-mono text-sm font-semibold text-neutral-900">{b.code}</p>
                                             <p className="text-xs text-neutral-400">{relativeTime(b.created_at)}</p>
+                                            {b.source === "offline" && (
+                                                <Pill className="mt-1 bg-violet-50 text-violet-700 border-violet-200">Offline</Pill>
+                                            )}
                                         </td>
                                         <td className="py-3.5 px-5">
                                             <p className="text-sm font-medium text-neutral-900">{b.contact?.name || "Customer"}</p>
@@ -224,6 +230,15 @@ export function ExperienceBookingsPage() {
                                         </td>
                                         <td className="py-3.5 px-5 text-right text-sm font-semibold text-neutral-900 tabular-nums">
                                             {b.total_people}
+                                        </td>
+                                        <td className="py-3.5 px-5">
+                                            <PaymentPill booking={b} />
+                                            {!!bookingAmount(b) && (
+                                                <p className="text-xs text-neutral-500 mt-1 tabular-nums">
+                                                    {formatMoney(bookingAmount(b))}
+                                                    {!!b.pricing?.gst_amount && ` incl. ${formatMoney(b.pricing.gst_amount)} GST`}
+                                                </p>
+                                            )}
                                         </td>
                                         <td className="py-3.5 px-5">
                                             <BookingStatusPill status={b.status} />
@@ -292,7 +307,11 @@ export function ExperienceBookingsPage() {
                 open={!!cancelTarget}
                 onClose={() => setCancelTarget(null)}
                 title={`Cancel booking ${cancelTarget?.code ?? ""}?`}
-                body={`${cancelTarget?.contact?.name || "The customer"} gets a notification with your reason, and the places go back on sale.`}
+                body={`${cancelTarget?.contact?.name || "The customer"} gets a notification with your reason, and the places go back on sale.${
+                    cancelTarget?.payment?.status === "paid"
+                        ? ` SeekKrr refunds the full ${formatMoney(bookingAmount(cancelTarget))} to the customer.`
+                        : ""
+                }`}
                 reasonLabel="Reason (shared with the customer)"
                 reasonPlaceholder="e.g. Heavy rain is forecast — we're not flying that morning"
                 confirmLabel="Cancel booking"
@@ -305,7 +324,11 @@ export function ExperienceBookingsPage() {
                     }
                     try {
                         await experienceService.cancelBooking(businessId, cancelTarget.id, reason);
-                        toast.success("Booking cancelled. The customer has been told.");
+                        toast.success(
+                            cancelTarget.payment?.status === "paid"
+                                ? "Booking cancelled. The customer has been told and gets a full refund."
+                                : "Booking cancelled. The customer has been told."
+                        );
                         await invalidate();
                     } catch (e) {
                         toast.error(errorMessage(e, "Couldn't cancel the booking"));

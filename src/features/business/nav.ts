@@ -15,6 +15,7 @@ import {
     Tag,
     Ticket,
     Users,
+    Wallet,
     type LucideIcon,
 } from "lucide-react";
 import type { BusinessFeature, MemberRole, PartnerSection } from "@services/business.types";
@@ -52,6 +53,8 @@ export const BUSINESS_NAV: BusinessNavGroup[] = [
         items: [
             { to: "/business/experiences", label: "Experiences", icon: Ticket, feature: "experiences" },
             { to: "/business/bookings", label: "Bookings", icon: CalendarCheck, feature: "experiences" },
+            // SeekKrr collects payments and pays the business out (owner / manager).
+            { to: "/business/earnings", label: "Earnings", icon: Wallet, feature: "experiences", minRole: "manager" },
         ],
     },
     {

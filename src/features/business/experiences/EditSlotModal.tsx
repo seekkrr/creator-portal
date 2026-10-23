@@ -7,9 +7,10 @@ import { useBusiness } from "../context";
 import { errorMessage } from "../utils";
 import { FieldLabel, inputClass } from "../components/bits";
 import { Modal } from "../components/Overlay";
+import { SeekKrrPrice } from "./ui";
 import { formatDayLabel, isValidTime } from "./utils";
 
-/** Change one slot's times, capacity (never below what's booked) or price. */
+/** Change one slot's times or capacity (never below what's booked). The price is set by SeekKrr. */
 export function EditSlotModal({
     slot,
     optionName,
@@ -25,7 +26,6 @@ export function EditSlotModal({
     const [start, setStart] = useState(slot.start_time);
     const [end, setEnd] = useState(slot.end_time);
     const [capacity, setCapacity] = useState(String(slot.capacity));
-    const [price, setPrice] = useState(String(slot.price ?? 0));
     const [error, setError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
     const booked = slot.booked ?? 0;
@@ -35,8 +35,6 @@ export function EditSlotModal({
         const cap = Number(capacity);
         if (!Number.isInteger(cap) || cap < 1) return "Capacity must be a whole number, 1 or more.";
         if (cap < booked) return `${booked} people have already booked — capacity can't go below that.`;
-        const p = price.trim() === "" ? 0 : Number(price);
-        if (Number.isNaN(p) || p < 0) return "Price can't be negative.";
         return null;
     };
 
@@ -48,8 +46,6 @@ export function EditSlotModal({
         if (start !== slot.start_time) payload.start_time = start;
         if (end !== slot.end_time) payload.end_time = end;
         if (Number(capacity) !== slot.capacity) payload.capacity = Number(capacity);
-        const p = price.trim() === "" ? 0 : Number(price);
-        if (p !== slot.price) payload.price = p;
         if (!Object.keys(payload).length) {
             onClose();
             return;
@@ -116,17 +112,9 @@ export function EditSlotModal({
                         />
                     </div>
                     <div>
-                        <FieldLabel htmlFor="slot-price" hint="Per person.">
-                            Price (₹)
-                        </FieldLabel>
-                        <input
-                            id="slot-price"
-                            className={inputClass}
-                            inputMode="decimal"
-                            maxLength={8}
-                            value={price}
-                            onChange={(e) => setPrice(e.target.value.replace(/[^\d.]/g, ""))}
-                        />
+                        <span className="block text-sm font-medium text-neutral-700 mb-1.5">Price</span>
+                        <SeekKrrPrice compact price={slot.price ?? null} gst={slot.gst} />
+                        <p className="text-xs text-neutral-500 mt-1">Set by SeekKrr.</p>
                     </div>
                 </div>
                 {booked > 0 && (start !== slot.start_time || end !== slot.end_time) && (

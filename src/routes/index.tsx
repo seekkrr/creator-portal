@@ -130,6 +130,7 @@ const BusinessExperienceBookingsPage = lazyBusiness(
     () => import("@features/business/pages/ExperienceBookingsPage"),
     "ExperienceBookingsPage"
 );
+const BusinessEarningsPage = lazyBusiness(() => import("@features/business/pages/EarningsPage"), "EarningsPage");
 const BusinessApplicationPage = lazyBusiness(
     () => import("@features/business/pages/BusinessApplicationPage"),
     "BusinessApplicationPage"
@@ -397,6 +398,8 @@ export const router = createBrowserRouter(
                                 element: featured("experiences", page(<BusinessExperienceSlotsPage />)),
                             },
                             { path: "bookings", element: featured("experiences", page(<BusinessExperienceBookingsPage />)) },
+                            // Owners and managers (the page tells staff it's not for them).
+                            { path: "earnings", element: featured("experiences", page(<BusinessEarningsPage />)) },
                             { path: "collabs", element: featured("collabs", page(<BusinessCollabsPage />)) },
                             { path: "requests", element: featured("collabs", page(<BusinessRequestsPage />)) },
                             { path: "messages", element: featured("collabs", gated("messages", <BusinessMessagesPage />)) },

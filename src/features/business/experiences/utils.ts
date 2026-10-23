@@ -8,7 +8,11 @@ import type {
 
 // ── Copy ────────────────────────────────────────────────────────────────────
 
-export const PAYMENTS_NOTE = "Payments aren't live yet — customers book for free and pay you directly.";
+export const PAYMENTS_NOTE =
+    "Customers pay in the SeekKrr app when they book. SeekKrr collects the payment and pays you out, minus its commission.";
+
+export const PRICE_SET_BY_SEEKKRR = "Price set by SeekKrr";
+export const PRICE_NOT_SET = "SeekKrr will set the price";
 
 export const OPTIONS_HINT =
     "Use options when you offer different sessions or games, e.g. Hatha and Vinyasa yoga. Each slot belongs to one option.";
@@ -40,10 +44,12 @@ export const EXPERIENCE_STATUS_META: Record<ExperienceStatus, { label: string; c
 };
 
 export const BOOKING_STATUS_META: Record<ExperienceBookingStatus, { label: string; className: string }> = {
+    pending_payment: { label: "Awaiting payment", className: "bg-amber-50 text-amber-700 border-amber-200" },
     confirmed: { label: "Confirmed", className: "bg-blue-50 text-blue-700 border-blue-200" },
     checked_in: { label: "Checked in", className: "bg-green-50 text-green-700 border-green-200" },
     cancelled: { label: "Cancelled", className: "bg-neutral-100 text-neutral-500 border-neutral-200" },
     no_show: { label: "No-show", className: "bg-red-50 text-red-700 border-red-200" },
+    expired: { label: "Not paid", className: "bg-neutral-100 text-neutral-500 border-neutral-200" },
 };
 
 // ── Dates & times (local IST calendar days) ─────────────────────────────────

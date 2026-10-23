@@ -1,11 +1,12 @@
 import { useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ImagePlus, Info, Loader2, Plus, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ImagePlus, Info, Loader2, Lock, Plus, Trash2, X } from "lucide-react";
 import { cloudinaryService } from "@services/cloudinary.service";
-import type { ExperienceBookingStatus, ExperienceStatus } from "@services/experience.types";
+import type { ExperienceBooking, ExperienceBookingStatus, ExperienceGst, ExperienceStatus } from "@services/experience.types";
 import { Pill } from "../components/bits";
 import { errorMessage } from "../utils";
-import { BOOKING_STATUS_META, EXPERIENCE_STATUS_META, PAYMENTS_NOTE } from "./utils";
+import { BOOKING_STATUS_META, EXPERIENCE_STATUS_META, PAYMENTS_NOTE, PRICE_NOT_SET, PRICE_SET_BY_SEEKKRR } from "./utils";
+import { formatPrice, gstLabel, paymentLabel } from "./money";
 
 export function ExperienceStatusPill({ status }: { status: ExperienceStatus }) {
     const meta = EXPERIENCE_STATUS_META[status] ?? { label: status, className: "bg-neutral-100 text-neutral-600" };
@@ -17,15 +18,67 @@ export function BookingStatusPill({ status }: { status: ExperienceBookingStatus 
     return <Pill className={meta.className}>{meta.label}</Pill>;
 }
 
-/** "Payments aren't live yet" note, shown wherever prices appear. */
+/** How customers pay (SeekKrr collects and pays the business out), shown wherever prices appear. */
 export function PaymentsNote({ className = "" }: { className?: string }) {
     return (
         <p
-            className={`flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-100 px-3.5 py-2.5 text-sm text-amber-900 ${className}`}
+            className={`flex items-start gap-2 rounded-xl bg-primary-50 border border-primary-100 px-3.5 py-2.5 text-sm text-primary-900 ${className}`}
         >
             <Info className="w-4 h-4 mt-0.5 shrink-0" />
             <span>{PAYMENTS_NOTE}</span>
         </p>
+    );
+}
+
+/** Paid / Refund pending / Refunded / Free for one booking. */
+export function PaymentPill({ booking }: { booking: Pick<ExperienceBooking, "payment" | "pricing" | "total_amount"> }) {
+    const meta = paymentLabel(booking);
+    return <Pill className={meta.className}>{meta.label}</Pill>;
+}
+
+/** A price businesses can see but not change: "₹800 /person · + 18% GST", or "SeekKrr will set the price". */
+export function SeekKrrPrice({
+    price,
+    gst,
+    label = PRICE_SET_BY_SEEKKRR,
+    compact = false,
+    className = "",
+}: {
+    price: number | null | undefined;
+    gst?: ExperienceGst | null;
+    label?: string;
+    compact?: boolean;
+    className?: string;
+}) {
+    const value =
+        price === null || price === undefined ? (
+            <span className="text-neutral-500">{PRICE_NOT_SET}</span>
+        ) : (
+            <>
+                <span className="font-semibold text-neutral-900 tabular-nums">{formatPrice(price)}</span>
+                {price > 0 && (
+                    <>
+                        <span className="text-neutral-500"> /person</span>
+                        <span className="text-neutral-500"> · {gstLabel(gst)}</span>
+                    </>
+                )}
+            </>
+        );
+    if (compact) {
+        return (
+            <div className={`rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm ${className}`} title={label}>
+                <span className="sr-only">{label}: </span>
+                {value}
+            </div>
+        );
+    }
+    return (
+        <div className={`rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 ${className}`}>
+            <p className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
+                <Lock className="w-3 h-3" /> {label}
+            </p>
+            <p className="text-sm mt-0.5">{value}</p>
+        </div>
     );
 }
 
