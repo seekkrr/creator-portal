@@ -263,6 +263,12 @@ export interface ExperienceBooking {
     cancelled_at: string | null;
     checked_in_at: string | null;
     experience?: { id: string; title: string; cover_url?: string | null } | null;
+    /** First slot's start (ISO). */
+    starts_at?: string | null;
+    /** Whether the business can cancel it right now (server's view). */
+    can_cancel?: boolean;
+    /** A traveller's booking: the business can cancel until then (3 hours before the start). */
+    business_cancellable_until?: string | null;
 }
 
 export interface ListBookingsParams {

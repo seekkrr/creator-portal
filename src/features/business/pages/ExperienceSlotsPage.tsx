@@ -19,7 +19,16 @@ import {
 import { AddSlotsModal } from "../experiences/AddSlotsModal";
 import { EditSlotModal } from "../experiences/EditSlotModal";
 import { ExperienceStatusPill } from "../experiences/ui";
-import { addDays, formatDayLabel, formatTimeRange, groupSlotsByDate, isUpcomingSlot, todayIso } from "../experiences/utils";
+import {
+    BUSINESS_CANCEL_CUTOFF_HOURS,
+    addDays,
+    formatDayLabel,
+    formatTimeRange,
+    groupSlotsByDate,
+    isUpcomingSlot,
+    slotCancelClosed,
+    todayIso,
+} from "../experiences/utils";
 
 function SlotRow({
     slot,
@@ -74,13 +83,22 @@ function SlotRow({
                 )}
             </div>
             {canManage && !cancelled && upcoming && (
-                <div className="flex gap-1.5 ml-auto">
+                <div className="flex items-center gap-1.5 ml-auto">
                     <Button size="sm" variant="ghost" leftIcon={<Pencil className="w-3.5 h-3.5" />} onClick={onEdit}>
                         Edit
                     </Button>
-                    <Button size="sm" variant="ghost" leftIcon={<XCircle className="w-3.5 h-3.5" />} onClick={onCancel}>
-                        Cancel
-                    </Button>
+                    {slotCancelClosed(slot) ? (
+                        <span
+                            className="text-xs text-neutral-400"
+                            title={`A slot with bookings can't be cancelled within ${BUSINESS_CANCEL_CUTOFF_HOURS} hours of the start. Contact SeekKrr if you need help.`}
+                        >
+                            Can't cancel within {BUSINESS_CANCEL_CUTOFF_HOURS} h
+                        </span>
+                    ) : (
+                        <Button size="sm" variant="ghost" leftIcon={<XCircle className="w-3.5 h-3.5" />} onClick={onCancel}>
+                            Cancel
+                        </Button>
+                    )}
                 </div>
             )}
         </li>
