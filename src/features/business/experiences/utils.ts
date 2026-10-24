@@ -1,5 +1,6 @@
 import type {
     Experience,
+    ExperienceBooking,
     ExperienceBookingStatus,
     ExperienceSlot,
     ExperienceStatus,
@@ -26,13 +27,41 @@ export const STANDARD_CANCELLATION_POLICY: TitledText[] = [
     },
     {
         title: "Standard Cancellations",
-        description: "Cancel up to 48 hours before the start time for a full refund.",
+        description: "Cancel in the SeekKrr app up to 24 hours before the start time for a full refund.",
     },
     {
         title: "Late Cancellations",
-        description: "Cancellations within 48 hours of the start time are non-refundable.",
+        description: "Within 24 hours of the start time, bookings can't be cancelled or refunded.",
     },
 ];
+
+// ── Business cancellation window ────────────────────────────────────────────
+
+/** A business can cancel a traveller's booking (or a slot with bookings) until this long before the start. */
+export const BUSINESS_CANCEL_CUTOFF_HOURS = 3;
+const CUTOFF_MS = BUSINESS_CANCEL_CUTOFF_HOURS * 60 * 60 * 1000;
+
+function ms(iso: string | null | undefined): number {
+    return iso ? Date.parse(iso) : NaN;
+}
+
+/** The business can cancel: a traveller's confirmed booking until 3 hours before it starts; an offline booking it recorded while confirmed. */
+export function businessCanCancel(
+    b: Pick<ExperienceBooking, "status" | "source" | "can_cancel" | "business_cancellable_until" | "starts_at">,
+    now: number = Date.now()
+): boolean {
+    if (b.status !== "confirmed") return false;
+    if (b.source === "offline") return true;
+    if (b.can_cancel === false) return false;
+    const until = b.business_cancellable_until ? ms(b.business_cancellable_until) : ms(b.starts_at) - CUTOFF_MS;
+    return Number.isNaN(until) || until > now;
+}
+
+/** A slot with bookings that starts within 3 hours: the business can't cancel it any more. */
+export function slotCancelClosed(s: Pick<ExperienceSlot, "booked" | "starts_at">, now: number = Date.now()): boolean {
+    const start = ms(s.starts_at);
+    return (s.booked ?? 0) > 0 && !Number.isNaN(start) && start - CUTOFF_MS <= now && start > now;
+}
 
 // ── Status ──────────────────────────────────────────────────────────────────
 

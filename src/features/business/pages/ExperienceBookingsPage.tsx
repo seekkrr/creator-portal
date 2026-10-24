@@ -13,7 +13,7 @@ import { FeatureOff } from "../components/FeatureGate";
 import { useExperienceBookings, useExperiences, useInvalidateExperiences } from "../experiences/queries";
 import { BookingStatusPill, PaymentPill, PaymentsNote } from "../experiences/ui";
 import { bookingAmount, formatMoney } from "../experiences/money";
-import { addDays, formatDayLabel, formatTimeRange, todayIso } from "../experiences/utils";
+import { BUSINESS_CANCEL_CUTOFF_HOURS, addDays, businessCanCancel, formatDayLabel, formatTimeRange, todayIso } from "../experiences/utils";
 
 type StatusFilter = "all" | ExperienceBookingStatus;
 type DayPreset = "today" | "tomorrow" | "any" | "custom";
@@ -246,7 +246,7 @@ export function ExperienceBookingsPage() {
                                         <td className="py-3.5 px-5 text-right">
                                             {b.status === "confirmed" ? (
                                                 <div className="flex justify-end items-center gap-1.5">
-                                                    {canManage && (
+                                                    {canManage && businessCanCancel(b) && (
                                                         <Button
                                                             size="sm"
                                                             variant="ghost"
@@ -256,6 +256,14 @@ export function ExperienceBookingsPage() {
                                                         >
                                                             Cancel
                                                         </Button>
+                                                    )}
+                                                    {canManage && !businessCanCancel(b) && (
+                                                        <span
+                                                            className="text-xs text-neutral-400 mr-1"
+                                                            title={`Bookings can't be cancelled within ${BUSINESS_CANCEL_CUTOFF_HOURS} hours of the start. Contact SeekKrr if you need help.`}
+                                                        >
+                                                            Can't cancel within {BUSINESS_CANCEL_CUTOFF_HOURS} h
+                                                        </span>
                                                     )}
                                                     <Button
                                                         size="sm"
