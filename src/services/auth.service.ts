@@ -1,10 +1,14 @@
 import { api, authStorage } from "./api";
 import { API_ENDPOINTS } from "@config/api";
 import { normalizeUser, type AuthTokens, type User, type Creator } from "@/types";
+import { businessService } from "./business.service";
+import type { Business } from "./business.types";
 
 export interface AuthMeResponse {
     user: User;
     creator?: Creator;
+    /** Businesses the user is a member of (only fetched for the `business` role). */
+    businesses: Business[];
 }
 
 export const authService = {
@@ -50,7 +54,23 @@ export const authService = {
             }
         }
 
-        return { user, creator };
+        const businesses = await authService.getMyBusinesses(user);
+        return { user, creator, businesses };
+    },
+
+    /**
+     * Partner Portal memberships. Only users holding the `business` role can be
+     * members, so skip the call otherwise. Best-effort: a failure here must not
+     * lock a creator out of the portal.
+     */
+    async getMyBusinesses(user: User): Promise<Business[]> {
+        if (!user.role?.includes("business")) return [];
+        try {
+            return await businessService.listMine();
+        } catch (error) {
+            console.error("Failed to fetch businesses:", error);
+            return [];
+        }
     },
 
     /**

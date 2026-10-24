@@ -103,4 +103,13 @@ export const API_ENDPOINTS = {
         AUDIO: (id: string) => `/api/v2/narratives/${id}/audio`,
         AUDIO_STATUS: (id: string) => `/api/v2/narratives/${id}/audio-status`,
     },
+    // V2 command chat (no AI). The Partner Portal always sends surface "partner";
+    // in the business area it also sends business_id (body, or query on suggest/catalog).
+    COMMANDS: {
+        SUGGEST: "/api/v2/commands/suggest",
+        UNDERSTAND: "/api/v2/commands/understand",
+        RUN: "/api/v2/commands/run",
+        HISTORY: "/api/v2/commands/history",
+        CATALOG: "/api/v2/commands/catalog",
+    },
 } as const;

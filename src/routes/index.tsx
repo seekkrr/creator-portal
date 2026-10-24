@@ -1,12 +1,20 @@
+import type { ComponentType, ReactNode } from "react";
 import { createBrowserRouter, Navigate, Link } from "react-router-dom";
 import { AuthLayout, DashboardLayout, PublicLayout } from "@layouts/index";
-import { ProtectedRoute } from "./ProtectedRoute";
+import { HomeRedirect, ProtectedRoute } from "./ProtectedRoute";
 import { SuspenseWrapper, RootWrapper } from "@components/index";
+import { SectionGate } from "@features/business/components/SectionGate";
+import { FeatureGate } from "@features/business/components/FeatureGate";
+import type { BusinessFeature, PartnerSection } from "@services/business.types";
 import { lazyRetry } from "@utils/lazyRetry";
 
 // Lazy load pages with retry mechanism
 const LoginPage = lazyRetry(() =>
     import("@features/auth/pages/LoginPage").then((m) => ({ default: m.LoginPage }))
+);
+
+const CreatorApplicationPage = lazyRetry(() =>
+    import("@features/auth/pages/CreatorApplicationPage").then((m) => ({ default: m.CreatorApplicationPage }))
 );
 
 const AccessDeniedPage = lazyRetry(() =>
@@ -83,17 +91,56 @@ const PayoutAccountsPage = lazyRetry(() =>
     }))
 );
 
-const BusinessDashboardPage = lazyRetry(() =>
-    import("@features/business/BusinessDashboard").then((m) => ({
-        default: m.BusinessDashboard,
-    }))
+// Command chat (no AI) — creator area and Partner Portal.
+const CreatorChatPage = lazyRetry(() =>
+    import("@features/command-chat/pages/CreatorChatPage").then((m) => ({ default: m.CreatorChatPage }))
+);
+const BusinessChatPage = lazyRetry(() =>
+    import("@features/command-chat/pages/BusinessChatPage").then((m) => ({ default: m.BusinessChatPage }))
 );
 
-const BusinessApplicationPage = lazyRetry(() =>
-    import("@features/business/BusinessApplicationPage").then((m) => ({
-        default: m.BusinessApplicationPage,
-    }))
+// ── Partner Portal (business workspace) ─────────────────────────────────────
+const lazyBusiness = <K extends string>(load: () => Promise<Record<K, ComponentType>>, name: K) =>
+    lazyRetry(() => load().then((m) => ({ default: m[name] })));
+
+const BusinessLayout = lazyBusiness(() => import("@features/business/BusinessLayout"), "BusinessLayout");
+const BusinessOverviewPage = lazyBusiness(() => import("@features/business/pages/OverviewPage"), "OverviewPage");
+const BusinessCollabsPage = lazyBusiness(() => import("@features/business/pages/CollabsPage"), "CollabsPage");
+const BusinessRequestsPage = lazyBusiness(() => import("@features/business/pages/RequestsPage"), "RequestsPage");
+const BusinessDiscoverPage = lazyBusiness(() => import("@features/business/pages/DiscoverPage"), "DiscoverPage");
+const BusinessContentPage = lazyBusiness(() => import("@features/business/pages/ContentPage"), "ContentPage");
+const BusinessAttributionPage = lazyBusiness(() => import("@features/business/pages/AttributionPage"), "AttributionPage");
+const BusinessOffersPage = lazyBusiness(() => import("@features/business/pages/OffersPage"), "OffersPage");
+const BusinessLocationsPage = lazyBusiness(() => import("@features/business/pages/LocationsPage"), "LocationsPage");
+const BusinessTeamPage = lazyBusiness(() => import("@features/business/pages/TeamPage"), "TeamPage");
+const BusinessBillingPage = lazyBusiness(() => import("@features/business/pages/BillingPage"), "BillingPage");
+const BusinessProfilePage = lazyBusiness(() => import("@features/business/pages/BusinessProfilePage"), "BusinessProfilePage");
+const BusinessBlocksPage = lazyBusiness(() => import("@features/business/pages/BlocksPage"), "BlocksPage");
+const BusinessMessagesPage = lazyBusiness(() => import("@features/business/pages/MessagesPage"), "MessagesPage");
+const BusinessExperiencesPage = lazyBusiness(() => import("@features/business/pages/ExperiencesPage"), "ExperiencesPage");
+const BusinessExperienceEditorPage = lazyBusiness(
+    () => import("@features/business/pages/ExperienceEditorPage"),
+    "ExperienceEditorPage"
 );
+const BusinessExperienceSlotsPage = lazyBusiness(
+    () => import("@features/business/pages/ExperienceSlotsPage"),
+    "ExperienceSlotsPage"
+);
+const BusinessExperienceBookingsPage = lazyBusiness(
+    () => import("@features/business/pages/ExperienceBookingsPage"),
+    "ExperienceBookingsPage"
+);
+const BusinessEarningsPage = lazyBusiness(() => import("@features/business/pages/EarningsPage"), "EarningsPage");
+const BusinessApplicationPage = lazyBusiness(
+    () => import("@features/business/pages/BusinessApplicationPage"),
+    "BusinessApplicationPage"
+);
+
+const page = (node: ReactNode) => <SuspenseWrapper>{node}</SuspenseWrapper>;
+/** A Partner Portal page the admin can hide; hidden pages redirect to the Overview. */
+const gated = (section: PartnerSection, node: ReactNode) => <SectionGate section={section}>{page(node)}</SectionGate>;
+/** Pages of a per-business product (Collabs, Experiences); when it's off they show a friendly note. */
+const featured = (feature: BusinessFeature, element: ReactNode) => <FeatureGate feature={feature}>{element}</FeatureGate>;
 
 export const router = createBrowserRouter(
     [
@@ -102,7 +149,7 @@ export const router = createBrowserRouter(
         children: [
             {
                 path: "/",
-                element: <Navigate to="/creator/login" replace />,
+                element: <HomeRedirect />,
             },
             {
                 element: <PublicLayout />,
@@ -157,9 +204,30 @@ export const router = createBrowserRouter(
                             },
                         ],
                     },
+                    // "Become a creator": Google sign-in first, then the short application.
                     {
                         element: (
-                            <ProtectedRoute>
+                            <ProtectedRoute workspace="any">
+                                <AuthLayout />
+                            </ProtectedRoute>
+                        ),
+                        children: [
+                            {
+                                path: "apply",
+                                element: (
+                                    <SuspenseWrapper>
+                                        <CreatorApplicationPage />
+                                    </SuspenseWrapper>
+                                ),
+                            },
+                        ],
+                    },
+                    // Legacy business URLs → the Partner Portal.
+                    { path: "business", element: <Navigate to="/business" replace /> },
+                    { path: "business/apply", element: <Navigate to="/business/apply" replace /> },
+                    {
+                        element: (
+                            <ProtectedRoute workspace="creator">
                                 <DashboardLayout />
                             </ProtectedRoute>
                         ),
@@ -285,21 +353,66 @@ export const router = createBrowserRouter(
                                 ),
                             },
                             {
-                                path: "business",
+                                path: "chat",
                                 element: (
                                     <SuspenseWrapper>
-                                        <BusinessDashboardPage />
+                                        <CreatorChatPage />
                                     </SuspenseWrapper>
                                 ),
+                            },
+                        ],
+                    },
+                ],
+            },
+            {
+                // Partner Portal. Any signed-in user may apply; the rest needs a business membership.
+                path: "/business",
+                element: (
+                    <ProtectedRoute workspace="any">
+                        <DashboardLayout />
+                    </ProtectedRoute>
+                ),
+                children: [
+                    { path: "apply", element: page(<BusinessApplicationPage />) },
+                    {
+                        element: (
+                            <ProtectedRoute workspace="business">
+                                {page(<BusinessLayout />)}
+                            </ProtectedRoute>
+                        ),
+                        children: [
+                            { index: true, element: page(<BusinessOverviewPage />) },
+                            // Every team role; the server decides what each may run.
+                            { path: "chat", element: page(<BusinessChatPage />) },
+                            { path: "experiences", element: featured("experiences", page(<BusinessExperiencesPage />)) },
+                            {
+                                path: "experiences/new",
+                                element: featured("experiences", page(<BusinessExperienceEditorPage />)),
                             },
                             {
-                                path: "business/apply",
-                                element: (
-                                    <SuspenseWrapper>
-                                        <BusinessApplicationPage />
-                                    </SuspenseWrapper>
-                                ),
+                                path: "experiences/:experienceId",
+                                element: featured("experiences", page(<BusinessExperienceEditorPage />)),
                             },
+                            {
+                                path: "experiences/:experienceId/slots",
+                                element: featured("experiences", page(<BusinessExperienceSlotsPage />)),
+                            },
+                            { path: "bookings", element: featured("experiences", page(<BusinessExperienceBookingsPage />)) },
+                            // Owners and managers (the page tells staff it's not for them).
+                            { path: "earnings", element: featured("experiences", page(<BusinessEarningsPage />)) },
+                            { path: "collabs", element: featured("collabs", page(<BusinessCollabsPage />)) },
+                            { path: "requests", element: featured("collabs", page(<BusinessRequestsPage />)) },
+                            { path: "messages", element: featured("collabs", gated("messages", <BusinessMessagesPage />)) },
+                            { path: "discover", element: featured("collabs", gated("matchmaking", <BusinessDiscoverPage />)) },
+                            { path: "content", element: featured("collabs", gated("content_library", <BusinessContentPage />)) },
+                            { path: "attribution", element: featured("collabs", gated("attribution", <BusinessAttributionPage />)) },
+                            { path: "offers", element: gated("offers", <BusinessOffersPage />) },
+                            { path: "locations", element: page(<BusinessLocationsPage />) },
+                            { path: "team", element: gated("team", <BusinessTeamPage />) },
+                            { path: "billing", element: gated("plans", <BusinessBillingPage />) },
+                            { path: "profile", element: page(<BusinessProfilePage />) },
+                            { path: "blocks", element: featured("collabs", gated("blocked_creators", <BusinessBlocksPage />)) },
+                            { path: "*", element: <Navigate to="/business" replace /> },
                         ],
                     },
                 ],

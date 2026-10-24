@@ -2,11 +2,15 @@ import { Outlet, Link, useLocation } from "react-router-dom";
 import { useAuthStore } from "@store/auth.store";
 import { Footer } from "@components/ui/Footer";
 import { Button } from "@components/ui";
+import { useWorkspace } from "@hooks/useWorkspace";
 
 export function PublicLayout() {
     const { isAuthenticated } = useAuthStore();
     const location = useLocation();
     const isLoginPage = location.pathname === "/creator/login";
+    const { homePath, access } = useWorkspace();
+    // Signed-in users without a workspace yet go to the application.
+    const dashboardPath = access.allowed ? homePath : "/business/apply";
 
     return (
         <div className="min-h-screen bg-neutral-50 flex flex-col font-sans">
@@ -14,14 +18,14 @@ export function PublicLayout() {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-20">
                         {/* Logo */}
-                        <Link to={isAuthenticated ? "/creator/dashboard" : "/creator/login"} className="flex items-center gap-2">
+                        <Link to={isAuthenticated ? dashboardPath : "/creator/login"} className="flex items-center gap-2">
                             <img src="/seekkrr-logo.svg" alt="SeekKrr" className="h-8" />
                         </Link>
 
                         {/* Actions */}
                         <div className="flex items-center gap-4">
                             {!isLoginPage && (
-                                <Link to={isAuthenticated ? "/creator/dashboard" : "/creator/login"}>
+                                <Link to={isAuthenticated ? dashboardPath : "/creator/login"}>
                                     <Button variant="outline" size="sm">
                                         {isAuthenticated ? "Go to Dashboard" : "Login"}
                                     </Button>

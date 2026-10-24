@@ -99,6 +99,21 @@ function isAuthEndpoint(url?: string): boolean {
     );
 }
 
+/** Error bodies are usually JSON objects, but text responses (e.g. an HTML
+ *  endpoint requested with responseType "text") arrive as a raw string. */
+function parseErrorBody(data: unknown): Record<string, unknown> | undefined {
+    if (data && typeof data === "object") return data as Record<string, unknown>;
+    if (typeof data === "string" && data.trim().startsWith("{")) {
+        try {
+            const parsed: unknown = JSON.parse(data);
+            if (parsed && typeof parsed === "object") return parsed as Record<string, unknown>;
+        } catch {
+            /* not JSON */
+        }
+    }
+    return undefined;
+}
+
 function createApiClient(): AxiosInstance {
     const client = axios.create({
         baseURL: config.api.baseUrl,
@@ -163,10 +178,15 @@ function createApiClient(): AxiosInstance {
             // Extract error message — check all known backend shapes:
             // V2 FastAPI: { detail: "..." } or { message: "..." }
             // V1 Flask: { error: "..." } or { details: "..." }
-            const responseData = error.response?.data as Record<string, unknown> | undefined;
+            const responseData = parseErrorBody(error.response?.data);
+            // FastAPI body validation returns { detail: [{ loc, msg, type }, ...] }.
+            const firstDetail = Array.isArray(responseData?.detail)
+                ? (responseData.detail[0] as { msg?: unknown } | undefined)
+                : undefined;
             const errorMessage =
                 (typeof responseData?.message === "string" && responseData.message) ||
                 (typeof responseData?.detail === "string" && responseData.detail) ||
+                (typeof firstDetail?.msg === "string" && firstDetail.msg) ||
                 (typeof responseData?.error === "string" && responseData.error) ||
                 (typeof responseData?.details === "string" && responseData.details) ||
                 error.message ||
