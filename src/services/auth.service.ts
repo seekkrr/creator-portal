@@ -1,4 +1,5 @@
 import { api, authStorage } from "./api";
+import { ACTING_TAB, endActingSession } from "./actingSession";
 import { API_ENDPOINTS } from "@config/api";
 import { normalizeUser, type AuthTokens, type User, type Creator } from "@/types";
 import { businessService } from "./business.service";
@@ -97,6 +98,11 @@ export const authService = {
     async logout(): Promise<void> {
         const refreshToken = authStorage.getRefreshToken();
         try {
+            if (ACTING_TAB) {
+                // Acting as a creator: end that session, never the admin's own.
+                await endActingSession();
+                return;
+            }
             if (refreshToken) {
                 await api.post(API_ENDPOINTS.AUTH.LOGOUT, {
                     refresh_token: refreshToken,

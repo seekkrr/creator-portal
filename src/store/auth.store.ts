@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
 import { evaluatePortalAccess, normalizeUser, type CreatorAccessDenialReason, type User, type Creator, type AuthTokens } from "@/types";
 import type { Business } from "@services/business.types";
 
@@ -12,6 +12,7 @@ const ACCESS_DENIAL_MESSAGE: Record<CreatorAccessDenialReason, string> = {
 import { authService } from "@services/auth.service";
 import { authStorage } from "@services/api";
 import { adminViewIdFor } from "./adminView.store";
+import { ACTING_TAB } from "@services/actingSession";
 
 interface AuthState {
     user: User | null;
@@ -165,7 +166,9 @@ export const useAuthStore = create<AuthStore>()(
             },
         }),
         {
-            name: "seekkrr-creator-auth",
+            // A tab acting as a creator keeps that creator to itself.
+            name: ACTING_TAB ? "seekkrr-creator-auth-acting" : "seekkrr-creator-auth",
+            storage: createJSONStorage(() => (ACTING_TAB ? sessionStorage : localStorage)),
             partialize: (state) => ({
                 user: state.user,
                 creator: state.creator,

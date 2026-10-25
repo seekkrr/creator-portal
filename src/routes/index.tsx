@@ -7,6 +7,7 @@ import { SectionGate } from "@features/business/components/SectionGate";
 import { FeatureGate } from "@features/business/components/FeatureGate";
 import type { BusinessFeature, PartnerSection } from "@services/business.types";
 import { lazyRetry } from "@utils/lazyRetry";
+import { ACTING_ENDED_PATH, ACTING_TAB } from "@services/actingSession";
 
 // Lazy load pages with retry mechanism
 const LoginPage = lazyRetry(() =>
@@ -15,6 +16,14 @@ const LoginPage = lazyRetry(() =>
 
 const CreatorApplicationPage = lazyRetry(() =>
     import("@features/auth/pages/CreatorApplicationPage").then((m) => ({ default: m.CreatorApplicationPage }))
+);
+
+const ActAsPage = lazyRetry(() =>
+    import("@features/auth/pages/ActAsPage").then((m) => ({ default: m.ActAsPage }))
+);
+
+const ActingEndedPage = lazyRetry(() =>
+    import("@features/auth/pages/ActingEndedPage").then((m) => ({ default: m.ActingEndedPage }))
 );
 
 const AccessDeniedPage = lazyRetry(() =>
@@ -188,7 +197,10 @@ export const router = createBrowserRouter(
                         children: [
                             {
                                 path: "login",
-                                element: (
+                                // A tab acting as a creator can't sign in: it only ever uses that session.
+                                element: ACTING_TAB ? (
+                                    <Navigate to={ACTING_ENDED_PATH} replace />
+                                ) : (
                                     <SuspenseWrapper>
                                         <LoginPage />
                                     </SuspenseWrapper>
@@ -199,6 +211,23 @@ export const router = createBrowserRouter(
                                 element: (
                                     <SuspenseWrapper>
                                         <AccessDeniedPage />
+                                    </SuspenseWrapper>
+                                ),
+                            },
+                            // Admins acting as a creator (from the admin portal), and where that ends.
+                            {
+                                path: "act-as",
+                                element: (
+                                    <SuspenseWrapper>
+                                        <ActAsPage />
+                                    </SuspenseWrapper>
+                                ),
+                            },
+                            {
+                                path: "acting-ended",
+                                element: (
+                                    <SuspenseWrapper>
+                                        <ActingEndedPage />
                                     </SuspenseWrapper>
                                 ),
                             },
