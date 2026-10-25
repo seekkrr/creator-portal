@@ -6,6 +6,7 @@ import axios, {
 import { config } from "@config/env";
 import { API_ENDPOINTS } from "@config/api";
 import type { ApiError } from "@/types";
+import { ACTING_ENDED_PATH, ACTING_TAB, clearActingSession, getActingSession } from "./actingSession";
 
 /**
  * Error thrown by the API client that preserves the backend's structured
@@ -37,16 +38,28 @@ export class ApiRequestError extends Error {
 const AUTH_TOKEN_KEY = "seekkrr_creator_access_token"; // Distinct key for creator portal
 const REFRESH_TOKEN_KEY = "seekkrr_creator_refresh_token";
 
+// A tab acting as a creator only ever uses that session (see actingSession.ts):
+// it never reads, refreshes or clears the admin's own tokens.
 function getStoredToken(): string | null {
+    if (ACTING_TAB) return getActingSession()?.token ?? null;
     return localStorage.getItem(AUTH_TOKEN_KEY);
 }
 
+function getRefreshToken(): string | null {
+    return ACTING_TAB ? null : localStorage.getItem(REFRESH_TOKEN_KEY);
+}
+
 function setStoredTokens(accessToken: string, refreshToken: string): void {
+    if (ACTING_TAB) return;
     localStorage.setItem(AUTH_TOKEN_KEY, accessToken);
     localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
 }
 
 function clearStoredTokens(): void {
+    if (ACTING_TAB) {
+        clearActingSession();
+        return;
+    }
     localStorage.removeItem(AUTH_TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
 }
@@ -65,7 +78,7 @@ let refreshPromise: Promise<string> | null = null;
 
 function refreshAccessToken(): Promise<string> {
     if (!refreshPromise) {
-        const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+        const refreshToken = getRefreshToken();
         refreshPromise = (async () => {
             if (!refreshToken) throw new Error("No refresh token");
             const { data } = await refreshClient.post<{ access_token: string; refresh_token: string }>(
@@ -80,6 +93,10 @@ function refreshAccessToken(): Promise<string> {
 }
 
 function redirectToLogin(): void {
+    if (ACTING_TAB) {
+        if (!window.location.pathname.includes(ACTING_ENDED_PATH)) window.location.href = ACTING_ENDED_PATH;
+        return;
+    }
     if (
         !window.location.pathname.includes("/login") &&
         !window.location.pathname.includes("/access-denied")
@@ -155,7 +172,7 @@ function createApiClient(): AxiosInstance {
                 originalRequest &&
                 !originalRequest._retry &&
                 !isAuthEndpoint(originalRequest.url) &&
-                localStorage.getItem(REFRESH_TOKEN_KEY)
+                getRefreshToken()
             ) {
                 originalRequest._retry = true;
                 try {
@@ -215,5 +232,5 @@ export const authStorage = {
     getToken: getStoredToken,
     setTokens: setStoredTokens,
     clearTokens: clearStoredTokens,
-    getRefreshToken: () => localStorage.getItem(REFRESH_TOKEN_KEY),
+    getRefreshToken,
 };

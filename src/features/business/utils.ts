@@ -123,11 +123,13 @@ export const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as c
 
 export const DELIVERABLE_TYPES: DeliverableType[] = ["reel", "post", "story", "video", "review"];
 
+// "video" is always a YouTube Short: businesses can't ask creators for long
+// videos. The stored type stays "video" so existing briefs keep working.
 export const DELIVERABLE_LABELS: Record<DeliverableType, { one: string; many: string }> = {
     reel: { one: "reel", many: "reels" },
     post: { one: "post", many: "posts" },
     story: { one: "story", many: "stories" },
-    video: { one: "video", many: "videos" },
+    video: { one: "YouTube Short", many: "YouTube Shorts" },
     review: { one: "review", many: "reviews" },
 };
 

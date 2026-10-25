@@ -3,9 +3,11 @@ import { useAuthStore } from "@store/auth.store";
 import { Briefcase, Check, ChevronDown, Compass, LogOut, Menu, Store, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Footer } from "@components/ui";
+import { ActingBanner } from "@components/ActingBanner";
 import { BUSINESS_HOME, CREATOR_HOME, useWorkspace, type Workspace } from "@hooks/useWorkspace";
+import { ACTING_ENDED_PATH, ACTING_TAB } from "@services/actingSession";
 
-const CREATOR_LINKS = [
+const ALL_CREATOR_LINKS = [
     { to: "/creator/quests", label: "My Quests" },
     { to: "/creator/markers", label: "My Markers" },
     { to: "/creator/events", label: "My Events" },
@@ -15,6 +17,11 @@ const CREATOR_LINKS = [
     { to: "/creator/chat", label: "Chat" },
     { to: "/creator/profile", label: "Profile" },
 ];
+// An admin acting as a creator gets no payouts or chat (the server refuses them too).
+const CREATOR_LINKS = ACTING_TAB
+    ? ALL_CREATOR_LINKS.filter((l) => l.to !== "/creator/payout-accounts" && l.to !== "/creator/chat")
+    : ALL_CREATOR_LINKS;
+const LOGOUT_LABEL = ACTING_TAB ? "Exit" : "Logout";
 
 /** Creator ↔ Business toggle for accounts that hold both roles. */
 function WorkspaceSwitcher({ ws, onSwitch }: { ws: Workspace; onSwitch?: () => void }) {
@@ -149,7 +156,8 @@ export function DashboardLayout() {
 
     const handleLogout = async () => {
         await logout();
-        navigate("/creator/login");
+        if (ACTING_TAB) window.location.replace(ACTING_ENDED_PATH);
+        else navigate("/creator/login");
     };
 
     const homeLink = businessMode ? (access.business ? BUSINESS_HOME : ws.homePath) : CREATOR_HOME;
@@ -157,6 +165,7 @@ export function DashboardLayout() {
     return (
         <div className="min-h-screen bg-neutral-50 flex flex-col">
             <header className="bg-white border-b border-neutral-200 sticky top-0 z-40 font-sans">
+                <ActingBanner />
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center h-20 gap-4">
                         {/* Logo */}
@@ -204,7 +213,7 @@ export function DashboardLayout() {
                                 className="flex items-center gap-2 text-neutral-600 hover:text-neutral-900 transition-colors"
                             >
                                 <LogOut className="w-5 h-5" />
-                                <span className="text-sm font-normal">Logout</span>
+                                <span className="text-sm font-normal">{LOGOUT_LABEL}</span>
                             </button>
                         </div>
 
@@ -258,7 +267,7 @@ export function DashboardLayout() {
                                     className="w-full flex items-center gap-2 text-red-600 hover:text-red-700 font-normal"
                                 >
                                     <LogOut className="w-5 h-5" />
-                                    Logout
+                                    {LOGOUT_LABEL}
                                 </button>
                             </div>
                         </div>
