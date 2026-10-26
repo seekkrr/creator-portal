@@ -56,6 +56,12 @@ function SlotRow({
                     {formatTimeRange(slot.start_time, slot.end_time)}
                 </p>
                 {optionName && <p className="text-xs text-neutral-500 truncate">{optionName}</p>}
+                {!cancelled && upcoming && slot.taken_by && (
+                    <p className="text-xs text-amber-700">
+                        {slot.taken_by.option_name ?? "Another session"} holds{" "}
+                        {formatTimeRange(slot.taken_by.start_time, slot.taken_by.end_time)}
+                    </p>
+                )}
             </div>
             <div className="flex-1 min-w-[10rem]">
                 <div className="flex justify-between text-xs text-neutral-500 mb-1">
@@ -78,6 +84,12 @@ function SlotRow({
                     <Pill className="bg-neutral-50 text-neutral-500 border-neutral-200">Past</Pill>
                 ) : full ? (
                     <Pill className="bg-red-50 text-red-700 border-red-200">Full</Pill>
+                ) : slot.unavailable_reason === "price_not_set" ? (
+                    <Pill className="bg-amber-50 text-amber-700 border-amber-200">Awaiting price</Pill>
+                ) : slot.taken_by ? (
+                    <Pill className="bg-amber-50 text-amber-700 border-amber-200">Time taken</Pill>
+                ) : slot.unavailable_reason === "private_booked" ? (
+                    <Pill className="bg-neutral-100 text-neutral-700 border-neutral-200">Booked</Pill>
                 ) : (
                     <Pill className="bg-green-50 text-green-700 border-green-200">Open</Pill>
                 )}
