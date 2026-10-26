@@ -64,6 +64,16 @@ export interface ExperienceGst {
     inclusive: boolean;
 }
 
+/**
+ * Whether slots get in each other's way. `shared_space`: every option uses one
+ * space (a go-kart track), so overlapping sessions block each other once one is
+ * booked. `private_slots`: one group per slot.
+ */
+export interface ExperienceScheduling {
+    shared_space: boolean;
+    private_slots: boolean;
+}
+
 export interface ExperienceStats {
     bookings: number;
     people: number;
@@ -93,6 +103,7 @@ export interface Experience {
     faqs: ExperienceFaq[];
     gallery: string[];
     options: ExperienceOption[];
+    scheduling?: ExperienceScheduling | null;
     /** Per person, set by SeekKrr (null = not set yet). */
     price_per_person?: number | null;
     gst?: ExperienceGst | null;
@@ -135,6 +146,7 @@ export interface ExperiencePayload {
      * already have one (a changed price is refused with 403 "Prices are set by SeekKrr.").
      */
     options: (Omit<ExperienceOption, "price"> & { price?: number | null })[];
+    scheduling?: ExperienceScheduling;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -162,6 +174,21 @@ export interface ExperienceSlot {
     gst?: ExperienceGst | null;
     status: SlotStatus;
     created_at?: string | null;
+    blocked?: boolean;
+    /** Shared space: the booked (or blocked) session holding this slot's time. */
+    taken_by?: SlotTakenBy | null;
+    /** Why travellers can't book it right now. */
+    unavailable_reason?: "cancelled" | "blocked" | "price_not_set" | "time_taken" | "private_booked" | "full" | null;
+}
+
+export interface SlotTakenBy {
+    slot_id: string;
+    option_id: string | null;
+    option_name: string | null;
+    start_time: string;
+    end_time: string;
+    booked: number;
+    blocked: boolean;
 }
 
 export interface SlotTimeWindow {

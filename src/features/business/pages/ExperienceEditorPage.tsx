@@ -29,7 +29,7 @@ import type {
 import { useBusiness } from "../context";
 import { useHub } from "../queries";
 import { errorMessage, isForbidden, isNotFound } from "../utils";
-import { Banner, FieldLabel, PageHeader, SectionCard, inputClass } from "../components/bits";
+import { Banner, FieldLabel, PageHeader, SectionCard, Toggle, inputClass } from "../components/bits";
 import { ChipInput } from "../components/ChipInput";
 import { CopyEmailText } from "../components/CopyEmail";
 import { ConfirmDialog } from "../components/Overlay";
@@ -79,6 +79,8 @@ interface ExperienceForm {
     cancellation_policy: TitledText[];
     faqs: ExperienceFaq[];
     options: OptionForm[];
+    shared_space: boolean;
+    private_slots: boolean;
 }
 
 const numStr = (n: number | null | undefined) => (n === null || n === undefined ? "" : String(n));
@@ -119,6 +121,8 @@ function formFrom(e: Experience | null): ExperienceForm {
             description: o.description ?? "",
             duration_minutes: numStr(o.duration_minutes),
         })),
+        shared_space: e?.scheduling?.shared_space ?? false,
+        private_slots: e?.scheduling?.private_slots ?? false,
     };
 }
 
@@ -177,6 +181,7 @@ function toPayload(f: ExperienceForm): ExperiencePayload {
                 description: o.description.trim(),
                 duration_minutes: o.duration_minutes.trim() === "" ? null : Number.parseInt(o.duration_minutes, 10),
             })),
+        scheduling: { shared_space: f.shared_space, private_slots: f.private_slots },
     };
 }
 
@@ -238,6 +243,7 @@ const SECTIONS = [
     { id: "exp-faqs", label: "FAQs" },
     { id: "exp-price", label: "Price" },
     { id: "exp-options", label: "Options" },
+    { id: "exp-scheduling", label: "Bookings" },
 ] as const;
 
 function Anchor({ id, children }: { id: string; children: ReactNode }) {
@@ -1127,6 +1133,32 @@ function EditorForm({ experience }: { experience: Experience | null }) {
                                 <p className="text-xs text-neutral-500">
                                     Prices are per person and set by SeekKrr. Each slot uses its option's price.
                                 </p>
+                            </div>
+                        </SectionCard>
+                    </Anchor>
+
+                    <Anchor id="exp-scheduling">
+                        <SectionCard
+                            title="How bookings work"
+                            description="Leave both off for group sessions where every slot has its own spots."
+                        >
+                            <div className="space-y-4">
+                                <Toggle
+                                    id="exp-shared-space"
+                                    checked={form.shared_space}
+                                    onChange={(v) => set("shared_space", v)}
+                                    disabled={readOnly}
+                                    label="Options share one space"
+                                    description="Only one session runs at a time, like go-karting on one track. Once a time is booked, overlapping times of every option close. More people can still join the session that's booked."
+                                />
+                                <Toggle
+                                    id="exp-private-slots"
+                                    checked={form.private_slots}
+                                    onChange={(v) => set("private_slots", v)}
+                                    disabled={readOnly}
+                                    label="One group per slot"
+                                    description="The first booking takes the whole slot, like a private boat ride. Set each slot's capacity to the largest group you take."
+                                />
                             </div>
                         </SectionCard>
                     </Anchor>
