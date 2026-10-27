@@ -1,6 +1,8 @@
 import { api } from "./api";
 import type {
     BookingsPage,
+    BulkSlotChange,
+    BulkSlotChangeResult,
     BulkSlotsPayload,
     BulkSlotsResult,
     Experience,
@@ -9,6 +11,7 @@ import type {
     ExperienceSlot,
     ExperienceStatus,
     ListBookingsParams,
+    OfflineBookingPayload,
     UpdateSlotPayload,
 } from "./experience.types";
 
@@ -101,9 +104,30 @@ export const experienceService = {
         return res.data.slot ?? null;
     },
 
-    /** Cancels the slot and its bookings' items; the customers are notified. */
-    async cancelSlot(businessId: string, slotId: string): Promise<void> {
-        await api.delete(`${biz(businessId)}/experience-slots/${encodeURIComponent(slotId)}`);
+    /** Cancels the slot and its bookings' items; the customers are notified (with `reason`, when given). */
+    async cancelSlot(businessId: string, slotId: string, reason?: string): Promise<void> {
+        await api.delete(`${biz(businessId)}/experience-slots/${encodeURIComponent(slotId)}`, {
+            params: { reason: reason || undefined },
+        });
+    },
+
+    /** Block, unblock, resize or cancel many slots at once; slots that can't take it come back in `skipped`. */
+    async bulkUpdateSlots(businessId: string, experienceId: string, change: BulkSlotChange): Promise<BulkSlotChangeResult> {
+        const res = await api.post<Partial<BulkSlotChangeResult>>(`${exp(businessId, experienceId)}/slots/bulk-update`, change);
+        return {
+            changed: res.data.changed ?? 0,
+            skipped: res.data.skipped ?? [],
+            cancelled_bookings: res.data.cancelled_bookings ?? 0,
+        };
+    },
+
+    /** Record a walk-in or phone booking on a slot (any member); confirmed at once, nobody is notified. */
+    async addOfflineBooking(businessId: string, slotId: string, payload: OfflineBookingPayload): Promise<ExperienceBooking | null> {
+        const res = await api.post<{ booking?: ExperienceBooking }>(
+            `${biz(businessId)}/experience-slots/${encodeURIComponent(slotId)}/offline-bookings`,
+            payload
+        );
+        return res.data.booking ?? null;
     },
 
     // ── Bookings ─────────────────────────────────────────────────────────────
@@ -115,6 +139,7 @@ export const experienceService = {
                 date: params.date || undefined,
                 status: params.status || undefined,
                 page: params.page && params.page > 1 ? params.page : undefined,
+                page_size: params.page_size || undefined,
             },
         });
         const bookings = res.data.bookings ?? [];

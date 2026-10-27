@@ -28,10 +28,13 @@ const chip = (on: boolean) =>
  */
 export function AddSlotsModal({
     experience,
+    initialDate,
     onClose,
     onCreated,
 }: {
     experience: Experience;
+    /** Start with this one date picked (the day open on the Schedule). */
+    initialDate?: string;
     onClose: () => void;
     /** `requested` is how many slots the form asked for (to report skipped duplicates). */
     onCreated: (result: BulkSlotsResult, requested: number) => void;
@@ -40,8 +43,8 @@ export function AddSlotsModal({
     const options = experience.options;
     const firstOption = options[0];
     const [optionId, setOptionId] = useState(firstOption?.id ?? "");
-    const [mode, setMode] = useState<Mode>("range");
-    const [dates, setDates] = useState<string[]>([]);
+    const [mode, setMode] = useState<Mode>(initialDate ? "dates" : "range");
+    const [dates, setDates] = useState<string[]>(initialDate ? [initialDate] : []);
     const [dateDraft, setDateDraft] = useState("");
     const [from, setFrom] = useState(todayIso());
     const [to, setTo] = useState(addDays(todayIso(), 29));

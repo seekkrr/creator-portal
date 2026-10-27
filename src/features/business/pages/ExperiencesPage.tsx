@@ -104,7 +104,7 @@ function ExperienceCard({ experience, canManage }: { experience: Experience; can
                     </Link>
                     <Link to={`${editUrl}/slots`}>
                         <Button size="sm" variant="ghost" leftIcon={<CalendarRange className="w-3.5 h-3.5" />}>
-                            Slots
+                            Schedule
                         </Button>
                     </Link>
                     <Link to={`/business/bookings?experience=${experience.id}`} className="ml-auto">
