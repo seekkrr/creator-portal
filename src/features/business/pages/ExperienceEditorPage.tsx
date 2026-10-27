@@ -1185,7 +1185,7 @@ function EditorForm({ experience }: { experience: Experience | null }) {
                                 disabled={!!busy || (!experience && readOnly)}
                                 onClick={() => void goToSlots()}
                             >
-                                {dirty && canManage ? "Save & manage slots" : "Manage slots"}
+                                {dirty && canManage ? "Save & open schedule" : "Open schedule"}
                             </Button>
                         </div>
                     </SectionCard>

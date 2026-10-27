@@ -223,6 +223,31 @@ export interface UpdateSlotPayload {
     capacity?: number;
     start_time?: string;
     end_time?: string;
+    /** Blocked: customers see it as booked and can't book it; its bookings stay. */
+    blocked?: boolean;
+}
+
+/** One change to many slots (`POST .../experiences/{eid}/slots/bulk-update`, max 200). */
+export interface BulkSlotChange {
+    slot_ids: string[];
+    action: "block" | "unblock" | "capacity" | "cancel";
+    capacity?: number;
+    /** Cancel: told to the customers. */
+    reason?: string;
+}
+
+export interface BulkSlotChangeResult {
+    changed: number;
+    skipped: { slot_id: string; reason: string }[];
+    cancelled_bookings: number;
+}
+
+/** A walk-in or phone booking the business records on a slot (`POST .../experience-slots/{sid}/offline-bookings`). */
+export interface OfflineBookingPayload {
+    people: number;
+    name?: string;
+    phone?: string;
+    note?: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -303,6 +328,7 @@ export interface ListBookingsParams {
     date?: string;
     status?: ExperienceBookingStatus;
     page?: number;
+    page_size?: number;
 }
 
 export interface BookingsPage {
