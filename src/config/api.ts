@@ -111,5 +111,7 @@ export const API_ENDPOINTS = {
         RUN: "/api/v2/commands/run",
         HISTORY: "/api/v2/commands/history",
         CATALOG: "/api/v2/commands/catalog",
+        // Public: which groups the admin turned the chat on for.
+        SETTINGS: "/api/v2/config/chat",
     },
 } as const;

@@ -6,6 +6,8 @@ import type * as MockCommands from "@features/command-chat/mock/mockCommands";
 import type {
     CatalogCommand,
     CatalogResponse,
+    ChatAudience,
+    ChatSettings,
     CommandAttachment,
     CommandHistoryItem,
     CommandScope,
@@ -25,6 +27,7 @@ export type * from "./commands.types";
 const C = API_ENDPOINTS.COMMANDS;
 
 export const COMMANDS_UNAVAILABLE_MESSAGE = "The chat isn't available on this server yet.";
+export const CHAT_DISABLED_MESSAGE = "The chat isn't on yet.";
 const NETWORK_MESSAGE = "Couldn't reach the server. Check your connection and try again.";
 const SERVER_MESSAGE = "Something went wrong on the server. Try again in a moment.";
 const EXPIRED_MESSAGE = "This preview expired. Send the command again.";
@@ -130,6 +133,10 @@ export function errorFor(status: number, data: unknown, call: CallKind): Command
         return new CommandsApiError("server", msg || "Too many requests. Wait a moment and try again.", status);
     }
     if (status >= 500) return new CommandsApiError("server", SERVER_MESSAGE, status);
+    // The admin hasn't turned the chat on for the caller's group (V2 AppError: { error: code, message }).
+    if (status === 403 && data && typeof data === "object" && (data as { error?: unknown }).error === "CHAT_DISABLED") {
+        return new CommandsApiError("disabled", CHAT_DISABLED_MESSAGE, status);
+    }
     if (status === 403) return new CommandsApiError("forbidden", msg || FORBIDDEN_MESSAGE, status);
     if (status === 400 && call === "run" && (!msg || /expir|token/i.test(msg))) {
         return new CommandsApiError("expired", msg || EXPIRED_MESSAGE, status);
@@ -248,12 +255,33 @@ export interface UploadImageOptions {
 }
 
 /**
- * /api/v2/commands/* — the command chat. Every method throws CommandsApiError.
- * When the mock is on (isCommandsMockEnabled), calls are answered locally.
+ * /api/v2/commands/* — the command chat. Every method throws CommandsApiError
+ * (chatSettings: the shared client's ApiRequestError). When the mock is on
+ * (isCommandsMockEnabled), calls are answered locally.
  */
 export const commandsService = {
     get isMock(): boolean {
         return isCommandsMockEnabled();
+    },
+
+    /** Which groups the admin turned the chat on for (public). Anything but `true` counts as off. */
+    async chatSettings(): Promise<ChatSettings> {
+        // Demo data stands in for the server, so the chat is on for everyone.
+        if (isCommandsMockEnabled()) {
+            return { audiences: { users: true, creators: true, businesses: true, admin: true }, ai_ready: false, updated_at: null };
+        }
+        const res = await api.get<Partial<ChatSettings>>(C.SETTINGS);
+        const on: Partial<Record<ChatAudience, unknown>> = res.data.audiences ?? {};
+        return {
+            audiences: {
+                users: on.users === true,
+                creators: on.creators === true,
+                businesses: on.businesses === true,
+                admin: on.admin === true,
+            },
+            ai_ready: res.data.ai_ready === true,
+            updated_at: res.data.updated_at ?? null,
+        };
     },
 
     async suggest(q: string, scope: CommandScope, signal?: AbortSignal): Promise<CommandSuggestion[]> {
