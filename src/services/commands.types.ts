@@ -171,14 +171,27 @@ export interface CatalogResponse {
     commands: CatalogCommand[];
 }
 
+// ── Chat settings (admin-controlled) ───────────────────────
+
+/** Groups an admin turns the chat on for; the business area is "businesses", the creator area "creators". */
+export type ChatAudience = "users" | "creators" | "businesses" | "admin";
+
+/** `GET /config/chat`. */
+export interface ChatSettings {
+    audiences: Record<ChatAudience, boolean>;
+    ai_ready: boolean;
+    updated_at: string | null;
+}
+
 // ── Errors ─────────────────────────────────────────────────
 
 /**
  * - unavailable: the endpoints don't exist on this server (404 route / 405).
+ * - disabled: 403 CHAT_DISABLED — the admin hasn't turned the chat on for this group.
  * - network: no response (offline, timeout). Retry.
  * - server: 5xx / 429. Retry.
  * - expired: run token expired or invalid (400). Send the command again.
  * - forbidden: 403 — not (or no longer) allowed.
  * - invalid: any other 4xx; the server's message is shown as-is.
  */
-export type CommandsErrorKind = "unavailable" | "network" | "server" | "expired" | "forbidden" | "invalid";
+export type CommandsErrorKind = "unavailable" | "disabled" | "network" | "server" | "expired" | "forbidden" | "invalid";

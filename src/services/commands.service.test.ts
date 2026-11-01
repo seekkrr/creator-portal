@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-// The shared client reads the env config; the chat only needs `request`.
-vi.mock("@/services/api", () => ({ api: { request: vi.fn() } }));
+// The shared client reads the env config; the chat only needs `request` (and `get` for its settings).
+vi.mock("@/services/api", () => ({ api: { request: vi.fn(), get: vi.fn() } }));
 
 import { api } from "@/services/api";
 import {
+    CHAT_DISABLED_MESSAGE,
     COMMANDS_UNAVAILABLE_MESSAGE,
     CommandsApiError,
     commandsService,
@@ -13,6 +14,7 @@ import {
 import type { CommandScope } from "./commands.types";
 
 const request = vi.mocked(api.request);
+const get = vi.mocked(api.get);
 const BIZ_ID = "64b7f0c2a1b2c3d4e5f60718";
 const BUSINESS: CommandScope = { surface: "partner", businessId: BIZ_ID };
 const CREATOR: CommandScope = { surface: "partner", businessId: null };
@@ -28,6 +30,7 @@ function sent(n = 0): { method?: string; url?: string; params?: Record<string, u
 
 beforeEach(() => {
     request.mockReset();
+    get.mockReset();
     // Mock layer off (it's only for dev with the flag set).
     vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => {}, removeItem: () => {} });
 });
@@ -100,6 +103,60 @@ describe("errors", () => {
         await expect(commandsService.run("tok")).rejects.toMatchObject({ kind: "forbidden", message: "Collabs aren't on for Ara cafe." });
         await expect(commandsService.history()).rejects.toMatchObject({ kind: "server", retryable: true });
         await expect(commandsService.history()).rejects.toMatchObject({ kind: "network", retryable: true });
+    });
+
+    test("403 CHAT_DISABLED → disabled, with the plain message, on every gated call", async () => {
+        const off = { success: false, error: "CHAT_DISABLED", message: "The chat isn't on for businesses yet.", details: { audience: "businesses" } };
+        reply(403, off);
+        reply(403, off);
+        reply(403, off);
+        const err = await commandsService.catalog(BUSINESS).catch((e: unknown) => e);
+        expect(err).toBeInstanceOf(CommandsApiError);
+        expect(err).toMatchObject({ kind: "disabled", status: 403, message: CHAT_DISABLED_MESSAGE });
+        expect(CHAT_DISABLED_MESSAGE).toBe("The chat isn't on yet.");
+        expect((err as CommandsApiError).retryable).toBe(false);
+        await expect(commandsService.suggest("pau", BUSINESS)).rejects.toMatchObject({ kind: "disabled" });
+        await expect(commandsService.understand({ text: "show my quests", surface: "partner" })).rejects.toMatchObject({ kind: "disabled" });
+    });
+
+    test("any other 403 code stays forbidden", async () => {
+        reply(403, { success: false, error: "FORBIDDEN", message: "Only owners can do that." });
+        await expect(commandsService.catalog(BUSINESS)).rejects.toMatchObject({ kind: "forbidden", message: "Only owners can do that." });
+    });
+});
+
+describe("chatSettings", () => {
+    test("reads GET /config/chat; only a real true turns a group on", async () => {
+        get.mockResolvedValueOnce({
+            data: {
+                success: true,
+                audiences: { users: false, creators: "true", businesses: true },
+                ai_ready: true,
+                updated_at: "2026-10-30T10:00:00+00:00",
+            },
+        } as never);
+        await expect(commandsService.chatSettings()).resolves.toEqual({
+            audiences: { users: false, creators: false, businesses: true, admin: false },
+            ai_ready: true,
+            updated_at: "2026-10-30T10:00:00+00:00",
+        });
+        expect(get).toHaveBeenCalledWith("/api/v2/config/chat");
+    });
+
+    test("a reply without audiences keeps every group off", async () => {
+        get.mockResolvedValueOnce({ data: { success: true } } as never);
+        await expect(commandsService.chatSettings()).resolves.toEqual({
+            audiences: { users: false, creators: false, businesses: false, admin: false },
+            ai_ready: false,
+            updated_at: null,
+        });
+    });
+
+    test("demo data turns the chat on for everyone without asking the server", async () => {
+        vi.stubGlobal("localStorage", { getItem: () => "1", setItem: () => {}, removeItem: () => {} });
+        const settings = await commandsService.chatSettings();
+        expect(settings.audiences).toEqual({ users: true, creators: true, businesses: true, admin: true });
+        expect(get).not.toHaveBeenCalled();
     });
 });
 

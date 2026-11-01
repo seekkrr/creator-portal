@@ -25,7 +25,7 @@ export interface ChatEvent {
 function entryError(err: CommandsApiError, fallback: ErrorAction): EntryError {
     let action: ErrorAction = fallback;
     if (err.retryable) action = "retry";
-    else if (err.kind === "unavailable") action = null;
+    else if (err.kind === "unavailable" || err.kind === "disabled") action = null;
     return { kind: err.kind, message: err.message, action };
 }
 
@@ -37,7 +37,16 @@ function entryError(err: CommandsApiError, fallback: ErrorAction): EntryError {
  * The scope is fixed for the hook's life — the page remounts the chat when the
  * workspace (business or creator) changes, which starts a fresh conversation.
  */
-export function useCommandChat({ scope, onUnavailable }: { scope: CommandScope; onUnavailable?: () => void }) {
+export function useCommandChat({
+    scope,
+    onUnavailable,
+    onDisabled,
+}: {
+    scope: CommandScope;
+    onUnavailable?: () => void;
+    /** The server says the admin turned the chat off for this group (403 CHAT_DISABLED). */
+    onDisabled?: () => void;
+}) {
     const [state, dispatch] = useReducer(chatReducer, scopeKey(scope), loadChatState);
     const [busy, setBusy] = useState(false);
     const [event, setEvent] = useState<ChatEvent | null>(null);
@@ -49,6 +58,8 @@ export function useCommandChat({ scope, onUnavailable }: { scope: CommandScope; 
     scopeRef.current = scope;
     const onUnavailableRef = useRef(onUnavailable);
     onUnavailableRef.current = onUnavailable;
+    const onDisabledRef = useRef(onDisabled);
+    onDisabledRef.current = onDisabled;
 
     useEffect(() => {
         saveChatState(state);
@@ -93,6 +104,7 @@ export function useCommandChat({ scope, onUnavailable }: { scope: CommandScope; 
             } catch (e) {
                 const err = toCommandsError(e);
                 if (err.kind === "unavailable") onUnavailableRef.current?.();
+                if (err.kind === "disabled") onDisabledRef.current?.();
                 addBot({
                     id: newId("e"),
                     at: nowIso(),

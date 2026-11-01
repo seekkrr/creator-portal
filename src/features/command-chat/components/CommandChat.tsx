@@ -9,10 +9,12 @@ import {
 } from "@services/commands.service";
 import type { CommandAttachment, CommandScope } from "@services/commands.types";
 import { describeEntry, scopeKey } from "../chatModel";
+import { chatSettingsKey } from "../chatSettings";
 import { useCommandChat } from "../hooks/useCommandChat";
 import { commandQueryKeys, useCommandCatalog, useCommandHistory } from "../hooks/useCommandQueries";
 import { useSessionDraft } from "../hooks/useSessionDraft";
 import { CatalogPanel, CatalogSheet } from "./CatalogPanel";
+import { ChatOff } from "./ChatGate";
 import { Composer } from "./Composer";
 import { HistorySection } from "./HistorySection";
 import { MessageItem, type MessageHandlers } from "./MessageItem";
@@ -47,10 +49,15 @@ export function CommandChat({
 }) {
     const queryClient = useQueryClient();
     const [serverMissing, setServerMissing] = useState(false);
+    const [turnedOff, setTurnedOff] = useState(false);
     const [mockOn, setMockOn] = useState(isCommandsMockEnabled);
     const catalog = useCommandCatalog(scope);
     const history = useCommandHistory();
-    const chat = useCommandChat({ scope, onUnavailable: () => setServerMissing(true) });
+    const chat = useCommandChat({
+        scope,
+        onUnavailable: () => setServerMissing(true),
+        onDisabled: () => setTurnedOff(true),
+    });
     const [draft, setDraft] = useSessionDraft(scopeKey(scope));
     const [lastSent, setLastSent] = useState<string | null>(null);
     const [sheetOpen, setSheetOpen] = useState(false);
@@ -61,6 +68,13 @@ export function CommandChat({
     const endRef = useRef<HTMLDivElement>(null);
 
     const unavailable = serverMissing || (isCommandsApiError(catalog.error) && catalog.error.kind === "unavailable");
+    // The admin turned the chat off for this group since the settings loaded (403 CHAT_DISABLED).
+    const disabled = turnedOff || (isCommandsApiError(catalog.error) && catalog.error.kind === "disabled");
+
+    // Re-read the settings so the nav entry goes too.
+    useEffect(() => {
+        if (disabled) void queryClient.invalidateQueries({ queryKey: chatSettingsKey });
+    }, [disabled, queryClient]);
 
     const { entries, busy, event, startedAt } = chat;
     // Confirming shows its own spinner on the preview's button — no typing dots then.
@@ -179,6 +193,9 @@ export function CommandChat({
     };
 
     const closeSheet = useCallback(() => setSheetOpen(false), []);
+
+    if (disabled) return <ChatOff />;
+
     const catalogPanel = (
         <CatalogPanel
             commands={catalog.data}
