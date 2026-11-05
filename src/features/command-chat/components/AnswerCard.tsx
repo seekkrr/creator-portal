@@ -1,19 +1,28 @@
-import { ChevronRight } from "lucide-react";
+import { ArrowRight, ChevronRight } from "lucide-react";
 import type { AnswerResult } from "@services/commands.types";
 import { isPortalPath } from "../chatModel";
-import { focusRing, PortalLink, Thumb } from "./chatUi";
+import { botText, btnPill, focusRing, PortalLink, Thumb } from "./chatUi";
 
-/** Read-only answer ("show today's bookings" …): title, text and a list; Partner Portal links open in place. */
+/** Most item cards under an answer; the link opens the screen with the rest. */
+export const MAX_ANSWER_ITEMS = 3;
+
+/**
+ * The chat's answer: its words (the title only when there's no text), up to
+ * three item cards, and one small button to the portal screen with the rest.
+ * Only Partner Portal routes open (in place, through react-router).
+ */
 export function AnswerCard({ result }: { result: AnswerResult }) {
-    const hasThumbs = result.items.some((i) => i.image_url);
+    const said = result.text?.trim() || result.title.trim();
+    const items = result.items.slice(0, MAX_ANSWER_ITEMS);
+    const hasThumbs = items.some((i) => i.image_url);
+    const link = result.link && isPortalPath(result.link.url_path) ? result.link : null;
     return (
         <div>
-            {result.title && <h3 className="text-[15px] font-display font-semibold text-neutral-900">{result.title}</h3>}
-            {result.text && <p className="mt-0.5 text-sm text-neutral-600 whitespace-pre-line">{result.text}</p>}
-            {result.items.length > 0 && (
-                <ul className="mt-3 -mx-1 divide-y divide-neutral-100">
-                    {result.items.map((item, i) => {
-                        const link = isPortalPath(item.url_path) ? item.url_path : null;
+            {said ? <p className={botText}>{said}</p> : !items.length && !link && <p className="text-sm text-neutral-500">Nothing to show.</p>}
+            {items.length > 0 && (
+                <ul className={`${said ? "mt-2.5" : ""} -mx-1 divide-y divide-neutral-100`}>
+                    {items.map((item, i) => {
+                        const to = isPortalPath(item.url_path) ? item.url_path : null;
                         const body = (
                             <>
                                 {hasThumbs && <Thumb src={item.image_url} size="sm" />}
@@ -21,14 +30,14 @@ export function AnswerCard({ result }: { result: AnswerResult }) {
                                     <span className="block text-sm font-medium text-neutral-900 truncate">{item.label}</span>
                                     {item.sublabel && <span className="block text-xs text-neutral-500 truncate">{item.sublabel}</span>}
                                 </span>
-                                {link && <ChevronRight className="w-4 h-4 text-neutral-400 shrink-0" aria-hidden="true" />}
+                                {to && <ChevronRight className="w-4 h-4 text-neutral-400 shrink-0" aria-hidden="true" />}
                             </>
                         );
                         return (
                             <li key={`${item.label}-${i}`}>
-                                {link ? (
+                                {to ? (
                                     <PortalLink
-                                        to={link}
+                                        to={to}
                                         className={`flex items-center gap-3 px-1 py-2 rounded-lg hover:bg-neutral-50 transition-colors ${focusRing}`}
                                     >
                                         {body}
@@ -41,7 +50,14 @@ export function AnswerCard({ result }: { result: AnswerResult }) {
                     })}
                 </ul>
             )}
-            {!result.text && result.items.length === 0 && <p className="mt-1 text-sm text-neutral-500">Nothing to show.</p>}
+            {link && (
+                <div className={said || items.length ? "mt-2.5" : ""}>
+                    <PortalLink to={link.url_path} className={btnPill}>
+                        {link.label}
+                        <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+                    </PortalLink>
+                </div>
+            )}
         </div>
     );
 }

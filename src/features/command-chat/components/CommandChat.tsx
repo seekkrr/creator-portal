@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { BookOpen, FlaskConical, MessageSquareText, RotateCcw, ServerOff } from "lucide-react";
+import { FlaskConical, RotateCcw, ServerOff } from "lucide-react";
 import {
     COMMANDS_UNAVAILABLE_MESSAGE,
     isCommandsApiError,
@@ -8,17 +8,16 @@ import {
     setCommandsMock,
 } from "@services/commands.service";
 import type { CommandAttachment, CommandScope } from "@services/commands.types";
-import { describeEntry, scopeKey } from "../chatModel";
+import { composerPlaceholder, describeEntry, openQuestion, scopeKey } from "../chatModel";
 import { chatSettingsKey } from "../chatSettings";
 import { useCommandChat } from "../hooks/useCommandChat";
 import { commandQueryKeys, useCommandCatalog, useCommandHistory } from "../hooks/useCommandQueries";
 import { useSessionDraft } from "../hooks/useSessionDraft";
-import { CatalogPanel, CatalogSheet } from "./CatalogPanel";
 import { ChatOff } from "./ChatGate";
 import { Composer } from "./Composer";
 import { HistorySection } from "./HistorySection";
-import { MessageItem, type MessageHandlers } from "./MessageItem";
-import { BotAvatar, btnToolbar, exampleChip, focusRing } from "./chatUi";
+import { BotMessage, MessageItem, type MessageHandlers } from "./MessageItem";
+import { btnPill, btnToolbar, focusRing, TypingIndicator } from "./chatUi";
 
 function prefersReducedMotion(): boolean {
     return typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -29,8 +28,9 @@ function isTouch(): boolean {
 }
 
 /**
- * Command chat (no AI): type what you want to do ("pause Sunrise Yoga"),
- * answer any follow-up (which one? which photos?), check the preview, confirm.
+ * The chat: a conversation with SeekKrr. People say what they need in their
+ * own words; the chat answers, asks when something's missing (the message box
+ * answers it), and shows a confirm card before anything changes.
  *
  * Renders in the portal's page flow (the window scrolls): messages flow with
  * the page and the composer sticks to the bottom of the visible area. Mount it
@@ -39,19 +39,20 @@ function isTouch(): boolean {
 export function CommandChat({
     scope,
     actingAs,
-    railFrom = "lg",
+    greeting,
 }: {
     scope: CommandScope;
     /** The "Acting as …" line under the title. */
     actingAs: ReactNode;
-    /** Breakpoint from which "What you can do" shows as a side rail (the business area has its own nav). */
-    railFrom?: "lg" | "xl";
+    /** The chat's first message ("Hi! I can help with …"). */
+    greeting: string;
 }) {
     const queryClient = useQueryClient();
     const [serverMissing, setServerMissing] = useState(false);
     const [turnedOff, setTurnedOff] = useState(false);
     const [mockOn, setMockOn] = useState(isCommandsMockEnabled);
-    const catalog = useCommandCatalog(scope);
+    // Not listed anywhere: it only tells whether this server has the chat and whether it's on for this group.
+    const availability = useCommandCatalog(scope);
     const history = useCommandHistory();
     const chat = useCommandChat({
         scope,
@@ -60,16 +61,16 @@ export function CommandChat({
     });
     const [draft, setDraft] = useSessionDraft(scopeKey(scope));
     const [lastSent, setLastSent] = useState<string | null>(null);
-    const [sheetOpen, setSheetOpen] = useState(false);
     const [announcement, setAnnouncement] = useState("");
 
     const rootRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
     const endRef = useRef<HTMLDivElement>(null);
 
-    const unavailable = serverMissing || (isCommandsApiError(catalog.error) && catalog.error.kind === "unavailable");
+    const probeError = isCommandsApiError(availability.error) ? availability.error.kind : null;
+    const unavailable = serverMissing || probeError === "unavailable";
     // The admin turned the chat off for this group since the settings loaded (403 CHAT_DISABLED).
-    const disabled = turnedOff || (isCommandsApiError(catalog.error) && catalog.error.kind === "disabled");
+    const disabled = turnedOff || probeError === "disabled";
 
     // Re-read the settings so the nav entry goes too.
     useEffect(() => {
@@ -77,8 +78,8 @@ export function CommandChat({
     }, [disabled, queryClient]);
 
     const { entries, busy, event, startedAt } = chat;
-    // Confirming shows its own spinner on the preview's button — no typing dots then.
-    const running = entries.some((e) => e.type === "result" && e.status === "running");
+    // The chat's open question: the message box answers it, with its placeholder as the hint.
+    const question = openQuestion(entries);
 
     // Earlier commands = history from before this conversation began (later runs are already on screen).
     const earlier = useMemo(() => {
@@ -89,19 +90,6 @@ export function CommandChat({
         });
     }, [history.data, startedAt]);
 
-    const welcomeExamples = useMemo(() => {
-        const seen = new Set<string>();
-        const out: string[] = [];
-        for (const c of catalog.data ?? []) {
-            const ex = c.examples[0];
-            if (ex && !seen.has(c.area)) {
-                seen.add(c.area);
-                out.push(ex);
-            }
-        }
-        return out.slice(0, 4);
-    }, [catalog.data]);
-
     const focusComposer = useCallback(() => {
         const el = inputRef.current;
         if (!el) return;
@@ -109,42 +97,39 @@ export function CommandChat({
         el.setSelectionRange(el.value.length, el.value.length);
     }, []);
 
-    /** Put text in the composer (examples, history, "edit and send again") and move there. */
+    /** Put text in the composer (history, "edit and send again", a picked day or time) and move there. */
     const insert = useCallback(
         (text: string) => {
             setDraft(text);
-            setSheetOpen(false);
-            // After the sheet closes (it hands focus back on close).
             requestAnimationFrame(() => requestAnimationFrame(focusComposer));
         },
         [setDraft, focusComposer]
     );
 
-    const sendCommand = chat.send;
+    const sendMessage = chat.send;
     const send = useCallback(
         (text: string, attachments: CommandAttachment[]) => {
-            const ok = sendCommand(text, attachments);
+            const ok = sendMessage(text, attachments);
             if (ok) {
                 setLastSent(text.trim());
                 setDraft("");
             }
             return ok;
         },
-        [sendCommand, setDraft]
+        [sendMessage, setDraft]
     );
 
-    const { choose, provideValue, provideImages, confirm, cancel, retry } = chat;
+    const { choose, provideImages, confirm, cancel, retry } = chat;
     const handlers: MessageHandlers = useMemo(
         () => ({
             choose,
-            provideValue,
             provideImages,
             confirm: (id: string) => void confirm(id),
             cancel,
             retry,
             insert,
         }),
-        [choose, provideValue, provideImages, confirm, cancel, retry, insert]
+        [choose, provideImages, confirm, cancel, retry, insert]
     );
 
     // Keep the newest message in view (the end marker sits below the sticky composer).
@@ -167,10 +152,13 @@ export function CommandChat({
         if (!entry) return;
         const alerts = entry.type === "error" || (entry.type === "result" && entry.status === "failed");
         if (!alerts) setAnnouncement(describeEntry(entry));
+        // Options, photos and confirm cards take focus; a question is answered in the message box.
         const takesFocus =
             entry.type === "result" &&
             entry.status !== "failed" &&
-            (entry.result.kind === "choose" || entry.result.kind === "need" || entry.result.kind === "preview");
+            (entry.result.kind === "choose" ||
+                entry.result.kind === "preview" ||
+                (entry.result.kind === "need" && entry.result.input === "images"));
         if (takesFocus || isTouch()) return;
         const active = document.activeElement;
         if (!active || active === document.body || rootRef.current?.contains(active)) focusComposer();
@@ -192,30 +180,14 @@ export function CommandChat({
         void queryClient.invalidateQueries({ queryKey: commandQueryKeys.all });
     };
 
-    const closeSheet = useCallback(() => setSheetOpen(false), []);
-
     if (disabled) return <ChatOff />;
 
-    const catalogPanel = (
-        <CatalogPanel
-            commands={catalog.data}
-            isLoading={catalog.isLoading}
-            error={Boolean(catalog.error) && !unavailable}
-            unavailable={unavailable}
-            onRetry={() => void catalog.refetch()}
-            onInsert={insert}
-        />
-    );
-
-    const railShow = railFrom === "xl" ? "hidden xl:block" : "hidden lg:block";
-    const sheetButtonHide = railFrom === "xl" ? "xl:hidden" : "lg:hidden";
-
     return (
-        <div ref={rootRef} className="w-full flex gap-8 min-h-[calc(100dvh-12rem)] animate-fade-in">
-            <div className="flex-1 min-w-0 w-full max-w-3xl mx-auto flex flex-col">
+        <div ref={rootRef} className="w-full min-h-[calc(100dvh-12rem)] animate-fade-in">
+            <div className="w-full max-w-3xl mx-auto flex flex-col min-h-[calc(100dvh-12rem)]">
                 <header className="pb-5 space-y-3">
                     <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex items-center gap-x-3 gap-y-1 flex-wrap">
                             <h1 className="text-2xl sm:text-3xl font-display font-bold text-primary-900 tracking-tight flex items-center gap-2 flex-wrap">
                                 Chat
                                 {mockOn && (
@@ -224,25 +196,22 @@ export function CommandChat({
                                     </span>
                                 )}
                             </h1>
-                            <p className="text-neutral-500 mt-1">Type what you want to do. Nothing changes until you confirm.</p>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                            <button
-                                type="button"
-                                onClick={() => setSheetOpen(true)}
-                                className={`${btnToolbar} ${sheetButtonHide}`}
-                                aria-haspopup="dialog"
-                            >
-                                <BookOpen className="w-4 h-4" aria-hidden="true" />
-                                <span className="sr-only sm:not-sr-only">What can I do?</span>
-                            </button>
-                            {entries.length > 0 && (
-                                <button type="button" onClick={startOver} disabled={busy} className={btnToolbar} title="Start a new chat">
-                                    <RotateCcw className="w-4 h-4" aria-hidden="true" />
-                                    <span className="sr-only sm:not-sr-only">New chat</span>
+                            {import.meta.env.DEV && mockOn && import.meta.env.VITE_COMMANDS_MOCK !== "true" && (
+                                <button
+                                    type="button"
+                                    onClick={() => toggleMock(false)}
+                                    className={`text-xs text-neutral-400 hover:text-neutral-700 underline underline-offset-2 rounded ${focusRing}`}
+                                >
+                                    Turn off demo data
                                 </button>
                             )}
                         </div>
+                        {entries.length > 0 && (
+                            <button type="button" onClick={startOver} disabled={busy} className={`${btnToolbar} shrink-0`} title="Start a new chat">
+                                <RotateCcw className="w-4 h-4" aria-hidden="true" />
+                                <span className="sr-only sm:not-sr-only">New chat</span>
+                            </button>
+                        )}
                     </div>
                     {actingAs}
                 </header>
@@ -257,37 +226,22 @@ export function CommandChat({
                                 <p className="text-sm font-semibold text-neutral-900">{COMMANDS_UNAVAILABLE_MESSAGE}</p>
                                 <p className="mt-0.5 text-sm text-neutral-500">Everything else in the portal works as usual.</p>
                                 {import.meta.env.DEV && !mockOn && (
-                                    <button type="button" onClick={() => toggleMock(true)} className={`${exampleChip} mt-3`}>
-                                        <FlaskConical className="w-3.5 h-3.5 mr-1.5" aria-hidden="true" /> Try it with demo data
+                                    <button type="button" onClick={() => toggleMock(true)} className={`${btnPill} mt-3`}>
+                                        <FlaskConical className="w-3.5 h-3.5" aria-hidden="true" /> Try it with demo data
                                     </button>
                                 )}
                             </div>
                         </div>
                     )}
 
-                    {entries.length === 0 && !unavailable && (
-                        <div className="flex-1 flex flex-col items-center justify-center text-center py-10 px-2">
-                            <span className="w-12 h-12 rounded-2xl bg-primary-900 flex items-center justify-center shadow-sm" aria-hidden="true">
-                                <MessageSquareText className="w-6 h-6 text-highlight" />
-                            </span>
-                            <h2 className="mt-4 text-lg font-display font-semibold text-neutral-900">What do you want to do?</h2>
-                            <p className="mt-1 max-w-sm text-sm text-neutral-500">
-                                Say it the way you would to a colleague. You&apos;ll see exactly what changes before anything happens.
-                            </p>
-                            {welcomeExamples.length > 0 && (
-                                <div className="mt-5 flex flex-wrap justify-center gap-2 max-w-lg" role="group" aria-label="Examples">
-                                    {welcomeExamples.map((ex) => (
-                                        <button key={ex} type="button" onClick={() => insert(ex)} className={exampleChip}>
-                                            {ex}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {entries.length > 0 && (
+                    {(!unavailable || entries.length > 0) && (
                         <ol className="space-y-4 pb-2" aria-label="Conversation">
+                            {/* The chat says hello first. */}
+                            {!unavailable && (
+                                <li>
+                                    <BotMessage text={greeting} />
+                                </li>
+                            )}
                             {entries.map((entry) => (
                                 <li key={entry.id}>
                                     <MessageItem entry={entry} busy={busy} autoFocus={event?.entryId === entry.id} handlers={handlers} />
@@ -296,15 +250,9 @@ export function CommandChat({
                         </ol>
                     )}
 
-                    {busy && !running && (
-                        <div className="mt-4 flex items-start gap-2.5" role="status">
-                            <BotAvatar />
-                            <span className="inline-flex items-center gap-1 rounded-2xl rounded-tl-md border border-neutral-200 bg-white px-4 py-3.5 shadow-sm">
-                                <span className="w-1.5 h-1.5 rounded-full bg-neutral-400 animate-bounce [animation-delay:-0.3s]" aria-hidden="true" />
-                                <span className="w-1.5 h-1.5 rounded-full bg-neutral-400 animate-bounce [animation-delay:-0.15s]" aria-hidden="true" />
-                                <span className="w-1.5 h-1.5 rounded-full bg-neutral-400 animate-bounce" aria-hidden="true" />
-                                <span className="sr-only">Working on it…</span>
-                            </span>
+                    {busy && (
+                        <div className="mt-4">
+                            <TypingIndicator />
                         </div>
                     )}
                 </div>
@@ -319,6 +267,7 @@ export function CommandChat({
                         inputRef={inputRef}
                         lastSent={lastSent}
                         scope={scope}
+                        placeholder={composerPlaceholder(question)}
                     />
                 </div>
                 <div ref={endRef} aria-hidden="true" />
@@ -327,28 +276,6 @@ export function CommandChat({
                     {announcement}
                 </div>
             </div>
-
-            <aside className={`${railShow} w-72 shrink-0`} aria-labelledby="command-catalog-rail-title">
-                <div className="sticky top-24 max-h-[calc(100dvh-8rem)] overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
-                    <h2 id="command-catalog-rail-title" className="text-base font-display font-semibold text-neutral-900 mb-4">
-                        What you can do
-                    </h2>
-                    {catalogPanel}
-                    {import.meta.env.DEV && mockOn && import.meta.env.VITE_COMMANDS_MOCK !== "true" && (
-                        <button
-                            type="button"
-                            onClick={() => toggleMock(false)}
-                            className={`mt-6 text-xs text-neutral-400 hover:text-neutral-700 underline underline-offset-2 rounded ${focusRing}`}
-                        >
-                            Turn off demo data
-                        </button>
-                    )}
-                </div>
-            </aside>
-
-            <CatalogSheet open={sheetOpen} onClose={closeSheet}>
-                {catalogPanel}
-            </CatalogSheet>
         </div>
     );
 }
