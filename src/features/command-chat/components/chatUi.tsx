@@ -4,9 +4,9 @@ import { ImageOff } from "lucide-react";
 
 /**
  * Small shared pieces for the command chat, in the Partner Portal's visual
- * language: white rounded-2xl cards on warm neutrals, brand green
- * (primary-900 #003634) for the chat's own voice, primary-600 actions,
- * pill chips, and the highlight yellow for the avatar mark.
+ * language: white rounded-2xl message bubbles on warm neutrals, brand green
+ * (primary-900 #003634) for the chat's own voice, primary-600 actions, and
+ * the highlight yellow for the avatar mark.
  */
 
 /** Keyboard focus, like the portal's Button. */
@@ -23,11 +23,14 @@ export const btnToolbar = `inline-flex items-center justify-center gap-2 h-9 px-
 
 export const btnLink = `inline-flex items-center gap-1 text-sm font-semibold text-primary-700 hover:text-primary-900 hover:underline underline-offset-2 rounded ${focusRing}`;
 
-/** Tappable example phrase / suggestion chip (the portal's pill style). */
-export const exampleChip = `inline-flex items-center max-w-full px-3 py-1.5 rounded-full border border-neutral-200 bg-white text-xs text-neutral-600 hover:border-primary-300 hover:bg-primary-50 hover:text-primary-800 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed ${focusRing}`;
+/** One small action under a message ("Open bookings", "Pick a date"), in the portal's pill style. */
+export const btnPill = `inline-flex items-center gap-1.5 max-w-full px-3 py-1.5 rounded-full border border-neutral-200 bg-white text-xs font-semibold text-primary-800 hover:border-primary-300 hover:bg-primary-50 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed ${focusRing}`;
 
-export const inputClass =
-    "w-full px-3 py-2.5 bg-white border border-neutral-300 rounded-lg text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-500 read-only:bg-neutral-50";
+/** A chat message bubble (the chat's side). */
+export const botBubble = "rounded-2xl rounded-tl-md border border-neutral-200 bg-white px-4 py-3 shadow-sm";
+
+/** The chat's message text. */
+export const botText = "text-sm text-neutral-800 whitespace-pre-line break-words";
 
 /** In-portal link for a url_path the chat may open (see isPortalPath). */
 export function PortalLink({ to, className, children, ariaLabel }: { to: string; className?: string; children: ReactNode; ariaLabel?: string }) {
@@ -71,5 +74,20 @@ export function BotAvatar() {
         <span className="w-8 h-8 shrink-0 rounded-xl bg-primary-900 flex items-center justify-center shadow-sm" aria-hidden="true">
             <span className="font-display font-bold text-[13px] leading-none text-highlight">S</span>
         </span>
+    );
+}
+
+/** The chat is writing its reply: three dots in a bubble. */
+export function TypingIndicator() {
+    return (
+        <div className="flex items-start gap-2.5" role="status">
+            <BotAvatar />
+            <span className="inline-flex items-center gap-1 rounded-2xl rounded-tl-md border border-neutral-200 bg-white px-4 py-3.5 shadow-sm">
+                <span className="w-1.5 h-1.5 rounded-full bg-neutral-400 animate-bounce [animation-delay:-0.3s]" aria-hidden="true" />
+                <span className="w-1.5 h-1.5 rounded-full bg-neutral-400 animate-bounce [animation-delay:-0.15s]" aria-hidden="true" />
+                <span className="w-1.5 h-1.5 rounded-full bg-neutral-400 animate-bounce" aria-hidden="true" />
+                <span className="sr-only">SeekKrr is typing…</span>
+            </span>
+        </div>
     );
 }

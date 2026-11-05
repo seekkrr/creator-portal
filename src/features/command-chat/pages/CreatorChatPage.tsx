@@ -1,6 +1,6 @@
 import { Compass } from "lucide-react";
 import type { CommandScope } from "@services/commands.types";
-import { scopeKey } from "../chatModel";
+import { chatGreeting, scopeKey } from "../chatModel";
 import { ActingAs } from "../components/ActingAs";
 import { CommandChat } from "../components/CommandChat";
 
@@ -13,7 +13,7 @@ export function CreatorChatPage() {
         <CommandChat
             key={scopeKey(CREATOR_SCOPE)}
             scope={CREATOR_SCOPE}
-            railFrom="lg"
+            greeting={chatGreeting(null)}
             actingAs={
                 <ActingAs
                     mark={

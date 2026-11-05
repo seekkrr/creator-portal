@@ -3,7 +3,7 @@ import { Store } from "lucide-react";
 import { useBusiness } from "@features/business/context";
 import { useBusinessFeatures } from "@features/business/features";
 import type { CommandScope } from "@services/commands.types";
-import { scopeKey } from "../chatModel";
+import { chatGreeting, scopeKey } from "../chatModel";
 import { ActingAs } from "../components/ActingAs";
 import { CommandChat } from "../components/CommandChat";
 
@@ -30,7 +30,7 @@ export function BusinessChatPage() {
         <CommandChat
             key={scopeKey(scope)}
             scope={scope}
-            railFrom="xl"
+            greeting={chatGreeting(business.name)}
             actingAs={
                 <ActingAs
                     mark={mark}

@@ -11,12 +11,11 @@ import type {
     CommandAttachment,
     CommandHistoryItem,
     CommandScope,
-    CommandSuggestion,
     CommandsErrorKind,
+    CommandTurn,
     DoneResult,
     HistoryResponse,
     RunResponse,
-    SuggestResponse,
     UnderstandRequest,
     UnderstandResponse,
     UnderstandResult,
@@ -100,7 +99,7 @@ function loadMock(): Promise<MockModule> {
 
 // ── Scope ──────────────────────────────────────────────────
 
-/** surface (+ business_id in the business area) — the query of suggest/catalog. */
+/** surface (+ business_id in the business area) — the query of catalog. */
 export function scopeParams(scope: CommandScope): { surface: CommandScope["surface"]; business_id?: string } {
     return scope.businessId ? { surface: scope.surface, business_id: scope.businessId } : { surface: scope.surface };
 }
@@ -178,6 +177,26 @@ const str = (v: unknown): string => (typeof v === "string" ? v : v === null || v
 const strOrNull = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v : null);
 const arr = <T>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]) : []);
 
+/** The server reads at most this many earlier messages, each up to 1000 characters. */
+export const MAX_HISTORY_TURNS = 20;
+const MAX_TURN_LENGTH = 1000;
+
+/** History as the server accepts it: user/assistant turns with words, the latest 20, none too long. */
+export function cleanHistory(history: CommandTurn[] | undefined): CommandTurn[] {
+    return (history ?? [])
+        .filter((t) => (t.role === "user" || t.role === "assistant") && typeof t.text === "string" && t.text.trim())
+        .map((t) => ({ role: t.role, text: t.text.trim().slice(0, MAX_TURN_LENGTH) }))
+        .slice(-MAX_HISTORY_TURNS);
+}
+
+/** An answer's screen link, when the server sent a usable one. */
+function linkOf(v: unknown): { url_path: string; label: string } | null {
+    if (!v || typeof v !== "object") return null;
+    const l = v as Record<string, unknown>;
+    const url_path = strOrNull(l.url_path);
+    return url_path ? { url_path: url_path.trim(), label: strOrNull(l.label)?.trim() || "Open" } : null;
+}
+
 /** Fill defaults so a slightly-off server reply can't crash the chat. Unknown kinds throw. */
 export function normalizeResult(raw: unknown): UnderstandResult {
     if (!raw || typeof raw !== "object") throw new CommandsApiError("server", UNEXPECTED_MESSAGE);
@@ -215,6 +234,7 @@ export function normalizeResult(raw: unknown): UnderstandResult {
                 confirm_label: str(r.confirm_label) || "Confirm",
                 danger: r.danger === true,
                 token: str(r.token),
+                lead: strOrNull(r.lead)?.trim() || null,
             };
         case "answer":
             return {
@@ -227,6 +247,7 @@ export function normalizeResult(raw: unknown): UnderstandResult {
                     url_path: strOrNull(i.url_path),
                     image_url: strOrNull(i.image_url),
                 })),
+                link: linkOf(r.link),
             };
         case "denied":
             return { kind: "denied", message: str(r.message) || FORBIDDEN_MESSAGE };
@@ -284,25 +305,14 @@ export const commandsService = {
         };
     },
 
-    async suggest(q: string, scope: CommandScope, signal?: AbortSignal): Promise<CommandSuggestion[]> {
-        if (isCommandsMockEnabled()) return (await loadMock()).mockSuggest(q, scope);
-        const data = await call<SuggestResponse>(
-            { method: "GET", url: C.SUGGEST, params: { q, ...scopeParams(scope) }, signal },
-            "read"
-        );
-        return arr<Record<string, unknown>>(data.suggestions).map((s) => ({
-            text: str(s.text),
-            label: str(s.label) || str(s.text),
-            hint: strOrNull(s.hint),
-        }));
-    },
-
     async understand(request: UnderstandRequest): Promise<UnderstandResult> {
         if (isCommandsMockEnabled()) return normalizeResult(await (await loadMock()).mockUnderstand(request));
         const body: UnderstandRequest = { text: request.text, surface: request.surface };
         if (request.business_id) body.business_id = request.business_id;
         if (request.attachments?.length) body.attachments = request.attachments;
         if (request.picks && Object.keys(request.picks).length) body.picks = request.picks;
+        const history = cleanHistory(request.history);
+        if (history.length) body.history = history;
         const data = await call<UnderstandResponse>({ method: "POST", url: C.UNDERSTAND, data: body }, "understand");
         return normalizeResult(data.result);
     },
@@ -325,6 +335,7 @@ export const commandsService = {
         }));
     },
 
+    /** What the caller may run here. The chat doesn't list it; it only tells whether the chat is there and on. */
     async catalog(scope: CommandScope): Promise<CatalogCommand[]> {
         if (isCommandsMockEnabled()) return (await loadMock()).mockCatalog(scope);
         const data = await call<CatalogResponse>({ method: "GET", url: C.CATALOG, params: scopeParams(scope) }, "read");
