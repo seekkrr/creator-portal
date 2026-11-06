@@ -6,15 +6,16 @@ import type * as MockCommands from "@features/command-chat/mock/mockCommands";
 import type {
     CatalogCommand,
     CatalogResponse,
+    ChatAudience,
+    ChatSettings,
     CommandAttachment,
     CommandHistoryItem,
     CommandScope,
-    CommandSuggestion,
     CommandsErrorKind,
+    CommandTurn,
     DoneResult,
     HistoryResponse,
     RunResponse,
-    SuggestResponse,
     UnderstandRequest,
     UnderstandResponse,
     UnderstandResult,
@@ -25,6 +26,7 @@ export type * from "./commands.types";
 const C = API_ENDPOINTS.COMMANDS;
 
 export const COMMANDS_UNAVAILABLE_MESSAGE = "The chat isn't available on this server yet.";
+export const CHAT_DISABLED_MESSAGE = "The chat isn't on yet.";
 const NETWORK_MESSAGE = "Couldn't reach the server. Check your connection and try again.";
 const SERVER_MESSAGE = "Something went wrong on the server. Try again in a moment.";
 const EXPIRED_MESSAGE = "This preview expired. Send the command again.";
@@ -97,7 +99,7 @@ function loadMock(): Promise<MockModule> {
 
 // ── Scope ──────────────────────────────────────────────────
 
-/** surface (+ business_id in the business area) — the query of suggest/catalog. */
+/** surface (+ business_id in the business area) — the query of catalog. */
 export function scopeParams(scope: CommandScope): { surface: CommandScope["surface"]; business_id?: string } {
     return scope.businessId ? { surface: scope.surface, business_id: scope.businessId } : { surface: scope.surface };
 }
@@ -130,6 +132,10 @@ export function errorFor(status: number, data: unknown, call: CallKind): Command
         return new CommandsApiError("server", msg || "Too many requests. Wait a moment and try again.", status);
     }
     if (status >= 500) return new CommandsApiError("server", SERVER_MESSAGE, status);
+    // The admin hasn't turned the chat on for the caller's group (V2 AppError: { error: code, message }).
+    if (status === 403 && data && typeof data === "object" && (data as { error?: unknown }).error === "CHAT_DISABLED") {
+        return new CommandsApiError("disabled", CHAT_DISABLED_MESSAGE, status);
+    }
     if (status === 403) return new CommandsApiError("forbidden", msg || FORBIDDEN_MESSAGE, status);
     if (status === 400 && call === "run" && (!msg || /expir|token/i.test(msg))) {
         return new CommandsApiError("expired", msg || EXPIRED_MESSAGE, status);
@@ -171,6 +177,26 @@ const str = (v: unknown): string => (typeof v === "string" ? v : v === null || v
 const strOrNull = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v : null);
 const arr = <T>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]) : []);
 
+/** The server reads at most this many earlier messages, each up to 1000 characters. */
+export const MAX_HISTORY_TURNS = 20;
+const MAX_TURN_LENGTH = 1000;
+
+/** History as the server accepts it: user/assistant turns with words, the latest 20, none too long. */
+export function cleanHistory(history: CommandTurn[] | undefined): CommandTurn[] {
+    return (history ?? [])
+        .filter((t) => (t.role === "user" || t.role === "assistant") && typeof t.text === "string" && t.text.trim())
+        .map((t) => ({ role: t.role, text: t.text.trim().slice(0, MAX_TURN_LENGTH) }))
+        .slice(-MAX_HISTORY_TURNS);
+}
+
+/** An answer's screen link, when the server sent a usable one. */
+function linkOf(v: unknown): { url_path: string; label: string } | null {
+    if (!v || typeof v !== "object") return null;
+    const l = v as Record<string, unknown>;
+    const url_path = strOrNull(l.url_path);
+    return url_path ? { url_path: url_path.trim(), label: strOrNull(l.label)?.trim() || "Open" } : null;
+}
+
 /** Fill defaults so a slightly-off server reply can't crash the chat. Unknown kinds throw. */
 export function normalizeResult(raw: unknown): UnderstandResult {
     if (!raw || typeof raw !== "object") throw new CommandsApiError("server", UNEXPECTED_MESSAGE);
@@ -208,6 +234,7 @@ export function normalizeResult(raw: unknown): UnderstandResult {
                 confirm_label: str(r.confirm_label) || "Confirm",
                 danger: r.danger === true,
                 token: str(r.token),
+                lead: strOrNull(r.lead)?.trim() || null,
             };
         case "answer":
             return {
@@ -220,6 +247,7 @@ export function normalizeResult(raw: unknown): UnderstandResult {
                     url_path: strOrNull(i.url_path),
                     image_url: strOrNull(i.image_url),
                 })),
+                link: linkOf(r.link),
             };
         case "denied":
             return { kind: "denied", message: str(r.message) || FORBIDDEN_MESSAGE };
@@ -248,25 +276,33 @@ export interface UploadImageOptions {
 }
 
 /**
- * /api/v2/commands/* — the command chat. Every method throws CommandsApiError.
- * When the mock is on (isCommandsMockEnabled), calls are answered locally.
+ * /api/v2/commands/* — the command chat. Every method throws CommandsApiError
+ * (chatSettings: the shared client's ApiRequestError). When the mock is on
+ * (isCommandsMockEnabled), calls are answered locally.
  */
 export const commandsService = {
     get isMock(): boolean {
         return isCommandsMockEnabled();
     },
 
-    async suggest(q: string, scope: CommandScope, signal?: AbortSignal): Promise<CommandSuggestion[]> {
-        if (isCommandsMockEnabled()) return (await loadMock()).mockSuggest(q, scope);
-        const data = await call<SuggestResponse>(
-            { method: "GET", url: C.SUGGEST, params: { q, ...scopeParams(scope) }, signal },
-            "read"
-        );
-        return arr<Record<string, unknown>>(data.suggestions).map((s) => ({
-            text: str(s.text),
-            label: str(s.label) || str(s.text),
-            hint: strOrNull(s.hint),
-        }));
+    /** Which groups the admin turned the chat on for (public). Anything but `true` counts as off. */
+    async chatSettings(): Promise<ChatSettings> {
+        // Demo data stands in for the server, so the chat is on for everyone.
+        if (isCommandsMockEnabled()) {
+            return { audiences: { users: true, creators: true, businesses: true, admin: true }, ai_ready: false, updated_at: null };
+        }
+        const res = await api.get<Partial<ChatSettings>>(C.SETTINGS);
+        const on: Partial<Record<ChatAudience, unknown>> = res.data.audiences ?? {};
+        return {
+            audiences: {
+                users: on.users === true,
+                creators: on.creators === true,
+                businesses: on.businesses === true,
+                admin: on.admin === true,
+            },
+            ai_ready: res.data.ai_ready === true,
+            updated_at: res.data.updated_at ?? null,
+        };
     },
 
     async understand(request: UnderstandRequest): Promise<UnderstandResult> {
@@ -275,6 +311,8 @@ export const commandsService = {
         if (request.business_id) body.business_id = request.business_id;
         if (request.attachments?.length) body.attachments = request.attachments;
         if (request.picks && Object.keys(request.picks).length) body.picks = request.picks;
+        const history = cleanHistory(request.history);
+        if (history.length) body.history = history;
         const data = await call<UnderstandResponse>({ method: "POST", url: C.UNDERSTAND, data: body }, "understand");
         return normalizeResult(data.result);
     },
@@ -297,6 +335,7 @@ export const commandsService = {
         }));
     },
 
+    /** What the caller may run here. The chat doesn't list it; it only tells whether the chat is there and on. */
     async catalog(scope: CommandScope): Promise<CatalogCommand[]> {
         if (isCommandsMockEnabled()) return (await loadMock()).mockCatalog(scope);
         const data = await call<CatalogResponse>({ method: "GET", url: C.CATALOG, params: scopeParams(scope) }, "read");

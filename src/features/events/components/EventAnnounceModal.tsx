@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ChangeEvent } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { X, Megaphone, Upload, Loader2 } from "lucide-react";
@@ -82,19 +82,19 @@ export function EventAnnounceModal({ eventId, eventTitle, onClose }: EventAnnoun
                     <div>
                         <label className="block text-sm font-medium text-neutral-700 mb-1">Title</label>
                         <Input value={title} maxLength={120}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTitle(e.target.value)}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => setTitle(e.target.value)}
                             placeholder="e.g. Gates open early today!" />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-neutral-700 mb-1">Message</label>
                         <Textarea value={body} rows={3} maxLength={500}
-                            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setBody(e.target.value)}
+                            onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setBody(e.target.value)}
                             placeholder="Short line shown in the notification" />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-neutral-700 mb-1">Longer description <span className="text-neutral-400 font-normal">(optional)</span></label>
                         <Textarea value={longBody} rows={3} maxLength={2000}
-                            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setLongBody(e.target.value)}
+                            onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setLongBody(e.target.value)}
                             placeholder="Shown when the notification is expanded" />
                     </div>
                     <div>

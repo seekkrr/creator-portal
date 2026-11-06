@@ -4,6 +4,7 @@ import { LogOut, ShieldAlert, ShieldCheck } from "lucide-react";
 import { LoadingFallback } from "@components/LoadingFallback";
 import { Button } from "@components/ui";
 import { useWorkspace } from "@hooks/useWorkspace";
+import { useChatSettings } from "@features/command-chat/chatSettings";
 import { BusinessContext, type BusinessContextValue } from "./context";
 import { BUSINESS_NAV } from "./nav";
 import { useHub } from "./queries";
@@ -26,13 +27,15 @@ function BusinessNav({ ctx }: { ctx: BusinessContextValue }) {
     const { data: hub } = useHub();
     const { show } = usePartnerPortal();
     const { has } = useBusinessFeatures();
+    const { isOn: chatOn } = useChatSettings();
     const groups = BUSINESS_NAV.map((g) => ({
         ...g,
         items: g.items.filter(
             (i) =>
                 (!i.minRole || roleAtLeast(ctx.role, i.minRole)) &&
                 (!i.section || show(i.section)) &&
-                (!i.feature || has(i.feature))
+                (!i.feature || has(i.feature)) &&
+                (!i.chat || chatOn(i.chat))
         ),
     })).filter((g) => g.items.length);
 

@@ -456,7 +456,7 @@ export function EventFormModal({ open, mode, initial, onClose, onSaved }: EventF
             }`}
         >
             {label}
-            {count != null && count > 0 && (
+            {(count ?? 0) > 0 && (
                 <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-primary-100 text-primary-700 text-[11px] font-bold align-middle">
                     {count}
                 </span>

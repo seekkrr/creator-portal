@@ -5,7 +5,9 @@ import { HomeRedirect, ProtectedRoute } from "./ProtectedRoute";
 import { SuspenseWrapper, RootWrapper } from "@components/index";
 import { SectionGate } from "@features/business/components/SectionGate";
 import { FeatureGate } from "@features/business/components/FeatureGate";
+import { ChatGate } from "@features/command-chat/components/ChatGate";
 import type { BusinessFeature, PartnerSection } from "@services/business.types";
+import type { ChatAudience } from "@services/commands.types";
 import { lazyRetry } from "@utils/lazyRetry";
 import { ACTING_ENDED_PATH, ACTING_TAB } from "@services/actingSession";
 
@@ -150,6 +152,8 @@ const page = (node: ReactNode) => <SuspenseWrapper>{node}</SuspenseWrapper>;
 const gated = (section: PartnerSection, node: ReactNode) => <SectionGate section={section}>{page(node)}</SectionGate>;
 /** Pages of a per-business product (Collabs, Experiences); when it's off they show a friendly note. */
 const featured = (feature: BusinessFeature, element: ReactNode) => <FeatureGate feature={feature}>{element}</FeatureGate>;
+/** A command chat the admin turns on per group (creators, businesses); while it's off the page shows a short note. */
+const chatGated = (audience: ChatAudience, node: ReactNode) => <ChatGate audience={audience}>{page(node)}</ChatGate>;
 
 export const router = createBrowserRouter(
     [
@@ -383,11 +387,7 @@ export const router = createBrowserRouter(
                             },
                             {
                                 path: "chat",
-                                element: (
-                                    <SuspenseWrapper>
-                                        <CreatorChatPage />
-                                    </SuspenseWrapper>
-                                ),
+                                element: chatGated("creators", <CreatorChatPage />),
                             },
                         ],
                     },
@@ -411,8 +411,8 @@ export const router = createBrowserRouter(
                         ),
                         children: [
                             { index: true, element: page(<BusinessOverviewPage />) },
-                            // Every team role; the server decides what each may run.
-                            { path: "chat", element: page(<BusinessChatPage />) },
+                            // Every team role, once the admin turns the chat on for businesses; the server decides what each may run.
+                            { path: "chat", element: chatGated("businesses", <BusinessChatPage />) },
                             { path: "experiences", element: featured("experiences", page(<BusinessExperiencesPage />)) },
                             {
                                 path: "experiences/new",

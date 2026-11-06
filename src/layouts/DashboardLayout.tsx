@@ -6,15 +6,18 @@ import { Footer } from "@components/ui";
 import { ActingBanner } from "@components/ActingBanner";
 import { BUSINESS_HOME, CREATOR_HOME, useWorkspace, type Workspace } from "@hooks/useWorkspace";
 import { ACTING_ENDED_PATH, ACTING_TAB } from "@services/actingSession";
+import type { ChatAudience } from "@services/commands.types";
+import { useChatSettings } from "@features/command-chat/chatSettings";
 
-const ALL_CREATOR_LINKS = [
+const ALL_CREATOR_LINKS: { to: string; label: string; chat?: ChatAudience }[] = [
     { to: "/creator/quests", label: "My Quests" },
     { to: "/creator/markers", label: "My Markers" },
     { to: "/creator/events", label: "My Events" },
     { to: "/creator/narratives", label: "My Narratives" },
     { to: "/creator/tasks", label: "My Tasks" },
     { to: "/creator/payout-accounts", label: "My Payouts" },
-    { to: "/creator/chat", label: "Chat" },
+    // Only once the admin turns the chat on for creators.
+    { to: "/creator/chat", label: "Chat", chat: "creators" },
     { to: "/creator/profile", label: "Profile" },
 ];
 // An admin acting as a creator gets no payouts or chat (the server refuses them too).
@@ -148,6 +151,8 @@ export function DashboardLayout() {
     const ws = useWorkspace();
     const { mode, access, rememberMode } = ws;
     const businessMode = mode === "business";
+    const { isOn: chatOn } = useChatSettings();
+    const creatorLinks = CREATOR_LINKS.filter((l) => !l.chat || chatOn(l.chat));
 
     // Remember the last workspace a dual-role user worked in (used after login). An admin view isn't theirs.
     useEffect(() => {
@@ -187,7 +192,7 @@ export function DashboardLayout() {
                                Terms / Privacy / Contact live in the footer. */
                             access.creator && (
                                 <nav className="hidden md:flex items-center gap-8 ml-auto">
-                                    {CREATOR_LINKS.map((l) => (
+                                    {creatorLinks.map((l) => (
                                         <Link
                                             key={l.to}
                                             to={l.to}
@@ -250,7 +255,7 @@ export function DashboardLayout() {
                                 </>
                             ) : (
                                 access.creator &&
-                                CREATOR_LINKS.map((l) => (
+                                creatorLinks.map((l) => (
                                     <Link
                                         key={l.to}
                                         to={l.to}

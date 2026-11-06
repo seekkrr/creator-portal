@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef } from "react";
-import { AlertTriangle, ArrowRight, Check, RotateCw, X } from "lucide-react";
+import { AlertTriangle, ArrowRight, Check } from "lucide-react";
 import { Button } from "@components/ui";
 import type { ChangeValue, PreviewResult } from "@services/commands.types";
 import type { EntryError, PreviewStatus } from "../chatModel";
@@ -11,7 +11,10 @@ function show(v: ChangeValue): string {
     return String(v);
 }
 
-/** "Check before you confirm" — what will change, then Confirm (POST run) or Cancel. */
+/**
+ * "Check before you confirm" — what will change, then Confirm (POST run) or
+ * Not now. While it runs, the chat shows its typing dots (no spinner here).
+ */
 export function PreviewCard({
     result,
     status = "open",
@@ -85,39 +88,27 @@ export function PreviewCard({
             )}
 
             <div className="px-4 py-3 border-t border-neutral-100 flex flex-wrap items-center justify-end gap-2">
-                {status === "confirmed" && (
-                    <span className="mr-auto inline-flex items-center gap-1.5 text-sm font-medium text-green-700">
-                        <Check className="w-4 h-4" aria-hidden="true" /> Confirmed
-                    </span>
-                )}
-                {status === "cancelled" && (
-                    <span className="mr-auto inline-flex items-center gap-1.5 text-sm text-neutral-500">
-                        <X className="w-4 h-4" aria-hidden="true" /> Cancelled
-                    </span>
-                )}
+                {status === "confirmed" && <span className="mr-auto text-sm font-medium text-green-700">Done</span>}
+                {status === "cancelled" && <span className="mr-auto text-sm text-neutral-500">Skipped</span>}
                 {status === "failed" && error && (
-                    <div className="mr-auto flex items-start gap-2 text-sm text-red-700 min-w-0 basis-full sm:basis-auto sm:flex-1" role="alert">
-                        <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
-                        <span className="min-w-0">
-                            {error.message}{" "}
-                            {error.action && (
-                                <button
-                                    type="button"
-                                    onClick={onRetry}
-                                    disabled={busy}
-                                    className={`font-semibold underline underline-offset-2 hover:text-red-900 disabled:opacity-50 rounded ${focusRing}`}
-                                >
-                                    <RotateCw className="inline w-3.5 h-3.5 mr-1 -mt-0.5" aria-hidden="true" />
-                                    {error.action === "retry" ? "Retry" : "Send again"}
-                                </button>
-                            )}
-                        </span>
-                    </div>
+                    <p className="mr-auto text-sm text-red-700 min-w-0 basis-full sm:basis-auto sm:flex-1" role="alert">
+                        {error.message}{" "}
+                        {error.action && (
+                            <button
+                                type="button"
+                                onClick={onRetry}
+                                disabled={busy}
+                                className={`font-semibold underline underline-offset-2 hover:text-red-900 disabled:opacity-50 rounded ${focusRing}`}
+                            >
+                                {error.action === "retry" ? "Retry" : "Send again"}
+                            </button>
+                        )}
+                    </p>
                 )}
                 {!settled && status !== "failed" && (
                     <>
                         <Button type="button" variant="secondary" size="sm" onClick={onCancel} disabled={busy}>
-                            Cancel
+                            Not now
                         </Button>
                         <Button
                             type="button"
@@ -125,16 +116,16 @@ export function PreviewCard({
                             size="sm"
                             onClick={onConfirm}
                             disabled={busy}
-                            isLoading={status === "running"}
+                            aria-busy={status === "running" || undefined}
                             leftIcon={danger ? <AlertTriangle className="w-4 h-4" /> : <Check className="w-4 h-4" />}
                         >
-                            {status === "running" ? "Working…" : result.confirm_label}
+                            {result.confirm_label}
                         </Button>
                     </>
                 )}
                 {status === "failed" && error?.action && (
                     <Button type="button" variant="secondary" size="sm" onClick={onCancel} disabled={busy}>
-                        Cancel
+                        Not now
                     </Button>
                 )}
             </div>

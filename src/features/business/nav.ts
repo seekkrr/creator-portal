@@ -19,6 +19,7 @@ import {
     type LucideIcon,
 } from "lucide-react";
 import type { BusinessFeature, MemberRole, PartnerSection } from "@services/business.types";
+import type { ChatAudience } from "@services/commands.types";
 
 export interface BusinessNavItem {
     to: string;
@@ -32,6 +33,8 @@ export interface BusinessNavItem {
     section?: PartnerSection;
     /** Per-business product (admin switch); the item is hidden when it's off for this business. */
     feature?: BusinessFeature;
+    /** Command chat group (admin switch); the item is hidden while the chat is off for it. */
+    chat?: ChatAudience;
 }
 
 export interface BusinessNavGroup {
@@ -44,8 +47,8 @@ export const BUSINESS_NAV: BusinessNavGroup[] = [
         title: null,
         items: [
             { to: "/business", label: "Overview", icon: LayoutDashboard, end: true },
-            // Command chat: every role sees it; the server decides what each may run.
-            { to: "/business/chat", label: "Chat", icon: MessageSquareText },
+            // Command chat: every role sees it once the admin turns it on; the server decides what each may run.
+            { to: "/business/chat", label: "Chat", icon: MessageSquareText, chat: "businesses" },
         ],
     },
     {
