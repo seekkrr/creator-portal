@@ -442,7 +442,7 @@ function CollabOverview({ showExperiences }: { showExperiences: boolean }) {
                     value={data.pending_requests}
                     icon={<Inbox className="w-5 h-5" />}
                     tone="amber"
-                    hint={data.pending_requests ? "Reply within 48h or they expire" : "You're all caught up"}
+                    hint={data.pending_requests ? "Reply before they expire" : "You're all caught up"}
                     to="/business/requests"
                 />
                 <KpiCard
